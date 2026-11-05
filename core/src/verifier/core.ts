@@ -7,6 +7,20 @@ import { AbiCoder, Contract, JsonRpcProvider, getBytes, hashMessage, keccak256, 
 import { BLACKBOX_REGISTRY_ABI, ROBOT_REGISTRY_ABI, type ChainAnchor, type ChainMission, toChainAnchors, toChainMission } from "../chain/abi";
 import { type Entry, ZERO_HASH, canonicalJson, entryHash, keccakHex } from "../lib/canonical";
 import { type Policy, checkpointNonce, extractContent, parseAnswer, verifyBundle, vocabulary } from "../lib/interlock";
+import { effectiveSigner } from "../zg/services";
+
+/** 0G Compute's InferenceServing on 0G mainnet: where TEE signers are registered and acknowledged. */
+export const SERVING = { rpc: "https://evmrpc.0g.ai", chainId: 16661, contract: "0x47340d900bdFec2BD393c626E12ea0656F938d84" };
+const SERVING_ABI = [
+  "function getService(address provider) view returns (tuple(address provider,string serviceType,string url,uint256 inputPrice,uint256 outputPrice,uint256 updatedAt,string model,string verifiability,string additionalInfo,address teeSignerAddress,bool teeSignerAcknowledged) service)",
+];
+export interface ServiceView {
+  provider: string;
+  model: string;
+  verifiability: string;
+  signer: string;
+  acknowledged: boolean;
+}
 
 export type Status = "pass" | "fail" | "warn" | "skip";
 export interface Check {
@@ -34,6 +48,9 @@ export interface VerifyInputs {
   chain?: ChainView | null;
   roots?: Record<number, string | null>;
   replay?: { match: boolean | null; trajectory_hash: string; mismatches?: string[] } | null;
+  /** InferenceServing records for the manifest's providers, read from 0G mainnet by the verifier itself. */
+  services?: ServiceView[] | null;
+  servicesError?: string | null;
 }
 
 export interface DecisionRow {
@@ -184,6 +201,33 @@ export function verifyMission(inp: VerifyInputs): Report {
     });
   }
 
+  // 5b. the allowlist itself: every signer must be acknowledged on 0G, not just listed by the operator
+  if (manifest) {
+    const signers: string[] = (manifest.policy?.tee_signers ?? []).map((a: string) => a.toLowerCase());
+    const model = String(manifest.policy?.vision_model ?? "").toLowerCase();
+    const robotCheck = g?.body?.tee_signer_check?.mode ? ` The robot checked them itself before takeoff (${g.body.tee_signer_check.mode}).` : "";
+    if (manifest.compute?.mode === "mock") {
+      add({ id: "tee-registry", title: "TEE signers are acknowledged on 0G's InferenceServing", status: "warn", detail: "mock 0G: these signers are local test keys, not 0G TEE signers" });
+    } else if (!inp.services) {
+      add({ id: "tee-registry", title: "TEE signers are acknowledged on 0G's InferenceServing", status: "skip", detail: inp.servicesError ? `could not read InferenceServing: ${inp.servicesError}` : "InferenceServing not read" });
+    } else {
+      const ok = new Map(
+        inp.services
+          .filter((v) => v.acknowledged && /tee/i.test(v.verifiability) && (!model || v.model.toLowerCase() === model))
+          .map((v) => [v.signer.toLowerCase(), v]),
+      );
+      const bad = signers.filter((a) => !ok.has(a));
+      add({
+        id: "tee-registry",
+        title: "TEE signers are acknowledged on 0G's InferenceServing",
+        status: bad.length || !signers.length ? "fail" : "pass",
+        detail: bad.length
+          ? `signer ${short(bad[0])} is on the manifest allowlist but is not the acknowledged TEE signer of any ${model} provider on 0G mainnet`
+          : `${signers.length} signer(s) acknowledged by ${SERVING.contract.slice(0, 10)}… on 0G mainnet (${[...new Set(signers.map((a) => ok.get(a)!.verifiability))].join(", ")}).${robotCheck}`,
+      });
+    }
+  }
+
   // 6. anchors
   if (!ch?.mission) {
     add({ id: "anchors", title: "On-chain anchors match the log", status: ch ? "fail" : "skip", detail: ch ? "no mission on chain" : "no chain" });
@@ -329,6 +373,21 @@ export interface LoadOptions {
   registry: string;
   missionId: string;
   fetchRoot: (root: string) => Promise<Uint8Array>;
+  /** Override the 0G mainnet RPC used to read InferenceServing. */
+  servingRpc?: string;
+}
+
+/** Read each manifest provider's service record from InferenceServing. Never trusts the manifest's signer field. */
+export async function loadServices(manifest: any, rpc = SERVING.rpc): Promise<ServiceView[] | null> {
+  if (!manifest || manifest.compute?.mode === "mock") return null;
+  const providers: string[] = [...new Set<string>((manifest.compute?.providers ?? []).map((p: any) => p?.provider).filter((p: unknown) => typeof p === "string"))];
+  const c = new Contract(SERVING.contract, SERVING_ABI, new JsonRpcProvider(rpc, SERVING.chainId, { staticNetwork: true }));
+  return Promise.all(
+    providers.map(async (p) => {
+      const s = await c.getService(p);
+      return { provider: s.provider, model: s.model, verifiability: s.verifiability, signer: effectiveSigner(s.teeSignerAddress, s.additionalInfo), acknowledged: s.teeSignerAcknowledged };
+    }),
+  );
 }
 
 export interface MissionIndex {
@@ -378,12 +437,21 @@ export async function loadFromChain(o: LoadOptions): Promise<VerifyInputs & { in
       return JSON.parse(dec(await o.fetchRoot(e.root))) as Entry;
     });
   }
+  let services: ServiceView[] | null = null;
+  let servicesError: string | null = null;
+  try {
+    services = await loadServices(JSON.parse(manifestText), o.servingRpc);
+  } catch (e) {
+    servicesError = (e as Error).message.slice(0, 160);
+  }
   return {
     missionId: o.missionId,
     entries,
     manifestText,
     roots,
     index,
+    services,
+    servicesError,
     chain: { network: o.network, chainId: o.chainId, registry: o.registry, robotRegistry, mission, anchors, robotIsOperator },
   };
 }

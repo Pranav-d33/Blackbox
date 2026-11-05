@@ -56,6 +56,19 @@ test("verifier names a tampered entry", () => {
   assert.match(bad.firstFailure!, /Entry #1/);
 });
 
+test("verifier checks the allowlist against 0G's InferenceServing, not the manifest's word", () => {
+  const entries = JSON.parse(JSON.stringify(V.entries));
+  const signer: string = V.tee;
+  entries[0].body.manifest = { seed: 1, policy: { tee_signers: [signer], vision_model: "0gm-1.0-35b-a3b" } };
+  const svc = (s: string) => [{ provider: "0x" + "22".repeat(20), model: "0GM-1.0-35B-A3B", verifiability: "TeeML", signer: s, acknowledged: true }];
+  const tee = (r: ReturnType<typeof verifyMission>) => r.checks.find((c) => c.id === "tee-registry")!;
+  assert.equal(tee(verifyMission({ missionId: V.nonce.mission, entries })).status, "skip");
+  assert.equal(tee(verifyMission({ missionId: V.nonce.mission, entries, services: svc(signer) })).status, "pass");
+  const planted = verifyMission({ missionId: V.nonce.mission, entries, services: svc("0x" + "99".repeat(20)) });
+  assert.equal(tee(planted).status, "fail");
+  assert.match(tee(planted).detail, /not the acknowledged TEE signer/);
+});
+
 test("mock classifier separates cracks from decoys on rendered crops", () => {
   for (const [name, b64] of Object.entries<string>(V.crops)) {
     const got = toAnswer(classify(Buffer.from(b64, "base64")), SYSTEM_PROMPT);

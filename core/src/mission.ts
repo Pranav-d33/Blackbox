@@ -18,7 +18,7 @@ import type { Storage } from "./storage";
 import { type AllowlistEntry, type CheckpointRequest, DEFAULT_TASK, type Task, ZgDecider } from "./zg/decide";
 import { type Profile, loadProfile, simSection, vocabulary } from "./profile";
 import { ZgUnreachable } from "./zg/router";
-import { type MissionIndex, type Report, loadFromChain, verifyMission } from "./verifier/core";
+import { type MissionIndex, type Report, type ServiceView, loadFromChain, loadServices, verifyMission } from "./verifier/core";
 
 const MANIFEST_VERSION = 1;
 
@@ -384,12 +384,22 @@ export class Missions {
         registry: this.cfg.chain.registry,
         missionId,
         fetchRoot: (r) => this.storage.download(r),
+        servingRpc: this.cfg.zg.servingRpc,
       });
       return verifyMission({ ...inp, replay: rec?.replay ?? null });
     }
     if (!rec) throw new Error("unknown mission");
+    let services: ServiceView[] | null = null;
+    let servicesError: string | null = null;
+    try {
+      services = await loadServices(rec.manifest, this.cfg.zg.servingRpc);
+    } catch (e) {
+      servicesError = (e as Error).message.slice(0, 160);
+    }
     return verifyMission({
       missionId,
+      services,
+      servicesError,
       entries: entriesOverride ?? rec.entries,
       manifestText: rec.manifestText,
       chain: await this.chainView(missionId),
