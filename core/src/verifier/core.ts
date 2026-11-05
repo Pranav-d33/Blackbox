@@ -6,7 +6,7 @@
 import { AbiCoder, Contract, JsonRpcProvider, getBytes, hashMessage, keccak256, recoverAddress } from "ethers";
 import { BLACKBOX_REGISTRY_ABI, ROBOT_REGISTRY_ABI, type ChainAnchor, type ChainMission, toChainAnchors, toChainMission } from "../chain/abi";
 import { type Entry, ZERO_HASH, canonicalJson, entryHash, keccakHex } from "../lib/canonical";
-import { checkpointNonce, extractContent, parseAnswer, verifyBundle } from "../lib/interlock";
+import { type Policy, checkpointNonce, extractContent, parseAnswer, verifyBundle, vocabulary } from "../lib/interlock";
 
 export type Status = "pass" | "fail" | "warn" | "skip";
 export interface Check {
@@ -389,9 +389,9 @@ export async function loadFromChain(o: LoadOptions): Promise<VerifyInputs & { in
 }
 
 /** Helpers for UIs: parse a stored decision's answer for display. */
-export function answerOf(e: Entry) {
+export function answerOf(e: Entry, policy?: Policy) {
   try {
-    return parseAnswer(extractContent(e.body.zg.raw_response));
+    return parseAnswer(extractContent(e.body.zg.raw_response), vocabulary(policy));
   } catch {
     return null;
   }

@@ -8,7 +8,8 @@ import { goJson, sha256Hex } from "./canonical";
 
 export const LABELS = ["crack", "decoy", "unsure"] as const;
 export const ACTIONS = ["descend", "continue"] as const;
-export type Answer = { nonce: string; label: string; severity: number; action: "descend" | "continue" };
+export type Answer = { nonce: string; label: string; severity: number; action: string };
+export type Vocabulary = { labels: readonly string[]; actions: readonly string[]; severity_max: number };
 
 export interface Bundle {
   mission_id: string;
@@ -32,6 +33,18 @@ export interface Policy {
   tee_signers: string[];
   tee_binding?: string;
   nonce_hex_len?: number;
+  labels?: string[];
+  actions?: string[];
+  severity_max?: number;
+}
+
+/** What the mission profile lets the sealed model answer; manifests without one get the defaults. */
+export function vocabulary(policy?: Partial<Policy> | null): Vocabulary {
+  return {
+    labels: policy?.labels?.length ? policy.labels : LABELS,
+    actions: policy?.actions?.length ? policy.actions : ACTIONS,
+    severity_max: policy?.severity_max ?? 3,
+  };
 }
 
 export interface InterlockResult {
@@ -61,7 +74,7 @@ export function extractContent(raw: string): string {
   return c;
 }
 
-export function parseAnswer(content: string): Answer {
+export function parseAnswer(content: string, v: Vocabulary = vocabulary()): Answer {
   let s = content.trim().replace(/^<think>[\s\S]*?<\/think>/, "").trim();
   if (s.startsWith("```")) s = s.replace(/^```[a-zA-Z]*\s*/, "").replace(/\s*```$/, "");
   let o: any;
@@ -74,10 +87,10 @@ export function parseAnswer(content: string): Answer {
   const keys = Object.keys(o).sort().join(",");
   if (keys !== "action,label,nonce,severity") throw new Error(`answer keys [${keys}] != [action,label,nonce,severity]`);
   if (typeof o.nonce !== "string") throw new Error("nonce is not a string");
-  if (!LABELS.includes(o.label)) throw new Error(`label ${JSON.stringify(o.label)} not allowed`);
-  if (typeof o.severity !== "number" || !Number.isInteger(o.severity) || o.severity < 0 || o.severity > 3)
-    throw new Error("severity must be an integer 0-3");
-  if (!ACTIONS.includes(o.action)) throw new Error(`action ${JSON.stringify(o.action)} not allowed`);
+  if (!v.labels.includes(o.label)) throw new Error(`label ${JSON.stringify(o.label)} not allowed`);
+  if (typeof o.severity !== "number" || !Number.isInteger(o.severity) || o.severity < 0 || o.severity > v.severity_max)
+    throw new Error(`severity must be an integer 0-${v.severity_max}`);
+  if (!v.actions.includes(o.action)) throw new Error(`action ${JSON.stringify(o.action)} not allowed`);
   return { nonce: o.nonce.toLowerCase(), label: o.label, severity: o.severity, action: o.action };
 }
 
@@ -128,7 +141,7 @@ export function verifyBundle(b: Pick<Bundle, "raw_response" | "tee">, policy: Po
   let content: string;
   try {
     content = extractContent(b.raw_response);
-    r.answer = parseAnswer(content);
+    r.answer = parseAnswer(content, vocabulary(policy));
   } catch (e) {
     return { ...r, reason: `answer does not parse: ${(e as Error).message}` };
   }
