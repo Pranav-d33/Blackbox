@@ -137,7 +137,9 @@ export function loadConfig() {
       humanTimeoutMs: int("HUMAN_TIMEOUT_MS", 60000),
     },
     sim: {
-      backend: env("SIM_BACKEND", "pybullet"),
+      // "auto": the robot adapter's best physics backend (mujoco > pybullet > native)
+      backend: env("SIM_BACKEND", "auto"),
+      scenario: env("SCENARIO", "solar-farm"),
     },
   };
 }
