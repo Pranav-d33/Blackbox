@@ -3,18 +3,135 @@ import { Scene3D } from "/scene3d.js";
 const $ = (id) => document.getElementById(id);
 const short = (h, n = 10) => (h ? `${h.slice(0, n)}…${h.slice(-4)}` : "–");
 const get = (p) => fetch(p).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (reduced) document.documentElement.classList.add("reduced");
 
 // ------------------------------------------------------------- reveals
-const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))), { rootMargin: "0px 0px -4% 0px" });
-document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+let pending = [...document.querySelectorAll(".reveal")];
+function reveal() {
+  pending = pending.filter((el) => {
+    if (el.getBoundingClientRect().top > innerHeight * 0.9) return true;
+    el.classList.add("in");
+    return false;
+  });
+}
+
+// ---------------------------------------------------- statement words
+const statement = $("statementText");
+statement.innerHTML = statement.textContent
+  .trim()
+  .split(/\s+/)
+  .map((w) => `<span class="w">${w}</span>`)
+  .join(" ");
+const words = [...statement.querySelectorAll(".w")];
+
+// ------------------------------------------------------ scroll engine
+/** 0 when the section's top reaches the viewport top, 1 when its pinned run is over. */
+function progress(el) {
+  const r = el.getBoundingClientRect();
+  const run = r.height - innerHeight;
+  return run > 0 ? clamp(-r.top / run) : clamp(1 - r.top / innerHeight);
+}
+
+const nav = $("localnav");
+const bands = [...document.querySelectorAll("main > header, main > section, body > footer")];
+const heroStage = $("heroStage");
+const story = $("checkpoint");
+const device = $("device");
+const chapters = [...document.querySelectorAll("#chapters li")];
+const dots = [...document.querySelectorAll(".progress i")];
+const kill = $("kill");
+const STATES = [
+  ["holding", "orange"],
+  ["asking 0G", "blue"],
+  ["answer signed", "blue"],
+  ["verifying", "yellow"],
+  ["descend · recorded", "green"],
+];
+let step = -1;
+
+function setStep(n) {
+  if (n === step) return;
+  step = n;
+  device.dataset.step = String(n);
+  chapters.forEach((li, i) => {
+    li.classList.toggle("on", i === n);
+    li.classList.toggle("past", i < n);
+  });
+  dots.forEach((d, i) => d.classList.toggle("on", i === n));
+  const [text, tone] = STATES[n];
+  const cap = $("devState");
+  cap.textContent = text;
+  cap.className = `capsule ${tone}`;
+}
+
+function frame() {
+  reveal();
+  nav.classList.toggle("stuck", scrollY > 8);
+  // the nav takes the material of whatever section sits under it
+  const under = bands.find((b) => {
+    const r = b.getBoundingClientRect();
+    return r.top <= 26 && r.bottom > 26;
+  });
+  nav.classList.toggle("light", !!under?.classList.contains("light"));
+  if (reduced) return;
+
+  // hero: the stage grows to full bleed over the first screen of scroll
+  const hr = heroStage.getBoundingClientRect();
+  heroStage.style.setProperty("--p", clamp((innerHeight - hr.top) / (innerHeight * 1.1) - 0.35).toFixed(3));
+
+  // statement: words light up in reading order
+  const sp = progress($("statement"));
+  const lit = Math.round(clamp((sp - 0.08) / 0.75) * words.length);
+  words.forEach((w, i) => w.classList.toggle("lit", i < lit));
+
+  // checkpoint: five steps across the pinned run
+  setStep(Math.min(4, Math.floor(progress(story) * 5.2)));
+
+  // kill switch: the lease drains, then the verdict flips
+  const kp = clamp((progress(kill) - 0.1) / 0.7);
+  kill.style.setProperty("--p", kp.toFixed(3));
+  kill.classList.toggle("out", kp >= 0.999);
+  $("leaseMs").textContent = `${Math.round(6000 * (1 - kp))} ms`;
+}
+
+let queued = false;
+const onScroll = () => {
+  if (queued) return;
+  queued = true;
+  requestAnimationFrame(() => {
+    queued = false;
+    frame();
+  });
+};
+addEventListener("scroll", onScroll, { passive: true });
+addEventListener("resize", onScroll);
+if (reduced) {
+  setStep(3);
+  words.forEach((w) => w.classList.add("lit"));
+  kill.classList.add("out");
+} else setStep(0);
+frame();
+
+// ---------------------------------------------------------- counters
+function countUp(el, to) {
+  if (reduced || !to) return void (el.textContent = to);
+  const t0 = performance.now();
+  const tick = (t) => {
+    const k = clamp((t - t0) / 900);
+    el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
 
 // ---------------------------------------------------------------- hero
 const hero = new Scene3D($("hero3d"));
 hero.controls.enableZoom = false;
-const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-hero.controls.autoRotate = !still;
-hero.controls.autoRotateSpeed = 0.45;
-hero.renderer.domElement.addEventListener("pointerdown", () => (hero.controls.autoRotate = false), { once: true });
+hero.controls.enableRotate = false;
+hero.controls.autoRotate = !reduced;
+hero.controls.autoRotateSpeed = 0.35;
 
 function verdicts(sim, mission) {
   const labels = mission?.profile?.ui?.labels ?? {};
@@ -72,28 +189,21 @@ async function boot() {
       hero.setWorld(pv.world, "/api/scenarios/solar-farm/preview.jpg");
       hero.update({ pose_mm: [...pv.home_mm, 0], home_mm: pv.home_mm, waypoints_mm: pv.waypoints_mm, phase: "READY" }, []);
     }
-    $("liveCap").innerHTML = `<span class="dot"></span>Solar farm, ready for its first mission`;
+    $("liveCap").innerHTML = `<span class="dot"></span>Solar farm · ready for its first mission`;
   }
+
+  const real = m ? decisions.filter((e) => e.body.action_applied === (m.policy?.actions?.[0] ?? "descend")).length : 2;
+  const vs = $("vsReal");
+  const watch = () => {
+    if (vs.getBoundingClientRect().top > innerHeight * 0.8) return;
+    removeEventListener("scroll", watch);
+    countUp(vs, real);
+  };
+  addEventListener("scroll", watch, { passive: true });
+  watch();
   if (!m) return;
 
-  // proof frame: the first decision of the last mission
   const d = decisions[0]?.body;
-  if (d) {
-    const lab = m.profile?.ui?.labels?.[d.answer?.label]?.name ?? d.answer?.label;
-    const li = (t) => `<li><span>${t}</span></li>`;
-    $("proofSteps").innerHTML = [
-      li(`Robot holds at checkpoint ${d.checkpoint} · nonce echoed`),
-      li(`Sealed call · <code>${m.policy?.vision_model ?? "0G"}</code>${d.latency_ms ? ` · ${d.latency_ms} ms` : ""}`),
-      li(`0G answer · <b>${lab}</b> · severity ${d.answer?.severity} · ${d.answer?.action}`),
-      li(`TEE signer <code>${short(d.signer, 8)}</code> on the manifest allowlist`),
-      li(`Signature covers these exact response bytes (${d.binding})`),
-      li(`Robot acts · ${d.action_applied} · entry #${decisions[0].seq} → 0G Storage`),
-    ].join("");
-    $("proofCap").textContent = `From mission ${short(m.id, 10)} on this machine${mock ? ", on mock 0G" : ""}. request_id ${d.request_id ?? "–"}.`;
-  }
-  $("vsReal").textContent = decisions.filter((e) => e.body.action_applied === (m.policy?.actions?.[0] ?? "descend")).length;
-
-  // receipt
   $("rId").textContent = short(m.id, 14);
   $("rProfile").textContent = m.profile?.title ?? "–";
   $("rDec").textContent = decisions.length;
@@ -112,7 +222,7 @@ async function boot() {
     const r = await get(`/api/missions/${m.id}/verify?source=${cfg?.chain ? "storage" : "local"}`);
     if (r) {
       const pass = r.checks.filter((c) => c.status === "pass").length;
-      $("rVer").innerHTML = r.ok ? `<span class="ok">✓ verified · ${pass} checks</span>` : `<span style="color:var(--bad)">✕ ${r.firstFailure ?? "failed"}</span>`;
+      $("rVer").innerHTML = r.ok ? `<span class="ok">Verified · ${pass} checks</span>` : `<span class="bad">${r.firstFailure ?? "failed"}</span>`;
     } else $("rVer").textContent = "unavailable";
   } else $("rVer").textContent = m.status;
 }
