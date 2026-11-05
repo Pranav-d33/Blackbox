@@ -29,10 +29,11 @@ from typing import Any, Optional
 from .canonical import keccak_hex
 from .crypto import RobotKey, anchor_digest, close_digest
 from .episode_log import EpisodeLog
-from .interlock import ACTIONS, split_signed_text, verify_bundle
+from .interlock import split_signed_text, verify_bundle, vocabulary
 from .mission import CONTROL_EVERY, MissionSim
 from .physics import PHYS_HZ, available_backends
 from .replay import replay
+from .sdk import check_policy_fits, world_meta, world_texture_jpg
 
 HEX32 = re.compile(r"^0x[0-9a-fA-F]{64}$")
 
@@ -114,6 +115,8 @@ class Adapter:
         self.outbox = Outbox(core_url)
         self.outbox.start()
         self._preview = (None, b"")
+        self._texture = (None, b"")
+        self._scenario_preview = (None, None, b"")
         threading.Thread(target=self._runner, daemon=True).start()
         threading.Thread(target=self._watchdog, daemon=True).start()
 
@@ -158,7 +161,8 @@ class Adapter:
                 self.sim = RoverMission(m["mission_id"], m["seed"], m["sim"])
             else:
                 self.sim = MissionSim(m["mission_id"], m["seed"], m["sim"], self.texture_dir)
-            defects = [self.sim.place(d["kind"], int(d["x_mm"]), int(d["y_mm"]), int(d.get("variant", 0)))
+            check_policy_fits(p, getattr(self.sim, "ACTIONS", ("descend", "continue")))
+            defects =[self.sim.place(d["kind"], int(d["x_mm"]), int(d["y_mm"]), int(d.get("variant", 0)))
                        for d in req.get("defects", [])]
             path = os.path.join(self.data_dir, f"{m['mission_id']}.jsonl")
             if os.path.exists(path):
@@ -386,8 +390,9 @@ class Adapter:
             action = req.get("action")
             if cp is None or cp["status"] != "await_human" or req.get("checkpoint") != cp["k"]:
                 raise ValueError("no checkpoint is waiting for a human")
-            if action not in ACTIONS:
-                raise ValueError("action must be descend or continue")
+            allowed = vocabulary(self.policy)[1]
+            if action not in allowed:
+                raise ValueError(f"action must be one of {list(allowed)}")
             self._append("human", {"checkpoint": cp["k"], "step": cp["step"], "action": action,
                                    "by": str(req.get("by", "operator console"))[:64]})
             cp["status"] = "resolved"
@@ -482,7 +487,31 @@ class Adapter:
                 "events": list(self.events)[-40:],
                 "backends": available_backends(),
                 "speed": self.speed,
+                "world": world_meta(self.sim.world, self.sim.cfg) if getattr(self.sim, "world", None) else None,
             }
+
+    def world_texture(self) -> bytes:
+        with self.lock:
+            if self.sim is None or getattr(self.sim, "world", None) is None:
+                return b""
+            key = (id(self.sim), len(self.sim.world.defects))
+            if self._texture[0] != key:
+                self._texture = (key, world_texture_jpg(self.sim.world))
+            return self._texture[1]
+
+    def preview(self, req: dict) -> dict:
+        """Render a scenario's world before any mission exists, so defects can be placed on it."""
+        sim_cfg = req["sim"]
+        key = json.dumps(sim_cfg, sort_keys=True)
+        if self._scenario_preview[0] != key:
+            sim = MissionSim("0x" + "00" * 32, int(req.get("seed", 0)), sim_cfg, self.texture_dir)
+            try:
+                info = {"world": world_meta(sim.world, sim.cfg), "home_mm": sim.cfg["home_mm"],
+                        "waypoints_mm": [list(p) for p in sim.waypoints]}
+                self._scenario_preview = (key, info, world_texture_jpg(sim.world))
+            finally:
+                sim.close()
+        return dict(self._scenario_preview[1])
 
     def world_png(self) -> bytes:
         with self.lock:
@@ -525,6 +554,10 @@ def make_handler(ad: Adapter):
                     return self._send(200, ad.state(since))
                 if path == "/world.png":
                     return self._send(200, raw=ad.world_png(), ctype="image/png")
+                if path == "/world/texture.jpg":
+                    return self._send(200, raw=ad.world_texture(), ctype="image/jpeg")
+                if path == "/world/preview.jpg":
+                    return self._send(200, raw=ad._scenario_preview[2], ctype="image/jpeg")
                 m = re.match(r"^/crop/(\d+)\.png$", path)
                 if m:
                     png = ad.crops.get(int(m.group(1)))
@@ -545,6 +578,7 @@ def make_handler(ad: Adapter):
                 "/mission/prepare": ad.prepare,
                 "/mission/go": lambda r: ad.go(),
                 "/world/place": ad.place,
+                "/world/preview": ad.preview,
                 "/decision": lambda r: ad.submit_decision(r.get("bundle") or r, source=r.get("source", "console")),
                 "/human": ad.human,
                 "/estop": lambda r: ad.estop(),
