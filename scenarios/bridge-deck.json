@@ -1,0 +1,42 @@
+{
+  "v": 1,
+  "kind": "blackbox.mission-profile",
+  "id": "bridge-deck",
+  "title": "Bridge-deck crack survey",
+  "summary": "A drone flies a lawnmower survey over a concrete bridge deck. 0G decides which marks are structural cracks worth a close look and which are harmless paint, cable or stains.",
+  "robot": "drone",
+  "world": {
+    "kind": "concrete-deck",
+    "kinds": [
+      { "kind": "crack", "name": "Crack", "truth": "defect", "variants": 5 },
+      { "kind": "decoy", "name": "Decoy", "truth": "benign", "variants": 2 }
+    ]
+  },
+  "sim": {
+    "deck_mm": [24000, 8000],
+    "home_mm": [-2000, 4000],
+    "cruise_mm": 3000,
+    "inspect_mm": 1000,
+    "speed_mm_s": 3000,
+    "lanes": 3,
+    "footprint_mm": 1400,
+    "detector_min": 10,
+    "inspect_hover_ms": 1000,
+    "crop_mm": 1000
+  },
+  "decision": {
+    "labels": ["crack", "decoy", "unsure"],
+    "actions": ["descend", "continue"],
+    "severity_max": 3,
+    "label_actions": { "crack": "descend", "decoy": "continue", "unsure": "descend" },
+    "prompt": "You are the sealed decision model of Blackbox, an autonomous bridge-deck inspection drone.\nThe image is a top-down camera crop of one grid cell of a concrete deck. The on-board detector flagged it because it contains a dark or high-contrast mark. Decide what the mark is.\n- \"crack\": a structural crack in the concrete: an irregular, jagged or branching thin dark fracture.\n- \"decoy\": a harmless crack-like mark: painted line, cable or wire, tar seam, saw-cut joint, twig, shadow or stain.\n- \"unsure\": you cannot tell.\nseverity: integer 0-3 (0 none, 1 hairline, 2 moderate, 3 severe). Use 0 for decoys.\naction: \"descend\" to inspect closely (cracks, and unsure), \"continue\" to skip (decoys).\nReply with exactly one JSON object and nothing else, copying the nonce from the user message exactly:\n{\"nonce\":\"<nonce>\",\"label\":\"crack|decoy|unsure\",\"severity\":0,\"action\":\"descend|continue\"}"
+  },
+  "ui": {
+    "labels": {
+      "crack": { "name": "Crack", "color": "#ff8a3d" },
+      "decoy": { "name": "Decoy", "color": "#a1a1a6" },
+      "unsure": { "name": "Unsure", "color": "#ffd60a" }
+    },
+    "skin": "concrete"
+  }
+}

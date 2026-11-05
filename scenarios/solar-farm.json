@@ -1,0 +1,47 @@
+{
+  "v": 1,
+  "kind": "blackbox.mission-profile",
+  "id": "solar-farm",
+  "title": "Solar farm O&M survey",
+  "summary": "A drone surveys four rows of PV modules. 0G decides which marks are cracked or damaged cells that need a close-up for the repair crew, and which are soiling that only needs the cleaning crew.",
+  "robot": "drone",
+  "world": {
+    "kind": "solar-farm",
+    "kinds": [
+      { "kind": "cracked_cell", "name": "Cracked cell", "truth": "defect", "variants": 3 },
+      { "kind": "soiling", "name": "Soiling", "truth": "benign", "variants": 2 }
+    ],
+    "rows": 4,
+    "row_pitch_mm": 4000,
+    "row_depth_mm": 2000,
+    "module_mm": [1000, 2000],
+    "margin_mm": 1000
+  },
+  "sim": {
+    "deck_mm": [36000, 16000],
+    "home_mm": [-2500, 8000],
+    "cruise_mm": 3000,
+    "inspect_mm": 1000,
+    "speed_mm_s": 3000,
+    "lanes": 4,
+    "footprint_mm": 1400,
+    "detector_min": 10,
+    "inspect_hover_ms": 1000,
+    "crop_mm": 1000
+  },
+  "decision": {
+    "labels": ["cracked_cell", "soiling", "unsure"],
+    "actions": ["descend", "continue"],
+    "severity_max": 3,
+    "label_actions": { "cracked_cell": "descend", "soiling": "continue", "unsure": "descend" },
+    "prompt": "You are the sealed decision model of Blackbox, an autonomous solar-farm inspection drone.\nThe image is a top-down RGB camera crop of photovoltaic modules: dark blue cells with thin silver busbars and an aluminium frame. The on-board detector flagged it because part of the crop differs from a clean module. Decide what it is.\n- \"cracked_cell\": physical damage to the glass or cells: bright, sharp, branching or radiating fracture lines, a shattered impact point, or a burn mark. Needs a close-up for the repair crew.\n- \"soiling\": dust, sand, bird droppings, leaves or similar dirt lying on an intact module: soft-edged, brownish or whitish patches. Only needs the cleaning crew.\n- \"unsure\": you cannot tell.\nseverity: integer 0-3 (0 none, 1 single cell, 2 several cells, 3 module-wide). Use 0 for soiling.\naction: \"descend\" to inspect closely (cracked_cell, and unsure), \"continue\" to skip (soiling).\nReply with exactly one JSON object and nothing else, copying the nonce from the user message exactly:\n{\"nonce\":\"<nonce>\",\"label\":\"cracked_cell|soiling|unsure\",\"severity\":0,\"action\":\"descend|continue\"}"
+  },
+  "ui": {
+    "labels": {
+      "cracked_cell": { "name": "Cracked cell", "color": "#ff8a3d" },
+      "soiling": { "name": "Soiling", "color": "#b5b0a6" },
+      "unsure": { "name": "Unsure", "color": "#ffd60a" }
+    },
+    "skin": "solar"
+  }
+}
