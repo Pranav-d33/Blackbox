@@ -91,6 +91,14 @@ console.log(`  answers accepted ${rows.filter((r) => r.accepted).length}/${rows.
 if (echoN) console.log(`  nonce echo       ${echoed}/${echoN}`);
 console.log(`  median latency   ${median} ms -> LEASE_MS=${Math.min(12000, Math.max(3000, 3 * median))}`);
 console.log(`  TEE binding      ${[...bindings.entries()].map(([k, v]) => `${k}:${v}`).join(" ") || "NONE MATCHED - see README 'TEE binding'"}`);
+// The broker signs sha256(request):sha256(response). If the request half equals the hash of the bytes we sent,
+// a signature can also bind the answer to the exact camera crop inside that request (README: frame binding).
+const signedReq = rows.filter((r) => r.reqHashMatch !== null);
+const reqOk = signedReq.filter((r) => r.reqHashMatch).length;
+console.log(
+  `  request binding  ${signedReq.length ? `${reqOk}/${signedReq.length} signed request hashes equal sha256(bytes sent)` : "no signed text to compare"}` +
+    (signedReq.length ? (reqOk === signedReq.length ? " -> frame binding possible through the Router" : " -> the Router rewrites the request; frame binding needs Direct mode") : ""),
+);
 
 if (argv.includes("--storage")) {
   const storage = makeStorage(cfg, "http://127.0.0.1");
