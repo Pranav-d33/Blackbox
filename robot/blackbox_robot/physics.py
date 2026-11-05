@@ -1,8 +1,10 @@
 """Rigid-body backends for the inspection drone.
 
-`pybullet` steps a real PyBullet world (DIRECT mode, fixed 240 Hz step).
+`mujoco` flies the Skydio X2 quadrotor from MuJoCo Menagerie on four rotor
+thrusts (see mujoco_drone.py). The default when MuJoCo is installed.
+`pybullet` steps a PyBullet rigid body (DIRECT mode, fixed 240 Hz step).
 `native` is a dependency-free point-mass integrator for CI and the Pi.
-Both are deterministic for a given sequence of commands; the backend name is
+All are deterministic for a given sequence of commands; the backend name is
 part of the mission manifest so a replay uses the same one.
 """
 from __future__ import annotations
@@ -113,10 +115,20 @@ def available_backends() -> List[str]:
         out.insert(0, "pybullet")
     except Exception:
         pass
+    try:
+        import mujoco  # noqa: F401
+
+        out.insert(0, "mujoco")
+    except Exception:
+        pass
     return out
 
 
 def make_body(backend: str, x: float, y: float, z: float):
+    if backend == "mujoco":
+        from .mujoco_drone import MuJoCoBody
+
+        return MuJoCoBody(x, y, z)
     if backend == "pybullet":
         return PyBulletBody(x, y, z)
     if backend == "native":

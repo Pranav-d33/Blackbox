@@ -1,0 +1,6 @@
+<mujoco model="blackbox survey scene">
+  <include file="x2.xml"/>
+  <worldbody>
+    <geom name="ground" type="plane" size="0 0 1" friction="0.8 0.005 0.0001"/>
+  </worldbody>
+</mujoco>
