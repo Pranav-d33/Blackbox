@@ -1,0 +1,260 @@
+/* GENERATED from design-system/tokens.json for Blackbox (CHARAK V2 system with Apple colour scheme). */
+
+@font-face {
+  font-family: 'Anek Latin';
+  font-style: normal;
+  font-weight: 100 800;
+  font-stretch: 75% 125%;
+  font-display: swap;
+  src: url('../fonts/AnekLatin-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Anek Latin';
+  font-style: normal;
+  font-weight: 100 800;
+  font-stretch: 75% 125%;
+  font-display: swap;
+  src: url('../fonts/AnekLatin-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/IBMPlexMono-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/IBMPlexMono-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/IBMPlexMono-600.woff2') format('woff2');
+}
+
+:root {
+  /* ramps — Apple system colours */
+  --blue-50: #EAF4FF;
+  --blue-100: #D6EAFF;
+  --blue-200: #ADDBFF;
+  --blue-300: #66B5FF;
+  --blue-400: #2997FF;
+  --blue-500: #0071E3;
+  --blue-600: #0066CC;
+  --blue-700: #004E9E;
+  --blue-800: #00356B;
+  --blue-900: #001C3D;
+
+  --flame-50: #FFF4E8;
+  --flame-100: #FFE5CA;
+  --flame-200: #FFC894;
+  --flame-300: #FFA85E;
+  --flame-400: #FF8A3D;
+  --flame-500: #FF9500;
+  --flame-600: #BF4800;
+  --flame-700: #8F3600;
+  --flame-800: #5E2300;
+  --flame-900: #331200;
+
+  --emerald-50: #EBF9EE;
+  --emerald-100: #CEF0D6;
+  --emerald-200: #9CE0AD;
+  --emerald-300: #65D181;
+  --emerald-400: #32D74B;
+  --emerald-500: #34C759;
+  --emerald-600: #1D8A3A;
+  --emerald-700: #15682B;
+  --emerald-800: #0E461D;
+  --emerald-900: #072610;
+
+  --graphite-50: #F5F5F7;
+  --graphite-100: #E8E8ED;
+  --graphite-200: #D2D2D7;
+  --graphite-300: #A1A1A6;
+  --graphite-400: #86868B;
+  --graphite-500: #6E6E73;
+  --graphite-600: #424245;
+  --graphite-700: #2C2C2E;
+  --graphite-800: #1D1D1F;
+  --graphite-900: #000000;
+
+  /* status solids */
+  --status-flagged: #FF9500;
+  --status-acting: #0071E3;
+  --status-verified: #34C759;
+  --status-sealed: #A78BFA;
+  --status-waiting: #FFD60A;
+  --status-refused: #FF453A;
+
+  /* scheme: showroom (light — launch & verifier light bands) */
+  --showroom-ground: #F5F5F7;
+  --showroom-card: #FFFFFF;
+  --showroom-tint: #EAF4FF;
+  --showroom-warm: #FFF4E8;
+  --showroom-fill: #E8E8ED;
+  --showroom-text: #1D1D1F;
+  --showroom-text-muted: #6E6E73;
+  --showroom-text-faint: #86868B;
+  --showroom-line: #D2D2D7;
+  --showroom-line-strong: #A1A1A6;
+  --showroom-primary: #0071E3;
+  --showroom-on-primary: #FFFFFF;
+  --showroom-primary-pressed: #0066CC;
+  --showroom-primary-soft: #EAF4FF;
+  --showroom-primary-mid: #D6EAFF;
+  --showroom-on-primary-soft: #004E9E;
+  --showroom-accent-warm: #BF4800;
+  --showroom-accent-warm-soft: #FFE5CA;
+  --showroom-on-accent-warm-soft: #8F3600;
+  --showroom-greeting: #BF4800;
+  --showroom-success: #1D8A3A;
+  --showroom-warning: #FF9500;
+  --showroom-danger: #D70015;
+  --showroom-danger-soft: #FFE5E3;
+  --showroom-on-danger-soft: #A1121A;
+  --showroom-chrome: #1D1D1F;
+  --showroom-on-chrome: #FFFFFF;
+  --showroom-scrim: #00000073;
+  --showroom-status-flagged-soft: #FFE5CA;
+  --showroom-status-flagged-on: #8F3600;
+  --showroom-status-acting-soft: #D6EAFF;
+  --showroom-status-acting-on: #004E9E;
+  --showroom-status-verified-soft: #CEF0D6;
+  --showroom-status-verified-on: #15682B;
+  --showroom-status-sealed-soft: #EFEAFB;
+  --showroom-status-sealed-on: #5835B0;
+  --showroom-status-waiting-soft: #FFF6CC;
+  --showroom-status-waiting-on: #7A5E00;
+  --showroom-status-refused-soft: #FFE5E3;
+  --showroom-status-refused-on: #A1121A;
+  --showroom-status-neutral-soft: #E8E8ED;
+  --showroom-status-neutral-on: #424245;
+
+  /* scheme: console (dark — operator console, verifier & dark keynote stage) */
+  --console-ground: #000000;
+  --console-card: #1D1D1F;
+  --console-tint: #001C3D;
+  --console-warm: #331200;
+  --console-fill: #2C2C2E;
+  --console-text: #F5F5F7;
+  --console-text-muted: #A1A1A6;
+  --console-text-faint: #86868B;
+  --console-line: #2C2C2E;
+  --console-line-strong: #424245;
+  --console-primary: #0071E3;
+  --console-on-primary: #FFFFFF;
+  --console-primary-pressed: #0077ED;
+  --console-primary-soft: #001C3D;
+  --console-primary-mid: #00356B;
+  --console-on-primary-soft: #66B5FF;
+  --console-accent-warm: #FF8A3D;
+  --console-accent-warm-soft: #331200;
+  --console-on-accent-warm-soft: #FFC894;
+  --console-greeting: #FF8A3D;
+  --console-success: #32D74B;
+  --console-warning: #FFD60A;
+  --console-danger: #FF453A;
+  --console-danger-soft: #3A1618;
+  --console-on-danger-soft: #FF8A80;
+  --console-chrome: #000000;
+  --console-on-chrome: #F5F5F7;
+  --console-scrim: #000000B8;
+  --console-status-flagged-soft: #331200;
+  --console-status-flagged-on: #FFC894;
+  --console-status-acting-soft: #001C3D;
+  --console-status-acting-on: #66B5FF;
+  --console-status-verified-soft: #072610;
+  --console-status-verified-on: #9CE0AD;
+  --console-status-sealed-soft: #241A3E;
+  --console-status-sealed-on: #CDB6FF;
+  --console-status-waiting-soft: #332900;
+  --console-status-waiting-on: #FFE366;
+  --console-status-refused-soft: #3A1618;
+  --console-status-refused-on: #FF8A80;
+  --console-status-neutral-soft: #2C2C2E;
+  --console-status-neutral-on: #D2D2D7;
+
+  /* type — Anek variable width axis (wdth 75–125) + IBM Plex Mono */
+  --font-sans: 'Anek Latin', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+  --type-display: 750 56px/60px var(--font-sans);
+  --type-display-width: 125%;
+  --type-title-large: 700 36px/42px var(--font-sans);
+  --type-title-large-width: 122%;
+  --type-title-medium: 650 26px/32px var(--font-sans);
+  --type-title-medium-width: 118%;
+  --type-title-small: 650 20px/26px var(--font-sans);
+  --type-title-small-width: 112%;
+  --type-body-large: 400 18px/26px var(--font-sans);
+  --type-body-large-width: 100%;
+  --type-body: 400 16px/24px var(--font-sans);
+  --type-body-width: 100%;
+  --type-label: 600 15px/20px var(--font-sans);
+  --type-label-width: 105%;
+  --type-caption: 500 13px/18px var(--font-sans);
+  --type-caption-width: 100%;
+  --type-overline: 700 12px/16px var(--font-sans);
+  --type-overline-width: 110%;
+  --type-numeric: 600 20px/24px var(--font-sans);
+  --type-numeric-width: 80%;
+
+  /* shape */
+  --radius-pill: 999px;
+  --radius-sheet: 32px;
+  --radius-card: 26px;
+  --radius-tile: 20px;
+  --radius-field: 20px;
+  --radius-avatar: 16px;
+  --radius-check: 8px;
+  --size-button-min-height: 52px;
+  --size-button-compact: 44px;
+  --size-chip-height: 40px;
+  --size-touch-min: 44px;
+  --size-check-box: 24px;
+  --size-bottom-bar-height: 68px;
+  --size-nav-pill-width: 56px;
+  --size-nav-pill-height: 32px;
+  --size-now-bar-height: 60px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-base: 16px;
+  --space-gutter: 20px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+
+  /* motion */
+  --dur-press: 150ms;
+  --ease-press: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-standard: 300ms;
+  --ease-standard: cubic-bezier(0.33, 0, 0.1, 1);
+  --dur-emphasized: 450ms;
+  --ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-exit: 200ms;
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --dur-stagger: 40ms;
+  --dur-live: 1600ms;
+  --dur-reduced: 150ms;
+  --press-scale: 0.96;
+}
+
+.tnum { font-variant-numeric: tabular-nums; font-stretch: 80%; }
+.display { font: var(--type-display); font-stretch: var(--type-display-width); }
+.title-large { font: var(--type-title-large); font-stretch: var(--type-title-large-width); }
+.title-medium { font: var(--type-title-medium); font-stretch: var(--type-title-medium-width); }
+.title-small { font: var(--type-title-small); font-stretch: var(--type-title-small-width); }
+.pressable { transition: transform var(--dur-press) var(--ease-press); }
+.pressable:active { transform: scale(var(--press-scale)); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 150ms !important; animation-iteration-count: 1 !important; transition-duration: 150ms !important; }
+  .pressable:active { transform: none; }
+}

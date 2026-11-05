@@ -1,0 +1,67 @@
+{
+  "generated": "2026-11-06T01:51:55.630208",
+  "sections": [
+    {
+      "id": "mockups",
+      "label": "Mockups",
+      "groups": [
+        {
+          "slug": "blackbox-design-system",
+          "files": [
+            {
+              "label": "index.html",
+              "path": "mockups/blackbox-design-system/index.html"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "design-systems",
+      "label": "Design Systems",
+      "groups": [
+        {
+          "slug": "blackbox",
+          "files": [
+            {
+              "label": "README.md",
+              "path": "design-systems/blackbox/README.md"
+            },
+            {
+              "label": "SKILL.md",
+              "path": "design-systems/blackbox/SKILL.md"
+            },
+            {
+              "label": "colors_and_type.css",
+              "path": "design-systems/blackbox/tokens/colors_and_type.css"
+            },
+            {
+              "label": "AnekLatin-latin-ext.woff2",
+              "path": "design-systems/blackbox/fonts/AnekLatin-latin-ext.woff2"
+            },
+            {
+              "label": "AnekLatin-latin.woff2",
+              "path": "design-systems/blackbox/fonts/AnekLatin-latin.woff2"
+            },
+            {
+              "label": "IBMPlexMono-400.woff2",
+              "path": "design-systems/blackbox/fonts/IBMPlexMono-400.woff2"
+            },
+            {
+              "label": "IBMPlexMono-500.woff2",
+              "path": "design-systems/blackbox/fonts/IBMPlexMono-500.woff2"
+            },
+            {
+              "label": "IBMPlexMono-600.woff2",
+              "path": "design-systems/blackbox/fonts/IBMPlexMono-600.woff2"
+            },
+            {
+              "label": "OFL-anek.txt",
+              "path": "design-systems/blackbox/fonts/OFL-anek.txt"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

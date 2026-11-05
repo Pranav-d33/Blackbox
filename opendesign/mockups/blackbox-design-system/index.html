@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blackbox Design System · V2 (Apple Colour Scheme)</title>
+  <link rel="stylesheet" href="../../design-systems/blackbox/tokens/colors_and_type.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { background: #E8E8ED; color: #1D1D1F; font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+    body { padding: 40px 24px 80px; display: flex; flex-direction: column; align-items: center; gap: 48px; }
+    .board-wrap { width: 100%; max-width: 1440px; display: flex; flex-direction: column; gap: 12px; }
+    .board-label { font-size: 13px; font-weight: 700; font-stretch: 110%; letter-spacing: 0.08em; text-transform: uppercase; color: #6E6E73; padding-left: 8px; display: flex; justify-content: space-between; }
+    .board { width: 100%; background: var(--showroom-ground); color: var(--showroom-text); border-radius: 36px; padding: 44px; border: 1px solid #D2D2D7; overflow: hidden; }
+    button, .pressable { font-family: inherit; cursor: pointer; transition: transform var(--dur-press) var(--ease-press), background-color var(--dur-standard) var(--ease-standard), color var(--dur-standard) var(--ease-standard); }
+    button:active, .pressable:active { transform: scale(0.96); }
+    .mono { font-family: var(--font-mono); letter-spacing: 0; }
+
+    /* Motion board animations */
+    @keyframes mRise { 0%, 8% { opacity: 0; transform: translateY(16px); } 22%, 82% { opacity: 1; transform: none; } 100% { opacity: 0; transform: none; } }
+    .m-rise { animation: mRise 3.2s cubic-bezier(0.33, 0, 0.1, 1) infinite both; }
+    @keyframes mA { 0%, 30% { opacity: 1; } 34%, 100% { opacity: 0; } }
+    @keyframes mB { 0%, 32% { opacity: 0; } 36%, 63% { opacity: 1; } 67%, 100% { opacity: 0; } }
+    @keyframes mC { 0%, 65% { opacity: 0; } 69%, 97% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes mBg { 0%, 32% { background: #FFE5CA; color: #8F3600; } 36%, 65% { background: #D6EAFF; color: #004E9E; } 69%, 100% { background: #CEF0D6; color: #15682B; } }
+    .m-bg { animation: mBg 4.5s cubic-bezier(0.33, 0, 0.1, 1) infinite; }
+    .m-a { animation: mA 4.5s infinite; } .m-b { animation: mB 4.5s infinite; } .m-c { animation: mC 4.5s infinite; }
+    @keyframes mPulse { 0% { box-shadow: 0 0 0 0 rgba(50, 215, 75, 0.7); } 100% { box-shadow: 0 0 0 12px rgba(50, 215, 75, 0); } }
+    .m-pulse { animation: mPulse 1600ms cubic-bezier(0.33, 0, 0.1, 1) infinite; }
+
+    @media (max-width: 1100px) {
+      .grid-12 { grid-template-columns: 1fr !important; }
+      .span-7, .span-5, .span-4, .span-3, .span-8 { grid-column: span 1 !important; }
+      .screens-row { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================= 01 · IDENTITY & PRINCIPLES ========================================================= -->
+  <div class="board-wrap">
+    <div class="board-label"><span>01 · Identity &amp; Principles</span><span>Blackbox · 0G Physical AI</span></div>
+    <section class="board grid-12" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px;">
+
+      <!-- Hero left block (7 cols) -->
+      <div class="span-7" style="grid-column: span 7; background: #001C3D; color: #FFFFFF; border-radius: 32px; padding: 48px 52px; display: flex; flex-direction: column; justify-content: space-between; min-height: 520px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: baseline; gap: 14px;">
+            <span style="font-size: 30px; font-weight: 800; font-stretch: 125%; letter-spacing: 0.03em;">BLACKBOX</span>
+            <span style="font-size: 22px; font-weight: 700; font-stretch: 115%; color: #FF8A3D;">0G · TeeML</span>
+          </div>
+          <span style="font-size: 13px; font-weight: 600; font-stretch: 110%; letter-spacing: 0.08em; text-transform: uppercase; color: #66B5FF;">Design System · V2</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 22px; margin: 36px 0;">
+          <h1 style="font-size: 84px; line-height: 0.96; font-weight: 750; font-stretch: 125%; letter-spacing: -0.02em;">Proof that<br/>reads at a<br/>glance.</h1>
+          <p style="max-width: 580px; font-size: 20px; line-height: 1.45; font-weight: 400; color: #D6EAFF;">One visual language for the Launch Showroom, the Operator Console, and the Public Verifier: calm Apple-system surfaces, big wide headers you read from far, and controls where your hand already is.</p>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <span style="padding: 9px 18px; border-radius: 999px; background: #0071E3; color: #FFFFFF; font-size: 14px; font-weight: 600;">Apple Blue · trust &amp; action</span>
+          <span style="padding: 9px 18px; border-radius: 999px; background: #BF4800; color: #FFFFFF; font-size: 14px; font-weight: 600;">Flame · flagged defects</span>
+          <span style="padding: 9px 18px; border-radius: 999px; background: #1D8A3A; color: #FFFFFF; font-size: 14px; font-weight: 600;">Emerald · verified &amp; sealed</span>
+        </div>
+      </div>
+
+      <!-- Brand Emblem right block (5 cols) -->
+      <div class="span-5" style="grid-column: span 5; background: #FFFFFF; border-radius: 32px; padding: 36px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; border: 1px solid #D2D2D7;">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; width: 100%;">
+          <!-- Emblem SVG: Flight recorder core + quadrotor + 0G seal -->
+          <svg width="240" height="240" viewBox="0 0 240 240" fill="none" aria-label="Blackbox emblem">
+            <circle cx="120" cy="120" r="104" fill="#F5F5F7" stroke="#D2D2D7" stroke-width="2" />
+            <circle cx="120" cy="120" r="76" fill="#001C3D" />
+            <path d="M72 72 L168 168 M168 72 L72 168" stroke="#2997FF" stroke-width="5" stroke-linecap="round" />
+            <circle cx="72" cy="72" r="18" fill="#EAF4FF" stroke="#0071E3" stroke-width="4" />
+            <circle cx="168" cy="72" r="18" fill="#EAF4FF" stroke="#0071E3" stroke-width="4" />
+            <circle cx="72" cy="168" r="18" fill="#EAF4FF" stroke="#0071E3" stroke-width="4" />
+            <circle cx="168" cy="168" r="18" fill="#EAF4FF" stroke="#0071E3" stroke-width="4" />
+            <rect x="92" y="92" width="56" height="56" rx="16" fill="#FF8A3D" stroke="#FFFFFF" stroke-width="4" />
+            <path d="M108 120 L116 128 L134 110" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <div style="text-align: center;">
+            <div style="font-size: 36px; font-weight: 800; font-stretch: 125%; color: #1D1D1F; letter-spacing: -0.02em;">BLACKBOX</div>
+            <div style="font-size: 14px; font-weight: 600; color: #BF4800; letter-spacing: 0.06em; text-transform: uppercase;">0G decides · Blackbox proves it</div>
+          </div>
+        </div>
+        <div style="width: 100%; display: flex; gap: 8px; align-items: center; padding-top: 20px; border-top: 1px solid #E8E8ED;">
+          <div style="width: 28px; height: 28px; border-radius: 10px; background: #FF8A3D;"></div>
+          <div style="width: 28px; height: 28px; border-radius: 10px; background: #FFD60A;"></div>
+          <div style="width: 28px; height: 28px; border-radius: 10px; background: #34C759;"></div>
+          <div style="width: 28px; height: 28px; border-radius: 10px; background: #0071E3;"></div>
+          <span style="margin-left: auto; font-size: 13px; color: #6E6E73; font-weight: 600;">Telemetry sets the warm palette. Blue does the work.</span>
+        </div>
+      </div>
+
+      <!-- Principle 01 -->
+      <div class="span-3" style="grid-column: span 3; background: #FFFFFF; border-radius: 32px; padding: 28px; display: flex; gap: 18px;">
+        <div style="width: 84px; flex-shrink: 0; border-radius: 22px; border: 2px solid #D2D2D7; padding: 6px; display: flex; flex-direction: column; gap: 5px;">
+          <div style="flex-grow: 4; border-radius: 14px; background: #EAF4FF;"></div>
+          <div style="flex-grow: 6; border-radius: 14px; background: #0071E3;"></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #0066CC;">01</span>
+          <h2 style="font-size: 24px; line-height: 1.08; font-weight: 700; font-stretch: 118%;">Look up top, reach down low</h2>
+          <p style="font-size: 15px; line-height: 1.5; color: #6E6E73;">A big title fills the top third to read. Demo beats — Place &amp; fly, Split replay, Forge, Cut link, and Verify — sit grouped below within immediate reach.</p>
+        </div>
+      </div>
+
+      <!-- Principle 02 -->
+      <div class="span-3" style="grid-column: span 3; background: #FFFFFF; border-radius: 32px; padding: 28px; display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #0066CC;">02</span>
+        <h2 style="font-size: 24px; line-height: 1.08; font-weight: 700; font-stretch: 118%;">One family, three widths</h2>
+        <p style="font-size: 15px; line-height: 1.5; color: #6E6E73;">Anek goes wide for headers, normal for reading, and narrow for telemetry, altitudes and latencies. IBM Plex Mono carries hashes and TEE signatures.</p>
+        <div style="margin-top: auto; display: flex; align-items: baseline; gap: 12px; padding-top: 12px;">
+          <span style="font-size: 38px; font-weight: 750; font-stretch: 125%;">Aa</span>
+          <span style="font-size: 38px; font-weight: 500; font-stretch: 100%;">Aa</span>
+          <span style="font-size: 38px; font-weight: 600; font-stretch: 75%;">Aa</span>
+          <span class="mono" style="font-size: 28px; font-weight: 600; color: #BF4800;">0x</span>
+        </div>
+      </div>
+
+      <!-- Principle 03 -->
+      <div class="span-3" style="grid-column: span 3; background: #FFFFFF; border-radius: 32px; padding: 28px; display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #0066CC;">03</span>
+        <h2 style="font-size: 24px; line-height: 1.08; font-weight: 700; font-stretch: 118%;">Flat, tonal, rounded</h2>
+        <p style="font-size: 15px; line-height: 1.5; color: #6E6E73;">There are no drop shadows. White cards on Apple `#F5F5F7` ground (or `#1D1D1F` on `#000000` stage), grouped into big 26px blocks, show the depth.</p>
+        <div style="margin-top: auto; display: flex; gap: 8px; padding-top: 12px;">
+          <div style="width: 44px; height: 44px; border-radius: 14px; background: #F5F5F7; border: 1px solid #D2D2D7;"></div>
+          <div style="width: 44px; height: 44px; border-radius: 14px; background: #FFFFFF; border: 1px solid #D2D2D7;"></div>
+          <div style="width: 44px; height: 44px; border-radius: 14px; background: #EAF4FF;"></div>
+          <div style="width: 44px; height: 44px; border-radius: 14px; background: #0071E3;"></div>
+          <div style="width: 44px; height: 44px; border-radius: 14px; background: #1D1D1F;"></div>
+        </div>
+      </div>
+
+      <!-- Principle 04 -->
+      <div class="span-3" style="grid-column: span 3; background: #FFF4E8; border-radius: 32px; padding: 28px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #FFC894;">
+        <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #BF4800;">04</span>
+        <h2 style="font-size: 24px; line-height: 1.08; font-weight: 700; font-stretch: 118%; color: #331200;">Blue acts, Flame flags</h2>
+        <p style="font-size: 15px; line-height: 1.5; color: #5E2300;">Anything you tap to act is Apple Blue. Flame appears in eyebrows, flagged solar cracks, and the holding moment. It is never a primary button.</p>
+        <div style="margin-top: auto; display: flex; gap: 8px; align-items: center; padding-top: 12px;">
+          <button class="pressable" style="height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: #0071E3; color: #FFFFFF; font-size: 15px; font-weight: 650;">Start mission</button>
+          <span style="padding: 6px 12px; border-radius: 999px; background: #FFE5CA; color: #8F3600; font-size: 14px; font-weight: 650;">★ Cracked cell</span>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- ========================================================= 02 · COLOUR ========================================================= -->
+  <div class="board-wrap">
+    <div class="board-label"><span>02 · Colour</span><span>Apple Blue, Flame, Emerald &amp; Graphite</span></div>
+    <section class="board" style="display: flex; flex-direction: column; gap: 28px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #0066CC;">02 · COLOUR</span>
+          <h2 style="font-size: 56px; line-height: 1; font-weight: 750; font-stretch: 125%;">Blue, Flame &amp; Emerald</h2>
+        </div>
+        <p style="max-width: 520px; font-size: 16px; line-height: 1.5; color: #6E6E73;">Apple Blue means trust and actuation, so it carries every primary control. Flame flags physical defects and eyebrows; Emerald seals verified TEE signatures and chain anchors. Each hue has a 10-step ramp. The outlined swatch is the brand value.</p>
+      </div>
+
+      <!-- 4x10 Ramps -->
+      <div style="display: flex; flex-direction: column; gap: 14px;" id="rampsContainer"></div>
+
+      <!-- Screen Mix Bar -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #6E6E73;">HOW MUCH OF EACH, ON A TYPICAL BLACKBOX SCREEN</span>
+        <div style="display: flex; height: 54px; border-radius: 18px; overflow: hidden; font-size: 14px; font-weight: 650;">
+          <div style="width: 58%; background: #F5F5F7; border: 1px solid #D2D2D7; border-radius: 18px 0 0 18px; display: flex; align-items: center; padding: 0 16px; color: #1D1D1F;">Showroom / Stage ground 58%</div>
+          <div style="width: 24%; background: #FFFFFF; border-top: 1px solid #D2D2D7; border-bottom: 1px solid #D2D2D7; display: flex; align-items: center; padding: 0 16px; color: #1D1D1F;">Tonal cards 24%</div>
+          <div style="width: 10%; background: #0071E3; display: flex; align-items: center; padding: 0 12px; color: #FFFFFF;">Blue 10%</div>
+          <div style="width: 5%; background: #FF8A3D; display: flex; align-items: center; padding: 0 10px; color: #1D1D1F;">5%</div>
+          <div style="width: 3%; background: #34C759;"></div>
+        </div>
+      </div>
+
+      <!-- Status & Surfaces -->
+      <div class="grid-12" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px;">
+        <div class="span-5" style="grid-column: span 5; background: #FFFFFF; border-radius: 26px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+          <span style="font-size: 18px; font-weight: 700; font-stretch: 115%;">Status</span>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #FFE5CA;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #FF9500;"></span><span style="font-size: 14px; font-weight: 600; color: #8F3600;">Flagged</span><span style="margin-left: auto; font-size: 12px; font-stretch: 85%; color: #6E6E73;">#FF9500</span></div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #D6EAFF;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #0071E3;"></span><span style="font-size: 14px; font-weight: 600; color: #004E9E;">Accepted</span><span style="margin-left: auto; font-size: 12px; font-stretch: 85%; color: #6E6E73;">#0071E3</span></div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #CEF0D6;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #34C759;"></span><span style="font-size: 14px; font-weight: 600; color: #15682B;">Verified · 0G</span><span style="margin-left: auto; font-size: 12px; font-stretch: 85%; color: #6E6E73;">#34C759</span></div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #EFEAFB;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #A78BFA;"></span><span style="font-size: 14px; font-weight: 600; color: #5835B0;">Sealed TEE</span><span style="margin-left: auto; font-size: 12px; font-stretch: 85%; color: #6E6E73;">#A78BFA</span></div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #FFF6CC;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #FFD60A;"></span><span style="font-size: 14px; font-weight: 600; color: #7A5E00;">Lease active</span><span style="margin-left: auto; font-size: 12px; font-stretch: 85%; color: #6E6E73;">#FFD60A</span></div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #FFE5E3;"><span style="width: 10px; height: 10px; border-radius: 999px; background: #FF453A;"></span><span style="font-size: 14px; font-weight: 600; color: #A1121A;">Refused · Stop</span><span style="margin-left: auto; font-size: 12px; font-stretch: 85%; color: #6E6E73;">#FF453A</span></div>
+          </div>
+        </div>
+
+        <div class="span-4" style="grid-column: span 4; background: #FFFFFF; border-radius: 26px; padding: 24px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-size: 18px; font-weight: 700; font-stretch: 115%;">Surfaces · Showroom (light)</span>
+          <div style="flex-grow: 1; border-radius: 20px; background: #F5F5F7; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="border-radius: 16px; background: #FFFFFF; padding: 12px 14px; display: flex; justify-content: space-between; font-size: 14px;"><span style="font-weight: 600;">surface.card</span><span style="font-stretch: 85%; color: #6E6E73;">#FFFFFF</span></div>
+            <div style="border-radius: 16px; background: #EAF4FF; padding: 12px 14px; display: flex; justify-content: space-between; font-size: 14px;"><span style="font-weight: 600; color: #004E9E;">surface.tint</span><span style="font-stretch: 85%; color: #004E9E;">#EAF4FF</span></div>
+            <div style="border-radius: 16px; background: #FFF4E8; padding: 12px 14px; display: flex; justify-content: space-between; font-size: 14px;"><span style="font-weight: 600; color: #8F3600;">surface.warm</span><span style="font-stretch: 85%; color: #8F3600;">#FFF4E8</span></div>
+            <div style="margin-top: auto; display: flex; justify-content: space-between; font-size: 14px; padding: 4px 4px 0;"><span style="font-weight: 600;">surface.ground</span><span style="font-stretch: 85%; color: #6E6E73;">#F5F5F7</span></div>
+          </div>
+        </div>
+
+        <div class="span-3" style="grid-column: span 3; background: #000000; border-radius: 26px; padding: 24px; display: flex; flex-direction: column; gap: 12px; color: #F5F5F7;">
+          <span style="font-size: 18px; font-weight: 700; font-stretch: 115%;">Surfaces · Console (dark)</span>
+          <div style="flex-grow: 1; border-radius: 20px; background: #000000; border: 1px solid #2C2C2E; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="border-radius: 16px; background: #1D1D1F; padding: 12px 14px; display: flex; justify-content: space-between; font-size: 14px;"><span style="font-weight: 600;">card</span><span style="font-stretch: 85%; color: #A1A1A6;">#1D1D1F</span></div>
+            <div style="border-radius: 16px; background: #001C3D; padding: 12px 14px; display: flex; justify-content: space-between; font-size: 14px;"><span style="font-weight: 600; color: #66B5FF;">tint</span><span style="font-stretch: 85%; color: #66B5FF;">#001C3D</span></div>
+            <div style="border-radius: 16px; background: #331200; padding: 12px 14px; display: flex; justify-content: space-between; font-size: 14px;"><span style="font-weight: 600; color: #FFC894;">warm</span><span style="font-stretch: 85%; color: #FFC894;">#331200</span></div>
+            <div style="margin-top: auto; display: flex; justify-content: space-between; font-size: 14px; padding: 4px 4px 0;"><span style="font-weight: 600;">ground</span><span style="font-stretch: 85%; color: #A1A1A6;">#000000</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========================================================= 03 · TYPOGRAPHY ========================================================= -->
+  <div class="board-wrap">
+    <div class="board-label"><span>03 · Typography</span><span>Anek Variable (wdth 75–125 · wght 100–800) + IBM Plex Mono</span></div>
+    <section class="board grid-12" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px;">
+      <div class="span-5" style="grid-column: span 5; display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: #0071E3; color: #FFFFFF; border-radius: 32px; padding: 40px; display: flex; flex-direction: column; gap: 12px; flex-grow: 1;">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #D6EAFF;">03 · TYPOGRAPHY</span>
+          <span style="font-size: 196px; line-height: 0.85; font-weight: 800; font-stretch: 125%; letter-spacing: -0.03em;">Aa</span>
+          <h2 style="font-size: 46px; line-height: 1; font-weight: 750; font-stretch: 125%;">Anek</h2>
+          <p style="font-size: 17px; line-height: 1.5; color: #EAF4FF;">A variable family by Ek Type with a width axis from 75 to 125. Blackbox gets wide keynote headers, calm reading copy, and narrow tabular telemetry from a single variable font, paired with IBM Plex Mono for cryptographic proofs.</p>
+          <div style="margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; padding-top: 16px;">
+            <span style="padding: 6px 14px; border-radius: 999px; background: #004E9E; font-size: 13px; font-weight: 600;">wdth 75–125</span>
+            <span style="padding: 6px 14px; border-radius: 999px; background: #004E9E; font-size: 13px; font-weight: 600;">wght 100–800</span>
+            <span style="padding: 6px 14px; border-radius: 999px; background: #004E9E; font-size: 13px; font-weight: 600;">Sentence case</span>
+            <span style="padding: 6px 14px; border-radius: 999px; background: #004E9E; font-size: 13px; font-weight: 600;">OFL · self-hosted</span>
+          </div>
+        </div>
+
+        <div style="background: #FFFFFF; border-radius: 32px; padding: 28px 32px; display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #0066CC;">THE WIDTH AXIS IS THE IDENTITY</span>
+          <div style="display: flex; align-items: baseline; justify-content: space-between;"><span style="font-size: 42px; font-weight: 750; font-stretch: 125%;">Sealed TEE</span><span style="font-size: 13px; color: #6E6E73;">Wide 125 · headers</span></div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between;"><span style="font-size: 42px; font-weight: 500; font-stretch: 100%;">Sealed TEE</span><span style="font-size: 13px; color: #6E6E73;">Normal 100 · reading</span></div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between;"><span style="font-size: 42px; font-weight: 600; font-stretch: 75%; font-variant-numeric: tabular-nums;">14.2 s · 3.00 m</span><span style="font-size: 13px; color: #6E6E73;">Narrow 75 · telemetry</span></div>
+          <div style="margin-top: 6px; padding-top: 12px; border-top: 1px solid #E8E8ED; display: flex; align-items: baseline; justify-content: space-between;"><span class="mono" style="font-size: 24px; font-weight: 600; color: #1D1D1F;">0x8f4e…91c2 ✓</span><span style="font-size: 13px; color: #6E6E73;">IBM Plex Mono · hashes</span></div>
+        </div>
+      </div>
+
+      <div class="span-7" style="grid-column: span 7; background: #FFFFFF; border-radius: 32px; padding: 36px 40px; display: flex; flex-direction: column;">
+        <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) 170px; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid #E8E8ED; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: #6E6E73;">
+          <span>TOKEN</span><span>SPECIMEN</span><span>SIZE / LINE · WGHT · WDTH</span>
+        </div>
+        <div id="typeScaleRows"></div>
+        <p style="margin: 18px 0 0; font-size: 14px; line-height: 1.5; color: #6E6E73;">Numbers always use tabular figures (<code class="mono">font-variant-numeric: tabular-nums</code>) so latencies, altitudes and checkpoint counts line up in live HUDs. Headers never go below 118 width.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========================================================= 04 · COMPONENTS ========================================================= -->
+  <div class="board-wrap">
+    <div class="board-label"><span>04 · Components</span><span>Pills, blocks &amp; bars</span></div>
+    <section class="board grid-12" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px;">
+      <div style="grid-column: span 12; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; padding: 0 4px 8px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #0066CC;">04 · COMPONENTS</span>
+          <h2 style="font-size: 56px; line-height: 1; font-weight: 750; font-stretch: 125%;">Pills, blocks &amp; bars</h2>
+        </div>
+        <div style="display: flex; gap: 22px; font-size: 14px; color: #6E6E73; flex-wrap: wrap;">
+          <span><b style="font-stretch: 85%; color: #1D1D1F;">999</b> buttons · chips</span>
+          <span><b style="font-stretch: 85%; color: #1D1D1F;">26</b> cards</span>
+          <span><b style="font-stretch: 85%; color: #1D1D1F;">20</b> tiles</span>
+          <span><b style="font-stretch: 85%; color: #1D1D1F;">32</b> sheets</span>
+          <span><b style="font-stretch: 85%; color: #1D1D1F;">52</b> min button height</span>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="span-4" style="grid-column: span 4; background: #FFFFFF; border-radius: 26px; padding: 28px; display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-size: 20px; font-weight: 700; font-stretch: 115%;">Buttons</span>
+        <button type="button" style="height: 52px; border: 0; border-radius: 999px; background: #0071E3; color: #FFFFFF; font-size: 17px; font-weight: 650; font-stretch: 108%;">Start mission</button>
+        <button type="button" style="height: 52px; border: 0; border-radius: 999px; background: #EAF4FF; color: #004E9E; font-size: 17px; font-weight: 650; font-stretch: 108%;">Verify on 0G Chain</button>
+        <button type="button" style="height: 52px; border: 1.5px solid #D2D2D7; border-radius: 999px; background: #FFFFFF; color: #1D1D1F; font-size: 17px; font-weight: 650; font-stretch: 108%;">Replay forced "continue"</button>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+          <button type="button" style="height: 50px; border: 0; border-radius: 999px; background: #FFE5E3; color: #A1121A; font-size: 16px; font-weight: 650;">Cut 0G link</button>
+          <button type="button" style="height: 50px; border: 0; border-radius: 999px; background: #1D1D1F; color: #FFFFFF; font-size: 16px; font-weight: 650;">Approve descend</button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: auto; padding-top: 6px;">
+          <span style="padding: 8px 14px; border-radius: 999px; background: #EAF4FF; color: #0066CC; font-size: 14px; font-weight: 650;">Public verifier ↗</span>
+          <span style="margin-left: auto; font-size: 12px; color: #6E6E73;">Press any: scale 0.96</span>
+        </div>
+      </div>
+
+      <!-- Chips, segments & checkpoints -->
+      <div class="span-4" style="grid-column: span 4; background: #FFFFFF; border-radius: 26px; padding: 28px; display: flex; flex-direction: column; gap: 16px;">
+        <span style="font-size: 20px; font-weight: 700; font-stretch: 115%;">Chips, segments &amp; checkpoints</span>
+        <div style="display: flex; padding: 4px; border-radius: 999px; background: #F5F5F7;">
+          <button type="button" style="flex-grow: 1; height: 42px; border: 0; border-radius: 999px; background: #FFFFFF; color: #1D1D1F; font-size: 15px; font-weight: 650;">Solar farm O&amp;M</button>
+          <button type="button" style="flex-grow: 1; height: 42px; border: 0; border-radius: 999px; background: transparent; color: #6E6E73; font-size: 15px; font-weight: 600;">Bridge-deck survey</button>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button type="button" style="height: 42px; padding: 0 16px; border-radius: 999px; border: 1.5px solid #D2D2D7; background: #FFFFFF; color: #1D1D1F; font-size: 15px; font-weight: 600; font-stretch: 85%; font-variant-numeric: tabular-nums;">CP #1 · continue</button>
+          <button type="button" style="height: 42px; padding: 0 16px; border-radius: 999px; border: 0; background: #0071E3; color: #FFFFFF; font-size: 15px; font-weight: 600; font-stretch: 85%; font-variant-numeric: tabular-nums;">CP #2 · descend</button>
+          <button type="button" style="height: 42px; padding: 0 16px; border-radius: 999px; border: 0; background: #F5F5F7; color: #86868B; font-size: 15px; font-weight: 600; font-stretch: 85%; text-decoration: line-through;">Forged skip</button>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto;">
+          <span style="padding: 6px 12px; border-radius: 999px; background: #FFE5CA; color: #8F3600; font-size: 13px; font-weight: 600;">Flagged</span>
+          <span style="padding: 6px 12px; border-radius: 999px; background: #D6EAFF; color: #004E9E; font-size: 13px; font-weight: 600;">Accepted</span>
+          <span style="padding: 6px 12px; border-radius: 999px; background: #CEF0D6; color: #15682B; font-size: 13px; font-weight: 600;">Verified</span>
+          <span style="padding: 6px 12px; border-radius: 999px; background: #EFEAFB; color: #5835B0; font-size: 13px; font-weight: 600;">Sealed TEE</span>
+          <span style="padding: 6px 12px; border-radius: 999px; background: #FFE5E3; color: #A1121A; font-size: 13px; font-weight: 600;">Refused</span>
+        </div>
+      </div>
+
+      <!-- Grouped list & Checkpoint card -->
+      <div class="span-4" style="grid-column: span 4; background: #E8E8ED; border-radius: 26px; padding: 24px; display: flex; flex-direction: column; gap: 12px;">
+        <span style="font-size: 20px; font-weight: 700; font-stretch: 115%;">Checkpoint card &amp; interlock</span>
+        <div style="background: #FFFFFF; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="width: 52px; height: 52px; border-radius: 16px; background: #FFE5CA; color: #8F3600; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 750; font-stretch: 115%;">CP2</div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 18px; font-weight: 650; font-stretch: 112%;">Cracked cell · descend</span>
+              <span style="font-size: 13px; color: #6E6E73;">0gm-1.0-35b-a3b · TeeML</span>
+            </div>
+            <span style="padding: 5px 10px; border-radius: 999px; background: #CEF0D6; color: #15682B; font-size: 12px; font-weight: 650;">✓ Verified</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #F5F5F7; font-size: 13px; color: #6E6E73;">
+            <span>Signer <code class="mono" style="color: #1D1D1F;">0x9a2c…4f10</code></span>
+            <span style="font-size: 18px; font-weight: 650; font-stretch: 80%; color: #1D1D1F;" class="tnum">412 ms · sev 2</span>
+          </div>
+        </div>
+        <label style="background: #FFFFFF; border-radius: 20px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; border: 2px solid #0071E3; margin-top: auto;">
+          <span style="font-size: 12px; font-weight: 600; color: #0066CC;">Mission ID (BlackboxRegistry · 16602)</span>
+          <input type="text" readonly value="0x7c9e3f01a8d42b19e8f0219c4d8a3f90" class="mono" style="border: 0; font-size: 14px; color: #1D1D1F; outline: none; background: transparent;" />
+        </label>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========================================================= 05 · MOTION ========================================================= -->
+  <div class="board-wrap">
+    <div class="board-label"><span>05 · Motion</span><span>Quick out, soft landing</span></div>
+    <section class="board grid-12" style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px;">
+      <div style="grid-column: span 12; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; padding: 0 4px 8px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em; color: #0066CC;">05 · MOTION</span>
+          <h2 style="font-size: 56px; line-height: 1; font-weight: 750; font-stretch: 125%;">Quick out, soft landing</h2>
+        </div>
+        <p style="max-width: 520px; font-size: 16px; line-height: 1.5; color: #6E6E73;">Motion starts fast and settles slowly, so operator controls feel instant but never jumpy. Every animation respects the Reduce motion setting.</p>
+      </div>
+
+      <div class="span-4" style="grid-column: span 4; background: #FFFFFF; border-radius: 26px; padding: 26px; display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 20px; font-weight: 700; font-stretch: 115%;">Tokens</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F5F5F7;"><div><div style="font-weight: 650;">press</div><div style="font-size: 12px; color: #6E6E73;">Buttons, tiles, rows · cubic-bezier(0.22, 1, 0.36, 1)</div></div><b class="tnum" style="font-size: 22px;">150</b></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F5F5F7;"><div><div style="font-weight: 650;">standard</div><div style="font-size: 12px; color: #6E6E73;">Tabs, segments, status · cubic-bezier(0.33, 0, 0.1, 1)</div></div><b class="tnum" style="font-size: 22px;">300</b></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #F5F5F7;"><div><div style="font-weight: 650;">emphasized</div><div style="font-size: 12px; color: #6E6E73;">Live checkpoint card, modal sheets · cubic-bezier(0.22, 1, 0.36, 1)</div></div><b class="tnum" style="font-size: 22px;">450</b></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;"><div><div style="font-weight: 650;">exit</div><div style="font-size: 12px; color: #6E6E73;">Dismiss, toast out · cubic-bezier(0.4, 0, 1, 1)</div></div><b class="tnum" style="font-size: 22px;">200</b></div>
+      </div>
+
+      <div class="span-4" style="grid-column: span 4; background: #FFFFFF; border-radius: 26px; padding: 26px; display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-size: 20px; font-weight: 700; font-stretch: 115%;">Status cross-fade &amp; stagger</span>
+        <div style="flex-grow: 1; background: #F5F5F7; border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center;">
+          <div class="m-bg" style="position: relative; width: 210px; height: 48px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 650;">
+            <span class="m-a" style="position: absolute;">Flagged · Holding</span>
+            <span class="m-b" style="position: absolute;">0G Signed · Acting</span>
+            <span class="m-c" style="position: absolute;">Verified · Anchored</span>
+          </div>
+          <div style="width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+            <div class="m-rise" style="animation-delay: 0ms; height: 26px; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; gap: 10px; padding: 0 12px;"><span style="width: 10px; height: 10px; border-radius: 99px; background: #0071E3;"></span><span style="font-size: 12px; font-weight: 600;">1. Hold · nonce echoed</span></div>
+            <div class="m-rise" style="animation-delay: 40ms; height: 26px; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; gap: 10px; padding: 0 12px;"><span style="width: 10px; height: 10px; border-radius: 99px; background: #FF9500;"></span><span style="font-size: 12px; font-weight: 600;">2. Sealed call · 0GM-1.0</span></div>
+            <div class="m-rise" style="animation-delay: 80ms; height: 26px; border-radius: 10px; background: #FFFFFF; display: flex; align-items: center; gap: 10px; padding: 0 12px;"><span style="width: 10px; height: 10px; border-radius: 99px; background: #34C759;"></span><span style="font-size: 12px; font-weight: 600;">3. TEE signature verified ✓</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="span-4" style="grid-column: span 4; background: #000000; color: #F5F5F7; border-radius: 26px; padding: 26px; display: flex; flex-direction: column; gap: 14px;">
+        <span style="font-size: 20px; font-weight: 700; font-stretch: 115%;">Press · spring &amp; live pulse</span>
+        <p style="font-size: 14px; color: #A1A1A6;">Hold these. Everything tappable shrinks to 0.96 and settles softly.</p>
+        <div style="flex-grow: 1; background: #1D1D1F; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="m-pulse" style="width: 12px; height: 12px; border-radius: 99px; background: #32D74B;"></span>
+            <span style="font-size: 14px; font-weight: 600;">Live checkpoint · lease 6000 ms</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button type="button" class="pressable" style="height: 50px; border: 0; border-radius: 999px; background: #3A1618; color: #FF8A80; font-size: 16px; font-weight: 650;">Forge skip</button>
+            <button type="button" class="pressable" style="height: 50px; border: 0; border-radius: 999px; background: #0071E3; color: #FFFFFF; font-size: 16px; font-weight: 650;">Verify on 0G</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========================================================= 06–08 · ANNOTATED SURFACES ========================================================= -->
+  <div class="board-wrap">
+    <div class="board-label"><span>06–08 · Applied Surfaces</span><span>Showroom (light) · Public Verifier · Operator Console (dark)</span></div>
+    <section class="board screens-row" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+
+      <!-- Surface 1: Launch Showroom (Light) -->
+      <div style="background: #F5F5F7; border-radius: 32px; padding: 24px; border: 1px solid #D2D2D7; display: flex; flex-direction: column; gap: 14px;">
+        <div style="padding: 16px 4px 8px;">
+          <span style="font-size: 14px; font-weight: 600; color: #BF4800;">Verify before actuate</span>
+          <h3 style="font-size: 38px; line-height: 1.02; font-weight: 750; font-stretch: 125%; letter-spacing: -0.02em; margin-top: 4px;">The flight recorder for AI robots.</h3>
+          <p style="font-size: 15px; color: #6E6E73; margin-top: 6px;">1 mission today · Solar farm O&amp;M</p>
+        </div>
+
+        <div style="background: #0071E3; color: #FFFFFF; border-radius: 26px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: #D6EAFF;">SEALED · 0GM-1.0-35B-A3B</span>
+            <span style="padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.18); font-size: 12px; font-weight: 600;">Intel TDX</span>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="width: 48px; height: 48px; border-radius: 16px; background: #EAF4FF; color: #004E9E; display: flex; align-items: center; justify-content: center; font-weight: 750; font-stretch: 120%;">0G</div>
+            <div>
+              <div style="font-size: 19px; font-weight: 700; font-stretch: 115%;">Cracked cell → descend</div>
+              <div style="font-size: 13px; color: #D6EAFF;">Nonce echoed · TEE signer allowlisted</div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px;">
+            <span class="tnum" style="font-size: 26px; font-weight: 650;">412 ms <span style="font-size: 14px; font-weight: 400; color: #D6EAFF;">latency</span></span>
+            <a href="/console.html" class="pressable" style="height: 42px; padding: 0 18px; border-radius: 999px; background: #FFFFFF; color: #004E9E; display: inline-flex; align-items: center; font-size: 15px; font-weight: 700; text-decoration: none;">Open console</a>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: auto;">
+          <div style="background: #EAF4FF; color: #004E9E; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; height: 92px;"><b style="font-size: 13px;">0G Compute</b><span style="font-size: 14px; font-weight: 650;">TeeML</span></div>
+          <div style="background: #FFF4E8; color: #8F3600; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; height: 92px;"><b style="font-size: 13px;">0G Storage</b><span style="font-size: 14px; font-weight: 650;">Root hash</span></div>
+          <div style="background: #EBF9EE; color: #15682B; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; height: 92px;"><b style="font-size: 13px;">0G Chain</b><span style="font-size: 14px; font-weight: 650;">Anchored</span></div>
+        </div>
+      </div>
+
+      <!-- Surface 2: Public Verifier -->
+      <div style="background: #F5F5F7; border-radius: 32px; padding: 24px; border: 1px solid #D2D2D7; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="width: 64px; height: 64px; border-radius: 22px; background: #CEF0D6; color: #15682B; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 750; font-stretch: 120%;">✓</div>
+          <span style="padding: 6px 12px; border-radius: 999px; background: #FFE5CA; color: #8F3600; font-size: 14px; font-weight: 650;" class="tnum">★ 6/6 checks</span>
+        </div>
+        <div>
+          <h3 style="font-size: 34px; line-height: 1.04; font-weight: 750; font-stretch: 122%;">Mission Verified</h3>
+          <p style="font-size: 14px; color: #6E6E73; margin-top: 4px;">Galileo (16602) · MuJoCo Skydio X2 · 4 entries</p>
+        </div>
+        <div style="background: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: #F5F5F7;">
+            <span style="height: 38px; border-radius: 999px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 650;">0G Storage</span>
+            <span style="height: 38px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #6E6E73;">Local JSONL</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+            <div style="padding: 10px; border-radius: 16px; background: #0071E3; color: #FFFFFF; text-align: center;"><div style="font-size: 11px;">Entry #1</div><b class="tnum" style="font-size: 16px;">descend</b></div>
+            <div style="padding: 10px; border-radius: 16px; background: #F5F5F7; color: #1D1D1F; text-align: center;"><div style="font-size: 11px; color: #6E6E73;">Entry #2</div><b class="tnum" style="font-size: 16px;">continue</b></div>
+            <div style="padding: 10px; border-radius: 16px; background: #FFE5E3; color: #A1121A; text-align: center;"><div style="font-size: 11px;">Forged</div><b class="tnum" style="font-size: 16px;">refused</b></div>
+          </div>
+        </div>
+        <a href="/verify.html" class="pressable" style="margin-top: auto; height: 52px; border-radius: 999px; background: #0071E3; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 650; text-decoration: none;">Verify from 0G Chain + Storage</a>
+      </div>
+
+      <!-- Surface 3: Operator Console (Dark) -->
+      <div style="background: #000000; color: #F5F5F7; border-radius: 32px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="padding: 12px 4px 4px;">
+          <span style="font-size: 14px; color: #A1A1A6;">Solar farm O&amp;M survey</span>
+          <h3 style="font-size: 38px; line-height: 1; font-weight: 750; font-stretch: 125%; margin-top: 4px;">Decisions</h3>
+          <span style="font-size: 15px; font-weight: 600; color: #FF8A3D;">2 checkpoints verified · holding</span>
+        </div>
+
+        <div style="background: #1D1D1F; border-radius: 24px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-size: 16px; font-weight: 650;">Sealed 0G Interlock</div>
+            <div style="font-size: 13px; color: #A1A1A6;">Rejects unsigned or tampered answers</div>
+          </div>
+          <div style="width: 50px; height: 30px; border-radius: 999px; background: #0071E3; padding: 3px; display: flex; justify-content: flex-end;"><div style="width: 24px; height: 24px; border-radius: 999px; background: #FFFFFF;"></div></div>
+        </div>
+
+        <div style="background: #1D1D1F; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="width: 44px; height: 44px; border-radius: 14px; background: #331200; color: #FFC894; display: flex; align-items: center; justify-content: center; font-weight: 750;">#2</div>
+            <div style="flex-grow: 1;">
+              <div style="font-size: 17px; font-weight: 650; font-stretch: 112%;">Cracked cell · sev 2</div>
+              <div style="font-size: 13px; color: #A1A1A6;">Nonce echoed · TEE allowlisted</div>
+            </div>
+            <span style="padding: 4px 10px; border-radius: 999px; background: #2C2C2E; font-size: 12px; font-weight: 600;">descend</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 8px; border-top: 1px solid #2C2C2E;">
+            <button type="button" class="pressable" style="height: 44px; border: 0; border-radius: 999px; background: #3A1618; color: #FF8A80; font-size: 14px; font-weight: 650;">Forge skip</button>
+            <a href="/console.html" class="pressable" style="height: 44px; border-radius: 999px; background: #0071E3; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 650; text-decoration: none;">Accept</a>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <script>
+    const ramps = [
+      { name: 'Apple Blue', role: 'Primary · trust, every action', brand: 500, darkFrom: 5, steps: ['#EAF4FF','#D6EAFF','#ADDBFF','#66B5FF','#2997FF','#0071E3','#0066CC','#004E9E','#00356B','#001C3D'] },
+      { name: 'Flame', role: 'Warmth & telemetry · flagged defects', brand: 500, darkFrom: 5, steps: ['#FFF4E8','#FFE5CA','#FFC894','#FFA85E','#FF8A3D','#FF9500','#BF4800','#8F3600','#5E2300','#331200'] },
+      { name: 'Emerald', role: 'Verified & sealed · TEE proof, anchors', brand: 500, darkFrom: 5, steps: ['#EBF9EE','#CEF0D6','#9CE0AD','#65D181','#32D74B','#34C759','#1D8A3A','#15682B','#0E461D','#072610'] },
+      { name: 'Graphite', role: 'Text, chrome, console & verifier', brand: 900, darkFrom: 5, steps: ['#F5F5F7','#E8E8ED','#D2D2D7','#A1A1A6','#86868B','#6E6E73','#424245','#2C2C2E','#1D1D1F','#000000'] }
+    ];
+    const stepNums = [50,100,200,300,400,500,600,700,800,900];
+    document.getElementById('rampsContainer').innerHTML = ramps.map(r => `
+      <div style="display: grid; grid-template-columns: 200px repeat(10, minmax(0, 1fr)); gap: 8px; align-items: stretch;">
+        <div style="display: flex; flex-direction: column; justify-content: center; gap: 2px;">
+          <span style="font-size: 20px; font-weight: 700; font-stretch: 115%;">${r.name}</span>
+          <span style="font-size: 13px; color: #6E6E73;">${r.role}</span>
+        </div>
+        ${r.steps.map((hex, i) => {
+          const st = stepNums[i];
+          const fg = i >= r.darkFrom ? '#FFFFFF' : '#1D1D1F';
+          const ring = st === r.brand ? '2px solid #1D1D1F' : 'none';
+          return `<div style="height: 88px; border-radius: 18px; background: ${hex}; color: ${fg}; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; outline: ${ring}; outline-offset: 3px;">
+            <span style="font-size: 14px; font-weight: 700; font-stretch: 90%;">${st}</span>
+            <span style="font-size: 12px; font-weight: 500; font-stretch: 85%;">${hex}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    `).join('');
+
+    const scale = [
+      { token: 'display', sample: 'Blackbox · 0G decides', size: 56, lh: 60, w: 750, wd: 125 },
+      { token: 'title.large', sample: 'The decision, sealed in a TEE', size: 36, lh: 42, w: 700, wd: 122 },
+      { token: 'title.medium', sample: 'Solar farm O&M survey', size: 26, lh: 32, w: 650, wd: 118 },
+      { token: 'title.small', sample: 'Checkpoint 2 · Cracked cell', size: 20, lh: 26, w: 650, wd: 112 },
+      { token: 'body.large', sample: 'An inspection drone makes calls that cost money.', size: 18, lh: 26, w: 400, wd: 100 },
+      { token: 'body', sample: 'The robot checks that signature before a rotor changes speed.', size: 16, lh: 24, w: 400, wd: 100 },
+      { token: 'label', sample: 'Start mission', size: 15, lh: 20, w: 600, wd: 105 },
+      { token: 'caption', sample: 'MuJoCo Skydio X2 · 10 Hz replay', size: 13, lh: 18, w: 500, wd: 100 },
+      { token: 'overline', sample: 'SEALED INFERENCE', size: 12, lh: 16, w: 700, wd: 110 },
+      { token: 'numeric', sample: '14.2 s · 3.00 m · < 1¢ · 4.8', size: 20, lh: 24, w: 600, wd: 80 }
+    ];
+    document.getElementById('typeScaleRows').innerHTML = scale.map(t => `
+      <div style="display: grid; grid-template-columns: 140px minmax(0, 1fr) 170px; gap: 16px; align-items: center; padding: 13px 0; border-bottom: 1px solid #F5F5F7;">
+        <span style="font-size: 14px; font-weight: 600; color: #0066CC;">${t.token}</span>
+        <span style="font-size: ${t.size}px; line-height: ${t.lh}px; font-weight: ${t.w}; font-stretch: ${t.wd}%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;">${t.sample}</span>
+        <span style="font-size: 13px; font-stretch: 85%; color: #6E6E73;">${t.size}/${t.lh} · ${t.w} · ${t.wd}</span>
+      </div>
+    `).join('');
+  </script>
+</body>
+</html>
