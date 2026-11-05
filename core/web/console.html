@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blackbox · operator console</title>
+  <meta name="theme-color" content="#000000" />
+  <link rel="stylesheet" href="/vendor/fonts/fonts.css" />
+  <link rel="stylesheet" href="/console.css" />
+  <script type="importmap">
+    { "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three/addons/" } }
+  </script>
+  <script src="/vendor/qrcode/qrcode.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <div>
+    <div class="mockbar" id="mockbar" hidden>MOCK 0G · development stand-in, not 0G Compute · set ZG_MODE=router for the sealed model</div>
+    <header class="top">
+      <div class="brand"><a href="/" style="color:inherit;text-decoration:none"><b>Blackbox</b></a><span><em>0G</em> decides. Blackbox proves it.</span></div>
+      <div class="seg" id="scenarios" title="Mission profile: loaded into the manifest, uploaded to 0G Storage"></div>
+      <div class="chips" id="chips"></div>
+    </header>
+  </div>
+  <main>
+    <section class="stage">
+      <div id="view"></div>
+
+      <div class="leftcol">
+      <div class="hudcard glass">
+        <div class="eyebrow">Live mission · 0G decides <span class="phase idle" id="hPhase">idle</span></div>
+        <h1 id="hTitle">Inspection mission</h1>
+        <div class="sum" id="hSum">Pick a scenario, place defects on the surface, then start.</div>
+        <div class="stats">
+          <div class="stat"><span>time</span><b id="sT">–</b></div>
+          <div class="stat"><span>altitude</span><b id="sZ">–</b></div>
+          <div class="stat"><span>checkpoints</span><b class="num" id="sCp">–</b></div>
+          <div class="stat"><span>physics</span><b class="small" id="sPhys">–</b></div>
+          <div class="stat"><span>log</span><b id="sLog">–</b></div>
+          <div class="stat"><span>anchors</span><b class="num" id="sAnc">–</b></div>
+        </div>
+      </div>
+
+      <div class="dock glass">
+        <div class="beat">
+          <div class="t"><b>1</b>Place &amp; fly</div>
+          <div class="row" id="kinds"></div>
+          <div class="row"><button class="btn primary" id="btnStart">Start mission</button></div>
+          <div class="hint" id="placed"></div>
+        </div>
+        <div class="beat">
+          <div class="t"><b>2</b>Did 0G move the robot?</div>
+          <div class="row"><button class="btn" id="btnSplit" title="Same seed and world, every 0G answer overridden to continue">Replay, 0G forced to "continue"</button></div>
+        </div>
+        <div class="beat">
+          <div class="t"><b>3</b>Dishonest operator</div>
+          <div class="row"><button class="btn danger" id="btnForge">Forge "continue"</button><button class="btn danger" id="btnTamperAns">Tamper answer</button><button class="btn danger" id="btnTamperLog">Edit log</button></div>
+        </div>
+        <div class="beat">
+          <div class="t"><b>4</b>Kill switch</div>
+          <div class="row"><button class="btn danger" id="btnKill">Cut 0G link</button><button class="btn danger" id="btnEstop">E-stop</button></div>
+        </div>
+        <div class="beat">
+          <div class="t"><b>5</b>Verify</div>
+          <div class="row"><button class="btn" id="btnVerify">Verify on 0G</button><a class="btn" id="lnkVerifier" target="_blank" href="/verify.html">Public ↗</a><button class="btn" id="btnQR">QR</button></div>
+        </div>
+      </div>
+      </div>
+
+      <div class="seg camseg" id="cam">
+        <button data-cam="orbit" class="on">Orbit</button><button data-cam="chase">Chase</button><button data-cam="top">Top</button>
+      </div>
+      <div class="legend glass" id="legend"></div>
+
+      <div class="banner glass" id="banner" hidden>
+        <b>Same seed, same world. Only 0G's answers differ.</b>
+        <span><i style="background:var(--accent)"></i>0G decided</span>
+        <span><i style="background:#ff5d5d"></i>0G's answers forced to "continue"</span>
+        <button class="btn" id="btnExitCompare">Exit</button>
+      </div>
+
+      <div class="live glass off" id="live">
+        <img id="liveImg" alt="" />
+        <div>
+          <h2><span id="liveTitle">Checkpoint</span><span class="badge dim" id="liveBadge"></span></h2>
+          <div class="steps" id="liveSteps"></div>
+          <div class="lease"><div id="leaseBar" style="width:0"></div></div>
+        </div>
+      </div>
+
+      <div class="toast glass" id="toast"></div>
+    </section>
+
+    <aside class="rail">
+      <div class="tabs" id="tabs">
+        <button data-tab="decisions" class="on">Decisions<span id="nCp"></span></button>
+        <button data-tab="record">Record on 0G</button>
+        <button data-tab="sdk">SDK</button>
+        <button data-tab="log">Robot log</button>
+      </div>
+      <div class="pane on" id="pane-decisions"><div id="feed"><div class="empty">No checkpoints yet. The drone holds and asks 0G each time its detector flags something.</div></div></div>
+      <div class="pane" id="pane-record"><div id="record"><div class="empty">Start a mission to see its manifest, anchors and entries on 0G.</div></div></div>
+      <div class="pane" id="pane-sdk"><div id="sdk"></div></div>
+      <div class="pane" id="pane-log"><div class="events" id="events"></div></div>
+    </aside>
+  </main>
+</div>
+<div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
+<script type="module" src="/console.js"></script>
+</body>
+</html>
