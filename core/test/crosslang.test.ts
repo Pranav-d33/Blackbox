@@ -8,7 +8,8 @@ import { getBytes, hashMessage, recoverAddress } from "ethers";
 import { REPO_ROOT } from "../src/config";
 import { canonicalJson, entryHash, goJson } from "../src/lib/canonical";
 import { checkpointNonce, verifyBundle } from "../src/lib/interlock";
-import { classify } from "../src/mock0g/classify";
+import { classify, toAnswer } from "../src/mock0g/classify";
+import { SYSTEM_PROMPT } from "../src/zg/decide";
 import { verifyMission } from "../src/verifier/core";
 
 const venvPy = join(REPO_ROOT, "robot", ".venv", "bin", "python");
@@ -57,7 +58,7 @@ test("verifier names a tampered entry", () => {
 
 test("mock classifier separates cracks from decoys on rendered crops", () => {
   for (const [name, b64] of Object.entries<string>(V.crops)) {
-    const got = classify(Buffer.from(b64, "base64"));
+    const got = toAnswer(classify(Buffer.from(b64, "base64")), SYSTEM_PROMPT);
     assert.equal(got.label, name.split("-")[0], `${name} -> ${JSON.stringify(got)}`);
   }
 });

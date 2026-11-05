@@ -14,7 +14,7 @@
 import { createServer } from "node:http";
 import { Wallet } from "ethers";
 import { goJson, sha256Hex } from "../lib/canonical";
-import { classify } from "./classify";
+import { classify, toAnswer } from "./classify";
 
 const PORT = Number(process.env.MOCK_0G_PORT ?? 8790);
 const BASE = process.env.MOCK_0G_URL ?? `http://127.0.0.1:${PORT}`;
@@ -63,7 +63,9 @@ createServer(async (req, res) => {
       const text = parts.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n");
       const img = parts.find((p: any) => p.type === "image_url")?.image_url?.url ?? "";
       const nonce = (text.match(/nonce:\s*(0x[0-9a-fA-F]+)/) ?? [])[1] ?? "";
-      const verdict = img.startsWith("data:image/png;base64,") ? classify(Buffer.from(img.split(",")[1], "base64")) : { label: "unsure", severity: 0, action: "descend" };
+      const system = String(body.messages?.find((m: any) => m.role === "system")?.content ?? "");
+      const seen = img.startsWith("data:image/png;base64,") ? classify(Buffer.from(img.split(",")[1], "base64")) : ({ truth: "unsure", severity: 0 } as const);
+      const verdict = toAnswer(seen, system);
       await sleep(LATENCY * (0.75 + Math.random() * 0.5));
       const chatKey = crypto.randomUUID();
       const broker = {
