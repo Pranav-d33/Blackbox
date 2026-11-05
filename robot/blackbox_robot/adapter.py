@@ -34,6 +34,7 @@ from .mission import CONTROL_EVERY, MissionSim
 from .physics import PHYS_HZ, available_backends
 from .replay import replay
 from .sdk import check_policy_fits, world_meta, world_texture_jpg
+from .tee_registry import SERVING_CONTRACT, SERVING_RPC, ServingReader, SignerCheck
 
 HEX32 = re.compile(r"^0x[0-9a-fA-F]{64}$")
 
@@ -98,8 +99,10 @@ class Outbox(threading.Thread):
 
 class Adapter:
     def __init__(self, key: RobotKey, core_url: str, data_dir: str, speed: float = 1.0,
-                 texture_dir: Optional[str] = None, driver: str = "sim"):
+                 texture_dir: Optional[str] = None, driver: str = "sim",
+                 signer_check: Optional[SignerCheck] = None):
         self.key = key
+        self.signer_check = signer_check
         self.driver = driver
         self.core_url = core_url.rstrip("/")
         self.data_dir = data_dir
@@ -148,6 +151,8 @@ class Adapter:
             p = m.get("policy", {})
             if not p.get("tee_signers"):
                 raise ValueError("manifest has an empty TEE signer allowlist")
+            # the core wrote this allowlist; check it against a source the core does not control
+            signer_record = self.signer_check.check(m) if self.signer_check else None
             if not 500 <= int(p.get("lease_ms", 0)) <= 60000:
                 raise ValueError("lease_ms must be within 500..60000")
             if self.sim is not None:
@@ -177,6 +182,7 @@ class Adapter:
                 "chain_id": m.get("chain_id"),
                 "registry": m.get("registry"),
                 "backend": self.sim.backend,
+                **({"tee_signer_check": signer_record} if signer_record else {}),
                 "defects": defects,
             })
             self._event("info", f"mission {m['mission_id'][:10]} prepared, {len(defects)} defects placed")
@@ -633,7 +639,14 @@ def main(argv=None) -> None:
         key = RobotKey.generate()
         print("[adapter] WARNING: ROBOT_PRIVATE_KEY not set - using a throwaway key "
               "(it is not a zerobot operator, so on-chain registration will revert)")
-    ad = Adapter(key, args.core, os.path.abspath(args.data), args.speed, args.textures, args.driver)
+    mode = os.environ.get("ROBOT_TEE_SIGNERS_FROM", "chain")
+    pinned = [a.strip() for a in os.environ.get("ROBOT_TEE_SIGNERS", "").split(",") if a.strip()]
+    check = SignerCheck(mode, pinned, ServingReader(os.environ.get("ZG_SERVING_RPC", SERVING_RPC),
+                                                    os.environ.get("ZG_SERVING_CONTRACT", SERVING_CONTRACT)))
+    if mode == "off":
+        print("[adapter] WARNING: ROBOT_TEE_SIGNERS_FROM=off - the robot trusts the core's TEE signer "
+              "allowlist (mock 0G only)")
+    ad = Adapter(key, args.core, os.path.abspath(args.data), args.speed, args.textures, args.driver, check)
     srv = ThreadingHTTPServer((args.host, args.port), make_handler(ad))
     body = "rover hardware" if args.driver == "rover" else f"sim, physics {available_backends()[0]}, speed x{args.speed}"
     print(f"[adapter] robot {key.address} listening on http://{args.host}:{args.port} (core {args.core}, {body})",

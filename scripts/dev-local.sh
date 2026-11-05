@@ -37,6 +37,8 @@ ROBOT_PRIVATE_KEY=$K1
 ROBOT_NAME=blackbox-drone-local
 STORAGE=local
 ZG_MODE=mock
+# mock signers are not on 0G's InferenceServing, so the robot cannot check them there
+ROBOT_TEE_SIGNERS_FROM=off
 LEASE_MS=${LEASE_MS:-6000}
 SIM_SPEED=${SIM_SPEED:-1.5}
 EOF
