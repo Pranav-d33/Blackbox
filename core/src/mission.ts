@@ -15,7 +15,8 @@ import { type Bundle, type Policy, expectedEcho, extractContent, parseAnswer } f
 import { SerialQueue } from "./lib/queue";
 import { RobotClient } from "./robotClient";
 import type { Storage } from "./storage";
-import { type AllowlistEntry, type CheckpointRequest, ZgDecider } from "./zg/decide";
+import { type AllowlistEntry, type CheckpointRequest, DEFAULT_TASK, type Task, ZgDecider } from "./zg/decide";
+import { type Profile, loadProfile, simSection, vocabulary } from "./profile";
 import { ZgUnreachable } from "./zg/router";
 import { type MissionIndex, type Report, loadFromChain, verifyMission } from "./verifier/core";
 
@@ -113,7 +114,7 @@ export class Missions {
   }
 
   // ------------------------------------------------------------------ start
-  async start(opts: { defects?: any[]; seed?: number }): Promise<MissionRecord> {
+  async start(opts: { defects?: any[]; seed?: number; scenario?: string }): Promise<MissionRecord> {
     if (this.current && (this.current.status === "preparing" || this.current.status === "flying"))
       throw new Error("a mission is already in progress");
     const health = await this.robot.health().catch(() => {
@@ -131,6 +132,10 @@ export class Missions {
     if (!allow.signers.length)
       throw new Error(`no TEE signers found for ${this.cfg.zg.visionModel}: refusing to fly without an allowlist`);
 
+    const profile = loadProfile(opts.scenario ?? this.cfg.sim.scenario);
+    const backends: string[] = health.backends ?? [];
+    const backend = this.cfg.sim.backend === "auto" ? (backends[0] ?? "native") : this.cfg.sim.backend;
+    if (!backends.includes(backend)) throw new Error(`robot adapter has no ${backend} physics (has: ${backends.join(", ")})`);
     const seed = opts.seed ?? Math.floor(Math.random() * 2 ** 31);
     const missionId = keccak256(
       AbiCoder.defaultAbiCoder().encode(["address", "bytes32", "uint256", "bytes32"], [robot, robotId, Date.now(), hexlify(randomBytes(32))]),
@@ -146,8 +151,10 @@ export class Missions {
       registry: chain.enabled ? chain.registry : "0x0000000000000000000000000000000000000000",
       robot_registry: chain.enabled ? chain.robotRegistry : null,
       seed,
-      sim: { backend: this.cfg.sim.backend },
+      profile,
+      sim: simSection(profile, backend),
       policy: {
+        ...vocabulary(profile),
         vision_model: this.cfg.zg.visionModel,
         trust_mode: this.cfg.zg.trustMode,
         tee_signers: allow.signers,
@@ -237,8 +244,9 @@ export class Missions {
     }
     if (this.demo.forgeArmed) {
       this.demo.forgeArmed = false;
-      const forged = forgeBundle(req, this.policyOf(rec));
-      const at: Attempt = { at: Date.now(), kind: "forged", answer: { label: "decoy", action: "continue" } };
+      const forged = forgeBundle(req, this.policyOf(rec), rec.manifest.profile);
+      const fa = JSON.parse(JSON.parse(forged.raw_response).choices[0].message.content);
+      const at: Attempt = { at: Date.now(), kind: "forged", answer: { label: fa.label, action: fa.action } };
       cpv.attempts.push(at);
       this.robot
         .decision(forged, "operator console")
@@ -246,7 +254,7 @@ export class Missions {
         .catch((e) => (at.robot_result = `error: ${e.message}`));
     }
     try {
-      const { bundle, precheck } = await this.decider.decide(req, this.policyOf(rec));
+      const { bundle, precheck } = await this.decider.decide(req, this.policyOf(rec), taskOf(rec.manifest.profile));
       let out = bundle;
       const at: Attempt = {
         at: Date.now(),
@@ -261,7 +269,7 @@ export class Missions {
       cpv.attempts.push(at);
       if (this.demo.tamperArmed && precheck.accepted) {
         this.demo.tamperArmed = false;
-        const t = tamperBundle(bundle);
+        const t = tamperBundle(bundle, rec.manifest.profile);
         out = t.bundle;
         cpv.attempts.push({ at: Date.now(), kind: "tampered", answer: t.answer, request_id: bundle.request_id });
       }
@@ -428,6 +436,7 @@ export class Missions {
       manifestUrl: rec.manifestRoot ? this.storage.fileUrl(rec.manifestRoot) : null,
       manifestTxUrl: this.storage.txUrl(rec.manifestTx),
       policy: rec.manifest.policy,
+      profile: rec.manifest.profile ?? null,
       allowlist: rec.allowlist,
       registerTx: rec.chain.registerTx,
       registerTxUrl: txUrl(rec.chain.registerTx),
@@ -490,9 +499,10 @@ function summarizeBody(e: Entry) {
 }
 
 /** A perfectly formed answer for this checkpoint, signed by the operator's own key instead of 0G's TEE. */
-function forgeBundle(req: CheckpointRequest, policy: Policy): Bundle {
+function forgeBundle(req: CheckpointRequest, policy: Policy, profile?: Profile): Bundle {
   const operator = Wallet.createRandom();
-  const answer = { nonce: expectedEcho(req.nonce, policy.nonce_hex_len ?? 64), label: "decoy", severity: 0, action: "continue" };
+  const skip = otherAction(profile, defectAction(profile));
+  const answer = { nonce: expectedEcho(req.nonce, policy.nonce_hex_len ?? 64), label: labelFor(profile, skip), severity: 0, action: skip };
   const chat = crypto.randomUUID();
   const broker = {
     id: `chatcmpl-${chat}`,
@@ -521,11 +531,33 @@ function forgeBundle(req: CheckpointRequest, policy: Policy): Bundle {
 }
 
 /** The real 0G answer with its real TEE signature, but the action flipped (skip a crack / dive on a decoy). */
-function tamperBundle(b: Bundle): { bundle: Bundle; answer: Record<string, unknown> } {
+function tamperBundle(b: Bundle, profile?: Profile): { bundle: Bundle; answer: Record<string, unknown> } {
   const body = JSON.parse(b.raw_response);
-  const a = parseAnswer(extractContent(b.raw_response));
-  const flipped =
-    a.action === "descend" ? { ...a, label: "decoy", severity: 0, action: "continue" } : { ...a, label: "crack", severity: 3, action: "descend" };
+  const a = parseAnswer(extractContent(b.raw_response), vocabulary(profile ?? LEGACY));
+  const to = otherAction(profile, a.action);
+  const flipped = { ...a, label: labelFor(profile, to), severity: to === defectAction(profile) ? (profile?.decision.severity_max ?? 3) : 0, action: to };
   body.choices[0].message.content = JSON.stringify(flipped);
   return { bundle: { ...b, raw_response: goJson(body) }, answer: { label: flipped.label, action: flipped.action } };
+}
+
+const LEGACY = {
+  decision: { labels: ["crack", "decoy", "unsure"], actions: ["descend", "continue"], severity_max: 3, label_actions: { crack: "descend", decoy: "continue", unsure: "descend" }, prompt: "" },
+} as unknown as Profile;
+
+function taskOf(profile?: Profile): Task {
+  return profile ? { prompt: profile.decision.prompt, title: profile.title } : DEFAULT_TASK;
+}
+/** The action the profile's first (defect) label calls for, e.g. descend. */
+function defectAction(profile?: Profile): string {
+  const d = (profile ?? LEGACY).decision;
+  return d.label_actions[d.labels[0]] ?? d.actions[0];
+}
+function otherAction(profile: Profile | undefined, action: string): string {
+  const d = (profile ?? LEGACY).decision;
+  return d.actions.find((x) => x !== action) ?? action;
+}
+/** A label that the profile maps to this action (never "unsure"). */
+function labelFor(profile: Profile | undefined, action: string): string {
+  const d = (profile ?? LEGACY).decision;
+  return d.labels.find((l) => l !== "unsure" && d.label_actions[l] === action) ?? d.labels[0];
 }

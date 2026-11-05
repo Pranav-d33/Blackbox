@@ -1,6 +1,6 @@
 /**
  * Blackbox core: http://127.0.0.1:8787
- *   /            operator dashboard (sim map, decision feed, demo controls)
+ *   /            operator console (3D mission view, decision feed, demo beats, SDK)
  *   /verify.html public verifier (reads 0G Chain + 0G Storage in the browser)
  *   /api/...     robot-facing API (checkpoint, entries) + dashboard API
  */
@@ -11,6 +11,7 @@ import { CORE_ROOT, loadConfig } from "./config";
 import { RegistryClient } from "./chain/registry";
 import { Missions } from "./mission";
 import { RobotClient } from "./robotClient";
+import { listProfiles, loadProfile, simSection } from "./profile";
 import { makeStorage } from "./storage";
 import { ZgDecider } from "./zg/decide";
 import { RouterClient } from "./zg/router";
@@ -32,8 +33,14 @@ const MIME: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".json": "application/json",
   ".png": "image/png",
+  ".jpg": "image/jpeg",
   ".svg": "image/svg+xml",
+  ".obj": "text/plain; charset=utf-8",
+  ".woff2": "font/woff2",
 };
+
+/** A scenario's world before any mission exists: geometry for the 3D view, texture for placing defects. */
+const previewOf = (id: string) => robot.preview(simSection(loadProfile(id), "native"));
 
 function publicConfig() {
   const n = cfg.chain.network;
@@ -85,6 +92,8 @@ function serveStatic(res: ServerResponse, path: string) {
 type Handler = (req: IncomingMessage, m: RegExpMatchArray, url: URL) => Promise<unknown>;
 const routes: [string, RegExp, Handler][] = [
   ["GET", /^\/api\/config$/, async () => publicConfig()],
+  ["GET", /^\/api\/scenarios$/, async () => ({ scenarios: listProfiles(), default: cfg.sim.scenario })],
+  ["GET", /^\/api\/scenarios\/([a-z0-9-]+)\/preview$/, async (_q, m) => previewOf(m[1])],
   [
     "GET",
     /^\/api\/status$/,
@@ -129,6 +138,12 @@ const server = createServer(async (req, res) => {
   }
   try {
     if (req.method === "GET" && path === "/api/robot/world.png") return sendBytes(res, await robot.bytes("/world.png"), "image/png");
+    if (req.method === "GET" && path === "/api/robot/world/texture.jpg") return sendBytes(res, await robot.bytes("/world/texture.jpg", 20000), "image/jpeg");
+    let pm = path.match(/^\/api\/scenarios\/([a-z0-9-]+)\/preview\.jpg$/);
+    if (req.method === "GET" && pm) {
+      await previewOf(pm[1]);
+      return sendBytes(res, await robot.bytes("/world/preview.jpg", 20000), "image/jpeg");
+    }
     let m = path.match(/^\/api\/missions\/(0x[0-9a-fA-F]{64})\/crop\/(\d+)\.png$/);
     if (req.method === "GET" && m) return sendBytes(res, missions.crop(m[1], Number(m[2])), "image/png");
     m = path.match(/^\/api\/storage\/(0x[0-9a-fA-F]{64})$/);

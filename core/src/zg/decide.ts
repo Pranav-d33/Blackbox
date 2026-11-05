@@ -19,6 +19,12 @@ action: "descend" to inspect closely (cracks, and unsure), "continue" to skip (d
 Reply with exactly one JSON object and nothing else, copying the nonce from the user message exactly:
 {"nonce":"<nonce>","label":"crack|decoy|unsure","severity":0,"action":"descend|continue"}`;
 
+export interface Task {
+  prompt: string;
+  title: string;
+}
+export const DEFAULT_TASK: Task = { prompt: SYSTEM_PROMPT, title: "Bridge-deck inspection drone" };
+
 export interface CheckpointRequest {
   mission_id: string;
   checkpoint: number;
@@ -49,7 +55,7 @@ export class ZgDecider {
     public services: ServiceDirectory,
   ) {}
 
-  visionBody(req: CheckpointRequest, policy: Policy) {
+  visionBody(req: CheckpointRequest, policy: Policy, prompt = SYSTEM_PROMPT) {
     const echo = expectedEcho(req.nonce, policy.nonce_hex_len ?? 64);
     const body: Record<string, unknown> = {
       model: this.cfg.zg.visionModel,
@@ -58,7 +64,7 @@ export class ZgDecider {
       response_format: { type: "json_object" },
       verify_tee: true,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: prompt },
         {
           role: "user",
           content: [
@@ -76,13 +82,14 @@ export class ZgDecider {
   }
 
   /** Ask 0G; re-ask once inside the lease if the model's answer does not parse or echo the nonce. */
-  async decide(req: CheckpointRequest, policy: Policy): Promise<{ bundle: Bundle; precheck: InterlockResult }> {
+  /** task: the mission profile's prompt and title, from the manifest the robot loaded. */
+  async decide(req: CheckpointRequest, policy: Policy, task: Task = DEFAULT_TASK): Promise<{ bundle: Bundle; precheck: InterlockResult }> {
     const deadline = Date.now() + Math.max(500, req.deadline_ms - 250);
     let out: { bundle: Bundle; precheck: InterlockResult } | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       const left = deadline - Date.now();
       if (left < 300) break;
-      const r = await this.router.post("/chat/completions", this.visionBody(req, policy), left);
+      const r = await this.router.post("/chat/completions", this.visionBody(req, policy, task.prompt), left);
       const bundle = await this.toBundle(req, r, deadline);
       const precheck = verifyBundle(bundle, policy, req.nonce);
       out = { bundle, precheck };
@@ -91,7 +98,7 @@ export class ZgDecider {
     }
     if (!out) throw new Error("no time left in the lease to ask 0G");
     if (out.precheck.accepted && this.cfg.zg.decisionModel && out.precheck.answer) {
-      out.bundle.decision_model = await this.decisionModel(req, out.precheck.answer, deadline);
+      out.bundle.decision_model = await this.decisionModel(req, out.precheck.answer, deadline, task.title);
     }
     return out;
   }
@@ -141,11 +148,11 @@ export class ZgDecider {
   }
 
   /** R16: calibrated hold. Text-only decision model over the vision answer; below threshold -> ask a human. */
-  private async decisionModel(req: CheckpointRequest, a: { label: string; severity: number; action: string }, deadline: number) {
+  private async decisionModel(req: CheckpointRequest, a: { label: string; severity: number; action: string }, deadline: number, title: string) {
     const model = this.cfg.zg.decisionModel;
     const threshold = this.cfg.zg.holdBelowPermille;
     const state =
-      `Bridge-deck inspection drone, checkpoint ${req.checkpoint}. The on-board detector flagged a mark ` +
+      `${title}, checkpoint ${req.checkpoint}. The on-board detector flagged a mark ` +
       `(score ${req.detector_score}/255). The sealed vision model classified the camera crop as ` +
       `label=${a.label}, severity=${a.severity}, and proposes action=${a.action}.`;
     const body = {

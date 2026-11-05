@@ -19,6 +19,7 @@ export class RobotClient {
   prepare = (b: unknown) => this.call("POST", "/mission/prepare", b, 60000);
   go = () => this.call("POST", "/mission/go", {});
   place = (b: unknown) => this.call("POST", "/world/place", b);
+  preview = (sim: unknown) => this.call("POST", "/world/preview", { sim }, 30000);
   decision = (bundle: unknown, source: string) => this.call("POST", "/decision", { bundle, source });
   human = (b: unknown) => this.call("POST", "/human", b);
   estop = () => this.call("POST", "/estop", {});
@@ -26,9 +27,9 @@ export class RobotClient {
   counterfactual = (force = "continue") => this.call("POST", "/counterfactual", { force }, 60000);
   replay = (entries?: unknown[]) => this.call("POST", "/replay", entries ? { entries } : {}, 120000);
 
-  async bytes(path: string): Promise<Uint8Array | null> {
+  async bytes(path: string, timeoutMs = 3000): Promise<Uint8Array | null> {
     try {
-      const res = await fetch(this.base + path, { signal: AbortSignal.timeout(3000) });
+      const res = await fetch(this.base + path, { signal: AbortSignal.timeout(timeoutMs) });
       return res.ok ? new Uint8Array(await res.arrayBuffer()) : null;
     } catch {
       return null;
