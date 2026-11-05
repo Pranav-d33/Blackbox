@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from .canonical import go_json, sha256_hex
 from .crypto import expected_echo, recover_text
@@ -43,7 +43,14 @@ def extract_content(raw_response: str) -> str:
     return content
 
 
-def parse_answer(content: str) -> dict:
+def vocabulary(policy: dict) -> Tuple[Tuple[str, ...], Tuple[str, ...], int]:
+    """(labels, actions, severity_max) the mission profile allows; old manifests get the defaults."""
+    return (tuple(policy.get("labels") or LABELS), tuple(policy.get("actions") or ACTIONS),
+            int(policy.get("severity_max", 3)))
+
+
+def parse_answer(content: str, labels: Sequence[str] = LABELS, actions: Sequence[str] = ACTIONS,
+                 severity_max: int = 3) -> dict:
     s = content.strip()
     s = re.sub(r"^<think>.*?</think>", "", s, flags=re.S).strip()
     if s.startswith("```"):
@@ -59,13 +66,13 @@ def parse_answer(content: str) -> dict:
         raise AnswerError(f"answer keys {sorted(obj.keys())} != {sorted(ANSWER_KEYS)}")
     if not isinstance(obj["nonce"], str):
         raise AnswerError("nonce is not a string")
-    if obj["label"] not in LABELS:
-        raise AnswerError(f"label {obj['label']!r} not in {LABELS}")
+    if obj["label"] not in labels:
+        raise AnswerError(f"label {obj['label']!r} not in {tuple(labels)}")
     sev = obj["severity"]
-    if isinstance(sev, bool) or not isinstance(sev, int) or not 0 <= sev <= 3:
-        raise AnswerError("severity must be an integer 0-3")
-    if obj["action"] not in ACTIONS:
-        raise AnswerError(f"action {obj['action']!r} not in {ACTIONS}")
+    if isinstance(sev, bool) or not isinstance(sev, int) or not 0 <= sev <= severity_max:
+        raise AnswerError(f"severity must be an integer 0-{severity_max}")
+    if obj["action"] not in actions:
+        raise AnswerError(f"action {obj['action']!r} not in {tuple(actions)}")
     return {"nonce": obj["nonce"].lower(), "label": obj["label"], "severity": sev, "action": obj["action"]}
 
 
@@ -129,7 +136,7 @@ def verify_bundle(bundle: dict, policy: dict, nonce: str) -> dict:
         return res
     try:
         content = extract_content(raw)
-        answer = parse_answer(content)
+        answer = parse_answer(content, *vocabulary(policy))
     except AnswerError as e:
         res["reason"] = f"answer does not parse: {e}"
         return res
