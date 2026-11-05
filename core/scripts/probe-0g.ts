@@ -3,7 +3,8 @@
  *   npm run probe                      # vision accuracy, nonce echo, TEE signature + binding, latency
  *   npm run probe -- --echo 20         # also send the nonce-echo prompt 20 times
  *   npm run probe -- --storage         # 1 KB MemData upload + read-back on 0G Storage
- *   npm run probe -- --images <dir>    # your own crack-*.png / decoy-*.png crops
+ *   npm run probe -- --images <dir>    # your own <label>-*.png crops (crack-0.png, decoy-1.png, ...)
+ *   npm run probe -- --scenario solar-farm   # the solar profile's prompt + robot/assets/probe-solar
  * Prints which TEE binding holds (set TEE_BINDING) and a lease recommendation (set LEASE_MS).
  */
 import { readFileSync, readdirSync } from "node:fs";
@@ -11,6 +12,7 @@ import { join } from "node:path";
 import { hexlify, randomBytes, toUtf8Bytes } from "ethers";
 import { REPO_ROOT, loadConfig } from "../src/config";
 import { responseHashCandidates, splitSignedText } from "../src/lib/interlock";
+import { loadProfile, vocabulary } from "../src/profile";
 import { makeStorage } from "../src/storage";
 import { ZgDecider } from "../src/zg/decide";
 import { RouterClient } from "../src/zg/router";
@@ -28,10 +30,16 @@ console.log(`0G Compute: ${cfg.zg.endpoints.map((e) => `${e.name}=${e.url}`).joi
 const allow = await decider.allowlist();
 for (const p of allow.providers) console.log(`provider ${p.provider}  ${p.verifiability}  signer ${p.signer}  ${p.url}  [${p.endpoint}]`);
 if (!allow.signers.length) throw new Error("no acknowledged TEE signer found for the model");
-const policy = { tee_signers: allow.signers, tee_binding: "auto", nonce_hex_len: cfg.policy.nonceHexLen };
+const profile = loadProfile(opt("scenario") ?? "bridge-deck");
+const { labels, actions } = profile.decision;
+const [defect, benign] = labels;
+const task = { prompt: profile.decision.prompt, title: profile.title };
+const policy = { tee_signers: allow.signers, tee_binding: "auto", nonce_hex_len: cfg.policy.nonceHexLen, ...vocabulary(profile) };
+console.log(`scenario ${profile.id}: labels ${labels.join("|")}, actions ${actions.join("|")}\n`);
 
-const dir = opt("images") ?? join(REPO_ROOT, "robot", "assets", "probe");
-const images = readdirSync(dir).filter((f) => /^(crack|decoy).*\.png$/i.test(f)).sort();
+const dir = opt("images") ?? join(REPO_ROOT, "robot", "assets", profile.id === "bridge-deck" ? "probe" : `probe-${profile.id.split("-")[0]}`);
+const images = readdirSync(dir).filter((f) => f.endsWith(".png") && labels.includes(f.split("-")[0])).sort();
+if (!images.length) throw new Error(`no ${labels.join("/")}-*.png crops in ${dir} (make them: cd robot && .venv/bin/python -m blackbox_robot.probe_images <dir> ${profile.id})`);
 const echoN = Number(opt("echo") ?? 0);
 const jobs = [...images.map((f) => ({ f, echo: false })), ...Array.from({ length: echoN }, () => ({ f: images[0], echo: true }))];
 
@@ -45,7 +53,7 @@ for (const { f, echo } of jobs) {
   };
   const t0 = Date.now();
   try {
-    const { bundle, precheck } = await decider.decide(req, policy);
+    const { bundle, precheck } = await decider.decide(req, policy, task);
     const text = bundle.tee.text ?? "";
     const h = splitSignedText(text);
     const cands = responseHashCandidates(bundle.raw_response);
@@ -70,14 +78,15 @@ for (const { f, echo } of jobs) {
 }
 
 const cls = rows.filter((r) => !r.echo && !r.error);
-const cracks = cls.filter((r) => r.want === "crack");
-const decoys = cls.filter((r) => r.want === "decoy");
+const defects = cls.filter((r) => r.want === defect);
+const benigns = cls.filter((r) => r.want === benign);
 const ms = rows.filter((r) => !r.error).map((r) => r.ms).sort((a, b) => a - b);
 const median = ms[Math.floor(ms.length / 2)] ?? 0;
 const echoed = rows.filter((r) => r.echo && r.accepted).length;
 console.log(`\nGate A`);
-console.log(`  cracks flagged   ${cracks.filter((r) => r.got === "crack" || r.got === "unsure").length}/${cracks.length} (need >= 4/5)`);
-console.log(`  decoys rejected  ${decoys.filter((r) => r.action === "continue").length}/${decoys.length} (need all)`);
+const need = Math.ceil(defects.length * 0.8);
+console.log(`  ${(defect + " flagged").padEnd(16)} ${defects.filter((r) => r.got === defect || r.got === "unsure").length}/${defects.length} (need >= ${need}/${defects.length})`);
+console.log(`  ${(benign + " rejected").padEnd(16)} ${benigns.filter((r) => r.action === actions[1]).length}/${benigns.length} (need all)`);
 console.log(`  answers accepted ${rows.filter((r) => r.accepted).length}/${rows.length} (parse + nonce + TEE signer + binding)`);
 if (echoN) console.log(`  nonce echo       ${echoed}/${echoN}`);
 console.log(`  median latency   ${median} ms -> LEASE_MS=${Math.min(12000, Math.max(3000, 3 * median))}`);
