@@ -2,86 +2,270 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Blackbox Operator Console</title>
-  <link rel="stylesheet" href="/style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <title>Blackbox · 0G decides. Blackbox proves it.</title>
+  <script>document.documentElement.classList.add("js");</script>
+  <link rel="stylesheet" href="/vendor/fonts/fonts.css" />
+  <link rel="stylesheet" href="/launch.css" />
+  <script type="importmap">
+    { "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three/addons/" } }
+  </script>
 </head>
 <body>
-  <div id="mockbar" class="mockbar" hidden>MOCK 0G - development stand-in, not 0G Compute. Set ZG_MODE=router for the real sealed model.</div>
-  <header class="top">
-    <div class="brand"><b>BLACKBOX</b><span>0G decides. Blackbox proves it.</span></div>
-    <div class="chips" id="chips"></div>
+  <nav class="localnav dark" aria-label="Blackbox">
+    <div class="wide">
+      <b>Blackbox</b>
+      <a class="l" href="#highlights">Highlights</a>
+      <a class="l" href="#sealed">How it works</a>
+      <a class="l" href="#why">Why 0G</a>
+      <a class="l" href="#sdk">For developers</a>
+      <a class="l" href="/verify.html">Verify</a>
+      <a class="pill small" href="/console.html">Try the demo</a>
+    </div>
+  </nav>
+
+  <!-- 1 · hero: the keynote stage -->
+  <header class="hero dark">
+    <div class="col">
+      <p class="eyebrow">New</p>
+      <h1 class="hero-name">Blackbox</h1>
+      <p class="intro">0G decides. Blackbox proves it.</p>
+      <div class="cta">
+        <a class="pill" href="/console.html">Try the live demo</a>
+        <a class="more" href="#why">Why 0G</a>
+      </div>
+    </div>
+    <div class="stagebox">
+      <div id="hero3d" aria-label="Live 3D replay of the last mission on this machine"></div>
+      <div class="caption live" id="liveCap"><span class="dot"></span>Loading the last mission…</div>
+      <div class="caption drag">Drag to rotate</div>
+    </div>
   </header>
 
-  <div class="wrap grid">
-    <div class="stack">
-      <section class="card">
-        <h2>Inspection mission <span class="sp"></span><span class="mono muted" id="missionId">no mission</span></h2>
-        <canvas id="map" width="1400" height="520"></canvas>
-        <div class="lease"><i id="leaseBar"></i></div>
-        <div class="hud" id="hud"></div>
-
-        <div class="beats">
-          <div class="beat">
-            <div class="t">1 · Drop a crack</div>
-            <div class="row">
-              <button class="toggle on" id="modeCrack">Crack</button>
-              <button class="toggle" id="modeDecoy">Decoy</button>
-              <button class="primary" id="btnStart">Start mission</button>
-            </div>
-            <div class="muted" style="margin-top:6px;font-size:12px">Click the deck to place. Before or during the flight.</div>
-          </div>
-          <div class="beat">
-            <div class="t">2 · Did 0G move the robot?</div>
-            <div class="row"><button id="btnSplit">Split screen: force "continue"</button></div>
-          </div>
-          <div class="beat">
-            <div class="t">3 · Dishonest operator</div>
-            <div class="row">
-              <button class="danger" id="btnForge">Forge "continue"</button>
-              <button class="danger" id="btnTamperAns">Tamper 0G answer</button>
-              <button class="danger" id="btnTamperLog">Edit log, verify</button>
-            </div>
-          </div>
-          <div class="beat">
-            <div class="t">4 · Kill switch</div>
-            <div class="row">
-              <button class="danger" id="btnKill">Cut 0G link</button>
-              <button class="danger" id="btnEstop">E-stop</button>
-            </div>
-          </div>
-          <div class="beat">
-            <div class="t">5 · Verify</div>
-            <div class="row">
-              <button id="btnVerify">Verify on 0G</button>
-              <a id="lnkVerifier" target="_blank"><button>Public verifier ↗</button></a>
-              <button id="btnQR">QR</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Record on 0G <span class="sp"></span><span class="mono muted" id="queueInfo"></span></h2>
-        <div class="kv" id="recordKv"></div>
-        <div style="overflow:auto;margin-top:10px"><table class="ledger" id="ledger"></table></div>
-      </section>
-
-      <section class="card">
-        <h2>Robot adapter events</h2>
-        <div class="events" id="events"></div>
-      </section>
+  <!-- 2 · the statement -->
+  <section class="light band center">
+    <div class="col reveal">
+      <h2 class="headline">The flight recorder<br />for AI robots.</h2>
+      <p class="intro lede">An inspection drone makes calls that cost money. Blackbox has 0G's sealed model make each one, records it on 0G, and the robot refuses to move on anything else.</p>
     </div>
+  </section>
 
-    <section class="card">
-      <h2>Checkpoint decisions <span class="sp"></span><span class="mono muted" id="feedCount"></span></h2>
-      <div class="feed" id="feed"><div class="muted">Checkpoints appear here. At each one the robot holds, 0G's sealed model decides, and the robot checks the TEE signature before it moves.</div></div>
-    </section>
-  </div>
+  <!-- 3 · highlights -->
+  <section class="light" id="highlights">
+    <div class="col hl-head reveal">
+      <h2 class="headline" style="margin:0">Get the highlights.</h2>
+    </div>
+    <div class="carousel" tabindex="0" aria-label="Highlights">
+      <article class="hl">
+        <h3>0G decides the path.</h3>
+        <p>The drone holds over a flagged module and asks 0G. A cracked cell gets a close-up for the repair crew.</p>
+        <div class="art"><img class="crop" id="hlCrack" src="/media/cracked_cell-0.png" alt="Camera crop of a PV module with a shattered cell" /></div>
+        <span class="badge flame">cracked_cell → descend</span>
+      </article>
+      <article class="hl">
+        <h3>Dust? It moves on.</h3>
+        <p>Soiling only needs the cleaning crew, so 0G sends the drone onward. Every call is logged either way.</p>
+        <div class="art"><img class="crop" src="/media/soiling-1.png" alt="Camera crop of a PV module with bird droppings" /></div>
+        <span class="badge">soiling → continue</span>
+      </article>
+      <article class="hl">
+        <h3>Forgeries don't fly.</h3>
+        <p>An operator signs a fake "continue" with their own key. The robot checks the signer against the manifest and refuses.</p>
+        <div class="art"><div class="term"><span class="m">operator console →</span> {"label":"soiling","action":"continue"}<br /><span class="r">✕ unsigned decision rejected: signer is not on the manifest allowlist</span><br /><span class="m">robot keeps holding · asks 0G again</span><br /><span class="g">✓ 0G: cracked_cell → descend</span></div></div>
+      </article>
+      <article class="hl">
+        <h3>No 0G. No decision.</h3>
+        <p>Cut the link mid-flight. The lease runs out, the drone flies home, and the record says exactly that.</p>
+        <div class="art"><div class="term"><span class="m">checkpoint 2 · lease 6000 ms</span><br /><span class="r">■ 0G unreachable, no decision made</span><br /><span class="m">no cache · no local stand-in</span><br /><span class="g">✓ returned home · landed</span></div></div>
+      </article>
+      <article class="hl">
+        <h3>Check it from your phone.</h3>
+        <p>Scan the code. Your browser reads 0G Chain and 0G Storage and re-checks the whole mission.</p>
+        <div class="art" style="place-items:stretch"><ul class="steps">
+          <li><span>Every entry hash recomputes</span></li><li><span>Signed by the registered robot</span></li><li><span>Anchored on 0G Chain every 2 decisions</span></li>
+          <li><span>Each answer signed by an allowlisted TEE</span></li><li><span>Each answer echoes its nonce</span></li><li><span>Replay reproduces the trajectory</span></li></ul></div>
+        <span class="badge ok">VERIFIED</span>
+      </article>
+    </div>
+  </section>
 
-  <div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
-  <div class="toast" id="toast"></div>
-  <script src="/app.js" type="module"></script>
+  <!-- 4 · performance: the decision, sealed -->
+  <section class="dark band center" id="sealed">
+    <div class="col reveal">
+      <p class="eyebrow">Sealed inference</p>
+      <h2 class="headline">The decision,<br />sealed in a TEE.</h2>
+      <p class="intro lede">0G's own vision model looks at the camera crop inside an Intel TDX enclave and signs its answer. The robot checks that signature before a single rotor changes speed.</p>
+      <div class="stats">
+        <div><div class="stat grad">0GM-1.0</div><p>0G's own vision model, running sealed (TeeML).<sup>1</sup></p></div>
+        <div><div class="stat grad">4 checks</div><p>before the robot acts: parses, nonce echoed, signer allowlisted, signature covers the bytes.</p></div>
+        <div><div class="stat grad">Every 2</div><p>decisions, the robot signs its chain head and it is anchored on 0G Chain.</p></div>
+        <div><div class="stat grad">&lt; 1¢</div><p>of 0G Compute per decision.<sup>2</sup></p></div>
+      </div>
+      <div class="pipeline">
+        <div><em>1</em><b>Hold</b><span>The drone stops over the mark. nonce = keccak256(mission, frame, k).</span></div>
+        <div><em>2</em><b>Ask 0G</b><span>Crop and nonce go to the sealed model. Strict JSON comes back.</span></div>
+        <div><em>3</em><b>Fetch the signature</b><span>The TEE's EIP-191 signature for that exact response.</span></div>
+        <div><em>4</em><b>Verify</b><span>The robot itself checks all four. Any failure is a refusal.</span></div>
+        <div><em>5</em><b>Act and record</b><span>Robot-signed entry to 0G Storage. Motion never waits for it.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · deep dive: verify before actuate -->
+  <section class="light band">
+    <div class="col split">
+      <div class="reveal">
+        <p class="eyebrow">Verify before actuate</p>
+        <h2 class="title">It only moves on what 0G signed.</h2>
+        <p style="color:var(--ink-muted)">Most systems log what the AI said after the fact. Blackbox puts the check in the control loop. A dishonest operator can't make the robot act on a decision 0G never made, and can't flip a real one.</p>
+      </div>
+      <div class="frame reveal" id="proofFrame">
+        <ul class="steps" id="proofSteps">
+          <li><span>Robot holds · nonce echoed</span></li>
+          <li><span>Sealed call · 0gm-1.0-35b-a3b</span></li>
+          <li><span>0G answer · cracked_cell · severity 2 · descend</span></li>
+          <li><span>TEE signer on the manifest allowlist</span></li>
+          <li><span>Signature covers these exact response bytes</span></li>
+          <li><span>Robot acts · descend · entry → 0G Storage</span></li>
+        </ul>
+        <p class="caption" style="margin:14px 0 0" id="proofCap">From the last mission on this machine.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · deep dive: replay -->
+  <section class="dark band">
+    <div class="col split">
+      <div class="frame black reveal">
+        <div class="vs">
+          <div><b class="blue">0G decided</b><span class="stat grad" id="vsReal" style="font-size:64px;display:block">2</span><span>close-ups of cracked cells</span></div>
+          <div><b class="red">Forced to "continue"</b><span class="stat" id="vsForced" style="font-size:64px;display:block;color:#ff453a">0</span><span>close-ups. It flies past the damage.</span></div>
+        </div>
+      </div>
+      <div class="reveal">
+        <p class="eyebrow">Replayable</p>
+        <h2 class="title">Same seed. Same flight.</h2>
+        <p style="color:var(--ink-muted)">MuJoCo flies a Skydio X2 quadrotor on four rotor thrusts. Replay any mission from its seed and the logged answers and you get the same trajectory hash. Force every answer to "continue" and watch it skip the cracks. 0G's answer moved the robot.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · bento: why 0G -->
+  <section class="light band" id="why">
+    <div class="col center reveal">
+      <p class="eyebrow">Why 0G</p>
+      <h2 class="headline">Three layers.<br />Each doing real work.</h2>
+      <p class="intro lede">A signed log alone doesn't need a blockchain. Proving which sealed model made each call, and that the robot obeyed only it, does.</p>
+    </div>
+    <div class="wide">
+      <div class="bento">
+        <div class="tile ink w2 reveal">
+          <svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></svg>
+          <span class="k">0G Compute</span><h3>The model signs its own answer.</h3>
+          <p>Sealed inference in an Intel TDX enclave. The signer is registered on 0G, so anyone can tell which model made the call.</p>
+        </div>
+        <div class="tile reveal">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+          <span class="k">0G Storage</span><h3>Every decision, by root hash.</h3>
+          <p>Crop hash, answer, request id and TEE signature, signed by the robot and chained.</p>
+        </div>
+        <div class="tile reveal">
+          <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
+          <span class="k">0G Chain</span><h3>Anchored every two decisions.</h3>
+          <p>The mission and its policy are registered before takeoff. Change one entry later and the verifier names it.</p>
+        </div>
+        <div class="tile reveal">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          <span class="k">zerobot</span><h3>A robot with an identity.</h3>
+          <p>Only a registered zerobot operator key can anchor its missions.</p>
+        </div>
+        <div class="tile ink reveal">
+          <span class="k">Fails closed</span><h3>No answer, no motion.</h3>
+          <div class="big grad">0</div>
+          <p>decisions faked when 0G is unreachable. There is no fallback model.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · SDK -->
+  <section class="light band" id="sdk">
+    <div class="col split">
+      <div class="reveal">
+        <p class="eyebrow">For developers</p>
+        <h2 class="title">Built for any robot.</h2>
+        <p style="color:var(--ink-muted)">A mission profile is a small JSON task pack: the world, the labels 0G may answer, the actions it may choose, and the prompt. It goes on 0G Storage with the manifest, and the robot's interlock enforces it. Implement three calls and your robot runs under Blackbox.</p>
+        <div class="scenarios"><span class="chip">Solar farm O&amp;M</span><span class="chip">Bridge-deck survey</span><span class="chip next">Your robot</span></div>
+      </div>
+      <pre class="code reveal"><span class="k">from</span> blackbox_robot.sdk <span class="k">import</span> Robot
+
+<span class="k">class</span> MyRobot(Robot):
+    ACTIONS = (<span class="s">"descend"</span>, <span class="s">"continue"</span>)
+
+    <span class="k">def</span> step(self):
+        <span class="c"># your control loop</span>
+        <span class="k">return</span> {<span class="s">"type"</span>: <span class="s">"checkpoint"</span>, <span class="s">"png"</span>: frame}
+
+    <span class="k">def</span> resolve(self, action):
+        <span class="c"># only an action 0G signed,</span>
+        <span class="c"># or "safe_stop"</span>
+        ...</pre>
+    </div>
+  </section>
+
+  <!-- 9 · compare -->
+  <section class="light band">
+    <div class="col">
+      <div class="center reveal">
+        <h2 class="headline">Who checks the drone?</h2>
+        <p class="intro lede">The asset owner, the insurer and the module maker all need to know what the drone saw and decided. Today they take the operator's word.</p>
+      </div>
+      <div class="cmp reveal">
+        <table>
+          <tr><th></th><th>Operator database</th><th>Signed log</th><th class="us">Blackbox on 0G</th></tr>
+          <tr><td>Was an entry changed later?</td><td>No way to tell</td><td>Yes</td><td class="us">Yes, against anchors on 0G Chain</td></tr>
+          <tr><td>Which model made the call?</td><td>Operator says so</td><td>Operator says so</td><td class="us">TEE signature from a signer on 0G</td></tr>
+          <tr><td>Made for this checkpoint?</td><td>No</td><td>No</td><td class="us">Answer echoes the robot's nonce</td></tr>
+          <tr><td>Did the robot obey only that?</td><td>No</td><td>No</td><td class="us">Refuses anything else, and logs it</td></tr>
+          <tr><td>Can a stranger check it?</td><td>No</td><td>If handed the file</td><td class="us">From a phone, no account</td></tr>
+          <tr><td>What if the AI is unreachable?</td><td>Silent fallback</td><td>Not recorded</td><td class="us">Safe stop, "no decision made"</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · see it decide -->
+  <section class="dark band center">
+    <div class="col reveal">
+      <p class="eyebrow">Live on this machine</p>
+      <h2 class="headline">See it decide.</h2>
+      <div class="receipt" id="receipt">
+        <div class="row"><span>Mission</span><b id="rId">no mission yet</b></div>
+        <div class="row"><span>Profile</span><b id="rProfile">–</b></div>
+        <div class="row"><span>Decisions</span><b id="rDec">–</b></div>
+        <div class="row"><span>Refused</span><b id="rRef">–</b></div>
+        <div class="row"><span>Anchors on 0G Chain</span><b id="rAnc">–</b></div>
+        <div class="row"><span>x_0g_trace.request_id</span><b id="rReq">–</b></div>
+        <div class="row"><span>Verifier</span><b id="rVer">–</b></div>
+      </div>
+      <div class="cta">
+        <a class="pill" href="/console.html">Try the live demo</a>
+        <a class="more" id="lnkVerify" href="/verify.html">Verify this mission</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="light">
+    <div class="col">
+      <ol>
+        <li id="fn1">Sealed inference on <code>0gm-1.0-35b-a3b</code> when the core runs against the 0G Router (<code>ZG_MODE=router</code>). <span id="mockNote"></span></li>
+        <li><span>At 0GM-1.0's listed price of $0.08 per 1M input tokens. Storage and gas are separate.</span></li>
+        <li><span>Blackbox's record is tamper-evident, not tamper-proof. It shows the robot acted only on answers signed by an allowlisted 0G TEE signer, each produced for its request. It does not prove what the camera saw.</span></li>
+      </ol>
+      <p class="fine">Blackbox is built for ETHGlobal Mumbai 2026, 0G Physical AI: Agents with a Body. Drone model: Skydio X2 from MuJoCo Menagerie (Apache-2.0, assets provided by Skydio). Physics: MuJoCo. 3D: three.js.</p>
+    </div>
+  </footer>
+  <script type="module" src="/launch.js"></script>
 </body>
 </html>
