@@ -13,7 +13,7 @@ from typing import Deque, Dict, List, Optional, Set, Tuple
 from .canonical import canonical_json, keccak_hex
 from .crypto import checkpoint_nonce
 from .physics import HALF_H, PHYS_HZ, controller, make_body
-from .world import World
+from .sdk import make_world
 
 SAMPLE_EVERY = 24  # 10 Hz trajectory samples
 CONTROL_EVERY = 12  # 20 Hz detector
@@ -37,6 +37,10 @@ OUTCOMES = ("descend", "continue", "safe_stop")
 
 
 class MissionSim:
+    """A survey drone implementing sdk.Robot. 0G may choose between ACTIONS at a checkpoint."""
+
+    ACTIONS = ("descend", "continue")
+
     def __init__(self, mission_id: str, seed: int, sim_cfg: Optional[dict] = None, texture_dir: Optional[str] = None):
         self.cfg = dict(DEFAULT_SIM)
         self.cfg.update(sim_cfg or {})
@@ -44,7 +48,7 @@ class MissionSim:
         self.mission_id = mission_id
         self.seed = int(seed)
         self.backend = c["backend"]
-        self.world = World(c["deck_mm"][0], c["deck_mm"][1], self.seed, texture_dir)
+        self.world = make_world(c, self.seed, texture_dir)
         hx, hy = c["home_mm"]
         self.body = make_body(self.backend, hx / 1000.0, hy / 1000.0, 0.0)
         self.step_idx = 0
@@ -298,6 +302,8 @@ class MissionSim:
             "inspected": self.inspected,
             "final": self.final,
             "backend": self.backend,
+            "crop_mm": self.cfg["crop_mm"],
+            "attitude": self.body.attitude() if hasattr(self.body, "attitude") else None,
         }
 
     def close(self) -> None:
