@@ -2,7 +2,11 @@
 
 **A decision recorder for autonomous inspection robots.** At every checkpoint the robot holds still and sends its camera crop to **0G's own sealed vision model** (`0gm-1.0-35b-a3b`, TeeML on Intel TDX). It moves **only** on an answer signed by an allowlisted 0G TEE signer that echoes its own nonce. Every decision goes into a robot-signed, keccak256-chained episode log on **0G Storage**, and the chain head is anchored on **0G Chain** every 2 decisions. If 0G is unreachable, the robot safe-stops and the log says *"0G unreachable, no decision made"*. It never guesses. Anyone can re-check a mission from one public link, and the mission can be **replayed** from its seed to the same trajectory hash.
 
-Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (sim drone), plus an optional real rover twin.
+**It is a recorder SDK, not a one-off demo.** What the robot inspects, which labels 0G may answer and which actions it may choose live in a *mission profile* (`scenarios/*.json`) that goes into the manifest on 0G Storage. The same code runs a **solar farm O&M survey** and a **bridge-deck crack survey**, flown by a **Skydio X2 quadrotor in MuJoCo** and shown in a 3D operator console.
+
+Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJoCo drone), plus an optional real rover twin.
+
+**Why 0G, and why a chain:** [docs/why-0g.md](docs/why-0g.md). **Video and booth script:** [docs/demo-script.md](docs/demo-script.md).
 
 > Built on [zerobot](https://github.com/0gfoundation/zerobot): robots are identified by zerobot's `RobotRegistry`, and `BlackboxRegistry` checks `isOperator()` on it.
 
@@ -13,34 +17,37 @@ Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (sim 
 1. [What the judges see (demo beats)](#what-the-judges-see)
 2. [Qualification map](#qualification-map)
 3. [Architecture](#architecture)
-4. [Project structure](#project-structure)
-5. [0G technology used](#0g-technology-used)
-6. [Quick start: offline, no keys](#quick-start-offline-no-keys)
-7. [Run on 0G testnet (Galileo)](#run-on-0g-testnet-galileo)
-8. [Manual values checklist](#manual-values-checklist)
-9. [Going to mainnet](#going-to-mainnet)
-10. [Not yet verified against live 0G](#not-yet-verified-against-live-0g)
-11. [Testing](#testing)
-12. [Claims we make (and don't)](#claims-we-make-and-dont)
-13. [Submission checklist](#submission-checklist)
-14. [Deployment addresses](#deployment-addresses)
-15. [Credits](#credits)
+4. [SDK: mission profiles and the Robot interface](#sdk-mission-profiles-and-the-robot-interface)
+5. [Project structure](#project-structure)
+6. [0G technology used](#0g-technology-used)
+7. [Quick start: offline, no keys](#quick-start-offline-no-keys)
+8. [Run on 0G testnet (Galileo)](#run-on-0g-testnet-galileo)
+9. [Manual values checklist](#manual-values-checklist)
+10. [Going to mainnet](#going-to-mainnet)
+11. [Not yet verified against live 0G](#not-yet-verified-against-live-0g)
+12. [Testing](#testing)
+13. [Claims we make (and don't)](#claims-we-make-and-dont)
+14. [Submission checklist](#submission-checklist)
+15. [Deployment addresses](#deployment-addresses)
+16. [Credits](#credits)
 
 ---
 
 ## What the judges see
 
-The operator console (`http://127.0.0.1:8787`) has one button per beat.
+`http://127.0.0.1:8787` opens the **launch page**: a keynote-style product page (Launch Showcase design system) whose hero replays the last mission on the machine in 3D, with live numbers from that mission and a receipt that verifies it. **Try the live demo** opens the operator console at `/console.html`.
+
+The operator console is a 3D view of the mission: the scenario's world, the MuJoCo drone, its flown path and one pin per checkpoint showing what 0G decided. The five beats sit in its left column, and a live card walks through each checkpoint (robot holds → sealed call → 0G answer → interlock → robot acts). Pick the scenario in the top bar.
 
 | Beat | Judge does | What it shows | Console control |
 |---|---|---|---|
-| **1. Drop a crack** | Clicks the deck to place cracks and decoys (before or during flight) | The local detector flags **both**. 0G's sealed call flags the crack and rejects the decoy. The drone descends only on the crack. The card shows `request_id`, chat id, TEE signer ✔, binding, and the 0G Storage root | *Crack / Decoy* toggle, *Start mission* |
-| **2. Split screen** | Watches | Same seed, same world, 0G's answers forced to "continue": the second drone flies past the crack. **0G's answer moved the robot** | *Split screen: force "continue"* |
+| **1. Drop a defect** | Clicks the surface to place defects and benign marks (solar: *Cracked cell* / *Soiling*; deck: *Crack* / *Decoy*), before or during flight | The local detector flags **both**. 0G's sealed call flags the defect and rejects the benign mark. The drone descends only on the defect. The pin and card show `request_id`, TEE signer ✔, binding, and the 0G Storage root | kind buttons, *Start mission* |
+| **2. Split screen** | Watches | Same seed, same world, 0G's answers forced to "continue": a second, red drone flies past the defect. **0G's answer moved the robot** | *Replay, 0G forced to "continue"* |
 | **3a. Forged decision** | Sends a forged "continue" from the operator console | The robot refuses: *"unsigned decision rejected: signer 0x… is not on the manifest allowlist"*. The refusal is logged | *Forge "continue"* |
-| **3b. Tampered answer** | The core flips 0G's real answer but keeps 0G's real signature | The robot refuses: *"TEE signature does not cover this answer"*, asks 0G again, then acts on the genuine answer | *Tamper 0G answer* |
-| **3c. Tampered log** | Lowers a severity in a local copy of the log | The verifier turns red and names the entry (*"Entry #2 (decision) was changed after the robot signed it"*) | *Edit log, verify* |
+| **3b. Tampered answer** | The core flips 0G's real answer but keeps 0G's real signature | The robot refuses: *"TEE signature does not cover this answer"*, asks 0G again, then acts on the genuine answer | *Tamper answer* |
+| **3c. Tampered log** | Lowers a severity in a local copy of the log | The verifier turns red and names the entry (*"Entry #2 (decision) was changed after the robot signed it"*) | *Edit log* |
 | **4. Kill switch** | Cuts the 0G link mid-mission (or kills the core) | The lease expires, the drone returns home, and the log reads *"0G unreachable, no decision made"*. There is no cached or local stand-in | *Cut 0G link*, *E-stop* |
-| **5. Verify on your phone** | Scans the QR | The public verifier reads 0G Chain and 0G Storage **in the browser**: robot signatures, TEE signer, nonces, anchors, manifest, replay | *Verify on 0G*, *Public verifier*, *QR* |
+| **5. Verify on your phone** | Scans the QR | The public verifier reads 0G Chain and 0G Storage **in the browser**: robot signatures, TEE signer, nonces, anchors, manifest, replay | *Verify on 0G*, *Public ↗*, *QR* |
 
 ---
 
@@ -50,7 +57,7 @@ The operator console (`http://127.0.0.1:8787`) has one button per beat.
 |---|---|---|
 | A 0G call inside the decision loop | At every checkpoint the robot holds, and `0gm-1.0-35b-a3b` (sealed, `X-0G-Provider-Trust-Mode: private`, `verify_tee: true`) classifies the crop and picks `descend`/`continue`. The path depends on the answer (beat 2). Optional **decision model** (`laya`/`vela-2.0-9b` on `/v1/decisions`) gives a calibrated hold | `core/src/zg/decide.ts`, `robot/blackbox_robot/mission.py` |
 | Episode log on 0G Storage with a request id per decision | One canonical-JSON entry per event, uploaded with `MemData` via the turbo indexer. Each decision carries `x_0g_trace.request_id`, the chat id (`ZG-Res-Key`), provider, model, the raw response and the TEE signature, chained by keccak256 and signed by the robot key | `robot/blackbox_robot/episode_log.py`, `core/src/storage/index.ts`, `core/src/mission.ts` |
-| Replayable simulation | PyBullet (DIRECT, 240 Hz) is re-run from the manifest seed plus the logged answers. Camera crops are re-rendered and compared by pixel hash, and the trajectory hash must match the one on chain | `robot/blackbox_robot/replay.py` |
+| Replayable simulation | MuJoCo flies the Skydio X2 quadrotor (MuJoCo Menagerie) on four rotor thrusts at 240 Hz, and is re-run from the manifest seed plus the logged answers. Camera crops are re-rendered and compared by pixel hash, and the trajectory hash must match the one on chain | `robot/blackbox_robot/replay.py` |
 | Safe stop if 0G is unreachable, never a faked decision | A lease watchdog in the robot adapter (3× median latency, capped at 12 s). Refused answers never extend the lease. The entry reads "0G unreachable, no decision made" | `robot/blackbox_robot/adapter.py` (`_watchdog`) |
 | Not a chatbot / no pre-recorded motion / not just logs | No chat UI, and the model only sees frames and returns strict JSON. Motion is recomputed physics. The robot **refuses to act** without 0G's signature | `robot/blackbox_robot/interlock.py` |
 | Contract addresses | `BlackboxRegistry` on Galileo (16602), plus zerobot's `RobotRegistry` it reads | [Deployment addresses](#deployment-addresses) |
@@ -62,7 +69,7 @@ The operator console (`http://127.0.0.1:8787`) has one button per beat.
 ```mermaid
 flowchart LR
   subgraph Robot["Robot side (Python) - holds the robot key"]
-    SIM["MissionSim<br/>PyBullet drone, seeded deck,<br/>local detector (flags only)"]
+    SIM["MissionSim<br/>MuJoCo Skydio X2, scenario world,<br/>local detector (flags only)"]
     AD["Robot adapter<br/>interlock - lease watchdog<br/>signed hash-chained log"]
     ROV["Rover driver (optional)<br/>Pi + camera + TB6612"]
     SIM --- AD
@@ -124,6 +131,45 @@ sequenceDiagram
 
 ---
 
+## SDK: mission profiles and the Robot interface
+
+Blackbox is the recorder; the drone is one robot that plugs into it. Two things make it general.
+
+**A mission profile** (`scenarios/<id>.json`) is the task pack. The core validates it (`core/src/profile.ts`) and copies it into the manifest, so it is uploaded to 0G Storage and fixed by the manifest root registered on 0G Chain before takeoff. The robot loads its policy from that manifest:
+
+| Field | Used by | Effect |
+|---|---|---|
+| `world` | robot (`sdk.make_world`) | Which world the camera reads: `concrete-deck` or `solar-farm` (rows, module size) |
+| `sim` | robot (`MissionSim`) | Field size, survey lanes, altitudes, detector threshold, crop size |
+| `decision.labels`, `decision.actions`, `decision.severity_max` | both interlocks, the verifier | The only answers 0G may give. Anything else is refused, never mapped to a default |
+| `decision.prompt` | core (`ZgDecider`) | The system prompt sent to the sealed model. It must contain the answer template for those labels and actions |
+| `decision.label_actions` | mock 0G, demo hooks | Which action each label implies (the forge and tamper beats use it) |
+| `ui` | console | Label names and colours |
+
+Adding a scenario is adding a JSON file. A profile may only grant actions the robot has: the adapter refuses a manifest whose actions the robot cannot perform (`sdk.check_policy_fits`).
+
+**The Robot interface** (`robot/blackbox_robot/sdk.py`) is the only way the adapter touches a robot:
+
+```python
+from blackbox_robot.sdk import Robot
+
+class MyRobot(Robot):
+    ACTIONS = ("descend", "continue")      # what 0G may choose between
+
+    def start(self): ...
+    def step(self):                          # one control tick of your own loop
+        ...                                  # return {"type": "checkpoint", "png": ..., "nonce": ..., ...}
+                                             # when the robot holds for a decision
+    def resolve(self, action): ...           # only an interlock-approved action, or "safe_stop"
+    def emergency_stop(self): ...
+    def state(self): ...
+    def trajectory_hash(self): ...
+```
+
+`MissionSim` (the MuJoCo drone) and `RoverMission` (the Raspberry Pi rover) both implement it. Worlds register in `sdk.WORLDS`; `solar_world.py` is an example of a new one.
+
+---
+
 ## Project structure
 
 ```
@@ -132,6 +178,8 @@ sequenceDiagram
 ├── .env.example                 every setting; values you must fill are marked  <-- SET ME
 ├── package.json                 root scripts: setup, dev:local, test, robot, core, verify, probe, replay
 ├── scripts/dev-local.sh         one command: anvil + contracts + mock 0G + core + robot (offline)
+├── scenarios/                   mission profiles: solar-farm.json, bridge-deck.json
+├── docs/                        why-0g.md (the narrative), demo-script.md (video and booth)
 │
 ├── contracts/                   Foundry, solc 0.8.27, evm cancun
 │   ├── src/BlackboxRegistry.sol      register / anchor / close missions; robot-signed (EIP-191), relayable; zerobot isOperator()
@@ -142,8 +190,12 @@ sequenceDiagram
 │
 ├── robot/                       Python 3.9+ (3.11 recommended); the only process with the robot key
 │   ├── blackbox_robot/
+│   │   ├── sdk.py               Robot interface, world registry, profile vocabulary checks, 3D texture
 │   │   ├── world.py             seeded concrete deck, 5 crack + 2 decoy variants, camera crops, anomaly map
-│   │   ├── physics.py           PyBullet backend (240 Hz DIRECT) + dependency-free "native" backend
+│   │   ├── solar_world.py       solar farm: PV module rows, 3 cracked-cell + 2 soiling variants
+│   │   ├── mujoco_drone.py      Skydio X2 quadrotor: SE(3) attitude control, rotor mixing
+│   │   ├── models/skydio_x2/    MJCF model and mesh from MuJoCo Menagerie (Apache-2.0)
+│   │   ├── physics.py           backends: mujoco (default), pybullet, dependency-free "native"
 │   │   ├── mission.py           deterministic lawnmower survey, checkpoints, outcomes, trajectory hash
 │   │   ├── interlock.py         verify before actuate (parse, nonce, TEE signer, signature binding)
 │   │   ├── episode_log.py       canonical JSON + keccak256 chain + robot EIP-191 signatures
@@ -156,7 +208,8 @@ sequenceDiagram
 │
 └── core/                        TypeScript (Node 20+), run with tsx
     ├── src/server.ts            HTTP: console, robot-facing API, demo controls, verifier API
-    ├── src/mission.ts           manifest, registerMission, checkpoint relay, writer queue, anchors, close, demo hooks
+    ├── src/mission.ts           manifest (with the profile), registerMission, checkpoint relay, writer queue, anchors, close, demo hooks
+    ├── src/profile.ts           mission profile loader and validation
     ├── src/zg/router.ts         0G Router client (trust mode, failover, kill switch)
     ├── src/zg/services.ts       InferenceServing.getService() reader + /v1/proxy/signature fetch
     ├── src/zg/decide.ts         prompt contract, vision call, bundle, R16 decision model
@@ -167,7 +220,8 @@ sequenceDiagram
     ├── src/mock0g/              DEV-ONLY Router + broker emulator (never a fallback)
     ├── scripts/                 probe-0g.ts (Gate A), setup-robot.ts (zerobot), keys.ts
     ├── test/crosslang.test.ts   Python and TypeScript must agree byte-for-byte
-    └── web/                     operator console (index.html, app.js) + public verifier (verify.html) + vercel.json
+    └── web/                     3D operator console (index.html, console.js, scene3d.js) + public verifier (verify.html)
+                                 vendor/: three.js, qrcode, the X2 mesh (served locally, works offline)
 ```
 
 ---
@@ -198,9 +252,9 @@ npm run setup
 npm run dev:local
 ```
 
-Open **http://127.0.0.1:8787**. This runs anvil, deploys the contracts, registers the robot on a zerobot-compatible registry, and starts a **mock 0G** (a yellow banner says so), the core and the robot. The mock signs exactly like the real broker (`sha256(req):sha256(resp)`, EIP-191) with a local key that is **not** a 0G signer. It exists for development and CI only and is never a fallback.
+Open **http://127.0.0.1:8787** (launch page) and **/console.html** (operator console). This runs anvil, deploys the contracts, registers the robot on a zerobot-compatible registry, and starts a **mock 0G** (a yellow banner says so), the core and the robot. The mock signs exactly like the real broker (`sha256(req):sha256(resp)`, EIP-191) with a local key that is **not** a 0G signer. It exists for development and CI only and is never a fallback.
 
-PyBullet compiles from source on macOS arm64 (about 5 minutes). Set `SIM_BACKEND=native` to skip it.
+Physics defaults to MuJoCo (prebuilt wheels for Linux, macOS and Windows; CPU only, no GPU needed). PyBullet is optional and compiles from source on macOS arm64 (about 5 minutes); if it fails, remove it from `robot/requirements.txt`. The 3D console falls back to software rendering on machines without a GPU.
 
 ---
 
@@ -250,7 +304,13 @@ This calls `registerRobot` and `addOperator(robot key)`. Copy the printed `ROBOT
 npm run probe -- --echo 20 --storage
 ```
 
-It prints, for the 7 probe crops: label accuracy, nonce echo, TEE signer, **which signature binding matched**, latency and a 1 KB storage round trip. Then:
+Then run it for the solar farm profile too, which sends that profile's prompt with the crops in `robot/assets/probe-solar` (regenerate them with `cd robot && .venv/bin/python -m blackbox_robot.probe_images assets/probe-solar solar-farm`):
+
+```bash
+npm run probe -- --scenario solar-farm
+```
+
+It prints, for each probe crop: label accuracy, nonce echo, TEE signer, **which signature binding matched**, latency and a 1 KB storage round trip. Then:
 
 - set `LEASE_MS` to the printed value (3× the median latency, capped at 12 s);
 - set `TEE_BINDING` to the binding that matched (`go` or `raw`). If **none** matched, read [Not yet verified](#not-yet-verified-against-live-0g) before the demo;
@@ -266,7 +326,7 @@ npm run core
 npm run robot
 ```
 
-Open http://127.0.0.1:8787, place a crack and a decoy, and press **Start mission**. Ledger rows link to storagescan and chainscan.
+Open http://127.0.0.1:8787/console.html, pick a scenario, place a defect and a benign mark, and press **Start mission**. Ledger rows link to storagescan and chainscan.
 
 **7. Public verifier on Vercel (MANUAL).**
 
@@ -351,8 +411,8 @@ npm test
 This runs:
 
 - **contracts**: 10 Foundry tests (register/anchor/close; non-operator signer; replayed digest; stale count; revoked zerobot operator; closed mission).
-- **robot**: 11 unittests. The interlock refuses forged, tampered, unsigned and wrong-nonce answers and answers with extra keys. A full adapter mission covers forgery refusals, a replay match and a tampered entry named. The lease safe-stops with "0G unreachable, no decision made".
-- **core**: type-check plus 7 cross-language tests. Python and TypeScript agree byte-for-byte on canonical JSON, Go-style JSON, nonces, interlock verdicts, entry hashes and robot signatures, and the mock classifier separates all 7 probe crops.
+- **robot**: 21 unittests. The interlock refuses forged, tampered, unsigned and wrong-nonce answers and answers with extra keys. A full adapter mission covers forgery refusals, a replay match and a tampered entry named. The lease safe-stops with "0G unreachable, no decision made". SDK tests: the profile's vocabulary is enforced both ways, a profile cannot grant actions the robot lacks, the world registry, and a MuJoCo solar survey that is deterministic and flies by tilting.
+- **core**: type-check plus 7 cross-language tests. Python and TypeScript agree byte-for-byte on canonical JSON, Go-style JSON, nonces, interlock verdicts, entry hashes and robot signatures, and the mock classifier separates all 7 probe crops. The mock also judges PV-module crops (cracked cells vs soiling) and answers in whatever vocabulary the profile's prompt declares.
 
 End to end (local): `npm run dev:local`, then drive the console. All beats above were run against the local stack while building.
 
@@ -400,6 +460,8 @@ Sample decisions (fill these in after the first testnet mission):
 ## Credits
 
 - [zerobot](https://github.com/0gfoundation/zerobot) (Apache-2.0): robot identity; the `IRobotRegistry` struct layout is copied from it.
-- [PyBullet](https://pybullet.org) (zlib): physics.
+- [MuJoCo](https://mujoco.org) (Apache-2.0): physics. The [Skydio X2 model](https://github.com/google-deepmind/mujoco_menagerie/tree/main/skydio_x2) from MuJoCo Menagerie (Apache-2.0, assets provided by Skydio) is vendored in `robot/blackbox_robot/models/skydio_x2/` with its licence.
+- [PyBullet](https://pybullet.org) (zlib): optional physics backend.
+- [three.js](https://threejs.org) r170 (MIT) and [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) (MIT), vendored in `core/web/vendor/` with their licences.
 - 0G Compute, Storage and Chain docs and SDKs: `@0gfoundation/0g-storage-ts-sdk`, `@0gfoundation/0g-compute-ts-sdk` (constants and the `processResponse` logic referenced), `0g-serving-broker` (signed-text format).
-- Crack and decoy textures are procedural (`robot/blackbox_robot/world.py`). If you add real photos, credit their dataset and licence here.
+- Crack, decoy, PV-module, cracked-cell and soiling textures are procedural (`robot/blackbox_robot/world.py`, `solar_world.py`). If you add real photos, credit their dataset and licence here.
