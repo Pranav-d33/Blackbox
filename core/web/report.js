@@ -3,7 +3,11 @@ export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&a
 export const short = (h, n = 10) => (h ? `${h.slice(0, n)}…${h.slice(-4)}` : "–");
 const ICON = { pass: "✔", fail: "✘", warn: "!", skip: "–" };
 
+const ENS_APP = { mainnet: "https://app.ens.domains/", sepolia: "https://sepolia.app.ens.domains/" };
+
 export function renderReport(r, links = {}) {
+  const ens = r.manifest?.ens;
+  const ensLink = (name) => (ens && ENS_APP[ens.network] ? `<a target="_blank" href="${ENS_APP[ens.network]}${esc(name)}">${esc(name)}</a>` : esc(name));
   const verdict = r.ok
     ? `<div class="verdict ok">Verified. Every check passed.</div>`
     : `<div class="verdict bad">Tampering detected.</div><div class="refusal" style="margin-bottom:12px">${esc(r.firstFailure)}</div>`;
@@ -14,6 +18,7 @@ export function renderReport(r, links = {}) {
     .map((x) => {
       const root = x.root ? (links.root ? `<a target="_blank" href="${esc(links.root(x.root))}">${esc(short(x.root, 8))}</a>` : esc(short(x.root, 8))) : "–";
       return `<tr><td>#${x.seq}</td><td class="k-${esc(x.kind)}">${esc(x.kind)}</td><td>${x.checkpoint ?? "–"}</td>
+        <td class="mono">${x.ens_name ? ensLink(x.ens_name) : esc(x.asset ?? "–")}</td>
         <td>${esc(x.label ?? "")} ${x.severity ?? ""} ${x.action ? "→ " + esc(x.action) : ""}</td>
         <td>${esc(x.request_id ?? "–")}</td><td>${esc(short(x.signer, 8))}</td><td>${esc(x.binding ?? "")}</td><td>${root}</td>
         <td class="muted">${esc(x.reason ?? "")}</td></tr>`;
@@ -21,8 +26,8 @@ export function renderReport(r, links = {}) {
     .join("");
   const counts = Object.entries(r.counts || {}).map(([k, v]) => `${k}: ${v}`).join(" · ");
   return `${verdict}
-    <div class="muted mono" style="margin-bottom:10px">robot ${esc(r.robot)} · ${esc(counts)}</div>
+    <div class="muted mono" style="margin-bottom:10px">robot ${ens ? `${ensLink(ens.names.robot)} · ` : ""}${esc(r.robot)} · ${esc(counts)}</div>
     <div class="checks">${checks}</div>
     <h3 style="margin:16px 0 8px;font-size:14px">Decisions, refusals and safe stops</h3>
-    <div style="overflow:auto"><table class="ledger"><tr><th>entry</th><th>kind</th><th>cp</th><th>answer</th><th>x_0g_trace.request_id</th><th>TEE signer</th><th>binding</th><th>0G Storage root</th><th>note</th></tr>${rows}</table></div>`;
+    <div style="overflow:auto"><table class="ledger"><tr><th>entry</th><th>kind</th><th>cp</th><th>asset (ENS)</th><th>answer</th><th>x_0g_trace.request_id</th><th>TEE signer</th><th>binding</th><th>0G Storage root</th><th>note</th></tr>${rows}</table></div>`;
 }

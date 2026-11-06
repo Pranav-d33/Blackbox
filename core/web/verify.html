@@ -27,14 +27,14 @@
     <section class="vform">
       <p class="group-title">Mission</p>
       <div class="group">
-        <label class="cell field"><span>Mission id</span><input id="mission" placeholder="0x…" autocomplete="off" spellcheck="false" /></label>
+        <label class="cell field"><span>Mission</span><input id="mission" placeholder="0x… mission id, or an ENS name like r2m14.solar.blackbox.eth" autocomplete="off" spellcheck="false" /></label>
         <label class="cell field"><span>Network</span>
           <select id="network"><option value="galileo">0G Galileo testnet (16602)</option><option value="mainnet">0G mainnet (16661)</option><option value="local">Local anvil</option></select>
         </label>
         <label class="cell field"><span>Registry</span><input id="registry" placeholder="BlackboxRegistry 0x…" autocomplete="off" spellcheck="false" /></label>
         <label class="cell field"><span>Storage</span><input id="api" placeholder="0G indexer gateway (default)" autocomplete="off" spellcheck="false" /></label>
       </div>
-      <p class="group-foot">The mission is read from BlackboxRegistry on 0G Chain. The manifest and every log entry come from 0G Storage by root hash. TEE signers are checked on 0G's InferenceServing.</p>
+      <p class="group-foot">The mission is read from BlackboxRegistry on 0G Chain. The manifest and every log entry come from 0G Storage by root hash. TEE signers are checked on 0G's InferenceServing. ENS names (the drone, the 0G signer, each panel or deck square) are resolved through ENSv2 and checked against the signed log.</p>
 
       <div class="vactions">
         <button class="pill" id="go">Verify on 0G</button>

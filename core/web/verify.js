@@ -1,14 +1,18 @@
-import { esc, renderReport } from "./report.js";
+import { esc, renderReport, short } from "./report.js";
 
 const $ = (id) => document.getElementById(id);
 const V = window.BlackboxVerifier;
 const q = new URLSearchParams(location.search);
 for (const k of ["mission", "network", "registry", "api"]) if (q.get(k)) $(k).value = q.get(k);
 
+// ENS: a name like r2m14.solar.blackbox-demo.eth can stand in for the mission id.
+let ensCfg = { network: q.get("ens") || "sepolia" };
+
 // When served by a Blackbox core, prefill from its config.
 fetch("/api/config")
   .then((r) => (r.ok ? r.json() : null))
   .then((c) => {
+    if (c?.ens && !q.get("ens")) ensCfg = { network: c.ens.network, universalResolver: c.ens.universalResolver, rpc: c.ens.network === "local" ? "http://127.0.0.1:8545" : undefined };
     if (!c?.chain) return;
     if (!q.get("network")) $("network").value = c.chain.network;
     if (!q.get("registry")) $("registry").value = c.chain.registry;
@@ -46,18 +50,25 @@ function storageLink(network) {
 async function run(localEntries) {
   const out = $("out");
   out.hidden = false;
-  const missionId = $("mission").value.trim();
+  let missionId = $("mission").value.trim();
   const network = $("network").value;
   const net = V.NETWORK_DEFAULTS[network];
+  let via = "";
   out.innerHTML = `<div class="muted">Reading ${esc(network)} registry and 0G Storage…</div>`;
   try {
+    if (/\.[a-z]/i.test(missionId) && !/^0x[0-9a-fA-F]{64}$/.test(missionId)) {
+      out.innerHTML = `<div class="muted">Resolving ${esc(missionId)} on ENS (${esc(ensCfg.network)})…</div>`;
+      const r = await V.missionFromEns(missionId.toLowerCase(), ensCfg);
+      via = `<div class="ensvia"><span class="mono">${esc(missionId)}</span> → mission <span class="mono">${esc(short(r.mission, 12))}</span>${r.description ? `<div class="muted">ENS says: ${esc(r.description)}</div>` : ""}<div class="muted">The ENS record only points here. Everything below is re-checked from 0G Chain and 0G Storage.</div></div>`;
+      missionId = r.mission;
+    }
     if (!/^0x[0-9a-fA-F]{64}$/.test(missionId)) throw new Error("enter a mission id (0x + 64 hex)");
     const inputs = await V.loadFromChain({ rpc: net.rpc, chainId: net.chainId, network, registry: $("registry").value.trim(), missionId, fetchRoot: fetchRootFn(network) });
     if (localEntries) inputs.entries = localEntries;
     const report = V.verifyMission(inputs);
     const ex = net.explorer;
     const head = `<h2>Report ${localEntries ? "(local copy)" : ""} <span class="sp"></span>${ex ? `<a target="_blank" href="${ex}/address/${esc($("registry").value.trim())}">registry on chainscan ↗</a>` : ""}</h2>`;
-    out.innerHTML = head + renderReport(report, { root: storageLink(network) });
+    out.innerHTML = head + via + renderReport(report, { root: storageLink(network) });
   } catch (e) {
     out.innerHTML = `<div class="verdict bad">Could not verify</div><div class="refusal">${esc(e.message)}</div>`;
   }
