@@ -149,10 +149,16 @@ class Adapter:
             if not HEX32.match(m.get("mission_id", "")):
                 raise ValueError("manifest mission_id must be bytes32 hex")
             p = m.get("policy", {})
-            if not p.get("tee_signers"):
-                raise ValueError("manifest has an empty TEE signer allowlist")
-            # the core wrote this allowlist; check it against a source the core does not control
-            signer_record = self.signer_check.check(m) if self.signer_check else None
+            unsealed = p.get("attestation") == "none"
+            if unsealed:
+                print("[adapter] WARNING: manifest attestation=none - this mission runs an UNSEALED model; "
+                      "answers are parsed and nonce-checked but carry no TEE signature", flush=True)
+                signer_record = {"mode": "none", "signers": []}
+            else:
+                if not p.get("tee_signers"):
+                    raise ValueError("manifest has an empty TEE signer allowlist")
+                # the core wrote this allowlist; check it against a source the core does not control
+                signer_record = self.signer_check.check(m) if self.signer_check else None
             if not 500 <= int(p.get("lease_ms", 0)) <= 60000:
                 raise ValueError("lease_ms must be within 500..60000")
             if self.sim is not None:
@@ -387,7 +393,7 @@ class Adapter:
             cp["status"] = "resolved"
             self.sim.resolve(action)
             self._event("accept", f"checkpoint {k}: 0G says {res['answer']['label']} -> {action} "
-                                  f"(TEE signer {res['signer'][:10]}, binding {res['binding']})")
+                                  f"({'TEE signer ' + res['signer'][:10] + ', binding ' + str(res['binding']) if res['signer'] else 'UNSEALED, no TEE signature'})")
             return res
 
     def human(self, req: dict) -> dict:
@@ -616,7 +622,10 @@ def load_dotenv(path: str) -> None:
             if not line or line.startswith("#") or "=" not in line:
                 continue
             k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+            v = v.strip()
+            if v[:1] not in ('"', "'"):
+                v = re.split(r"\s+#", v, maxsplit=1)[0].strip()  # inline comment, as the core's dotenv does
+            os.environ.setdefault(k.strip(), v.strip('"').strip("'"))
 
 
 def main(argv=None) -> None:
