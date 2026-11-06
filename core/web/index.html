@@ -3,13 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#07080b" />
-  <title>Blackbox · a flight recorder for AI robots</title>
-  <meta name="description" content="Inspection drones that move only on decisions signed by 0G's sealed AI, with a record anyone can verify." />
-  <link rel="stylesheet" href="/vendor/fonts/fonts.css" />
+  <meta name="theme-color" content="#0b0a09" />
+  <title>Blackbox · the flight recorder for AI robots</title>
+  <meta name="description" content="Blackbox is an SDK that sits between a robot's AI and its motors. The robot moves only on decisions it can verify, and anyone with a stake can check the record." />
+  <link rel="preload" href="/vendor/fonts/Newsreader-var.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/vendor/fonts/InterTight-var.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/vendor/fonts/editorial.css" />
   <script>document.documentElement.classList.add("js")</script>
-<meta name="live-console" content="https://blackbox-production-2091.up.railway.app" />
-<link rel="stylesheet" href="/landing.css" />
+  <meta name="live-console" content="https://blackbox-production-2091.up.railway.app" />
+  <link rel="stylesheet" href="/landing.css" />
   <script type="importmap">
     { "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three/addons/" } }
   </script>
@@ -17,16 +19,16 @@
 <body>
   <nav class="nav">
     <div class="wrap nav-in">
-      <a class="brand" href="/">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.7" /><circle cx="12" cy="12" r="3.2" fill="currentColor" /></svg>
+      <a class="brand" href="/" aria-label="Blackbox home">
+        <span class="brand-mark" aria-hidden="true"></span>
         Blackbox
       </a>
       <div class="nav-links">
         <a href="#how">How it works</a>
-        <a href="#break">Try to break it</a>
-        <a href="#mission">Real mission</a>
+        <a href="#break">Break it</a>
+        <a href="#mission">Proof</a>
         <a href="#sdk">SDK</a>
-        <a href="#why">Why 0G</a>
+        <a href="#stack">Stack</a>
         <a href="/workflows.html">Workflows</a>
       </div>
       <div class="nav-cta">
@@ -37,138 +39,127 @@
   </nav>
 
   <header class="hero">
-    <div id="scene" class="scene" aria-hidden="true"></div>
+    <div id="scene" class="scene" aria-hidden="true" data-parallax="0.18"></div>
     <div class="hero-fade"></div>
     <div class="wrap hero-copy">
-      <p class="eyebrow">0G · Physical AI</p>
-      <h1>0G decides.<br /><span>Blackbox proves it.</span></h1>
-      <p class="lede">A flight recorder for AI inspection robots. The drone moves only on decisions signed by 0G's sealed AI, and anyone can check the record. No trust in the operator.</p>
+      <p class="kicker"><span class="rec" aria-hidden="true"></span>Flight recorder for AI robots</p>
+      <h1>Every decision a robot makes, <em>on the record.</em></h1>
+      <p class="lede">Blackbox sits between a robot's AI and its motors. The robot moves only on a decision it can verify, and everyone with a stake can check the record afterwards, without trusting whoever ran it.</p>
       <div class="hero-cta">
-        <a class="btn solid lg" data-console href="/console.html">Open the live console</a>
-        <a class="btn ghost lg" href="#mission">See a real mission</a>
-        <a class="btn ghost lg" href="/verify.html" id="hero-verify">Verify it yourself</a>
+        <a class="btn solid lg" data-console href="/console.html">Open the live console <span class="arr" aria-hidden="true">→</span></a>
+        <a class="btn ghost lg" href="/verify.html" id="hero-verify">Verify a real mission</a>
       </div>
     </div>
     <aside class="hero-card" id="hero-card">
       <div class="hc-top"><span class="dot pulse"></span><span id="hc-status">Replaying a real mission</span></div>
       <div class="hc-title" id="hc-title">Solar farm survey</div>
       <div class="hc-rows" id="hc-rows"></div>
-      <a class="hc-link" id="hc-link" target="_blank" rel="noreferrer">On 0G Chain ↗</a>
+      <a class="hc-link" id="hc-link" target="_blank" rel="noreferrer">See it on chain ↗</a>
     </aside>
+    <div class="hero-meta wrap">
+      <span>SDK · Python + TypeScript</span>
+      <span>Solar farms · Bridge decks · Any profile</span>
+      <span>Built on 0G and Arkiv</span>
+    </div>
   </header>
 
+  <div class="ticker" aria-hidden="true"><div class="ticker-track" id="ticker"></div></div>
+
   <section class="band" id="problem">
-    <div class="wrap">
-      <p class="eyebrow">The problem</p>
-      <h2>Who checks the drone?</h2>
-      <p class="sub">An AI-driven drone calls a solar panel clean. Months later it catches fire. Four people need to know what the drone saw and decided, and all four get the same thing: the contractor's own database.</p>
-      <div class="grid4">
-        <div class="card"><b>The owner</b><span>paid for an inspection and wants proof it happened as reported</span></div>
-        <div class="card"><b>The insurer</b><span>is asked to cover the loss and needs evidence it can rely on</span></div>
-        <div class="card"><b>The panel maker</b><span>faces a warranty claim and wants to know when the crack appeared</span></div>
-        <div class="card"><b>The contractor</b><span>has to defend its record without being trusted on its word</span></div>
+    <div class="wrap split">
+      <p class="eyebrow"><i>01</i>The problem</p>
+      <div>
+        <h2>An AI drone calls a panel clean. Months later it <em>catches fire.</em></h2>
+        <p class="sub">Four people need to know what the drone saw and decided. Today all four get the same thing: the contractor's own database, editable by the one party with the most reason to edit it.</p>
+        <ol class="ledger">
+          <li><b>The owner</b><span>paid for an inspection and wants proof it happened as reported</span></li>
+          <li><b>The insurer</b><span>is asked to cover the loss and needs evidence it can rely on</span></li>
+          <li><b>The panel maker</b><span>faces a warranty claim and wants to know when the crack appeared</span></li>
+          <li><b>The contractor</b><span>has to defend its record without being taken at its word</span></li>
+        </ol>
       </div>
     </div>
   </section>
 
   <section class="band alt" id="how">
-    <div class="wrap">
-      <p class="eyebrow">How it works</p>
-      <h2>Every checkpoint, five steps.</h2>
-      <ol class="steps">
-        <li><i>1</i><b>It holds.</b><span>The camera flags a mark. The drone stops and takes a photo, fingerprinted and tied to a fresh nonce.</span></li>
-        <li><i>2</i><b>It asks 0G.</b><span>The photo goes to 0G's own vision model, running sealed inside a hardware enclave (TEE).</span></li>
-        <li><i>3</i><b>0G answers and signs.</b><span>"Cracked cell, severity 2, go closer", signed by the enclave's key and echoing the nonce.</span></li>
-        <li><i>4</i><b>The robot checks.</b><span>Signer allowlisted? Signature covers these exact bytes? Nonce echoed? Otherwise it refuses.</span></li>
-        <li><i>5</i><b>It acts and records.</b><span>Robot-signed, hash-chained log on 0G Storage, fingerprint anchored on 0G Chain.</span></li>
-      </ol>
-      <p class="note">No 0G, no decision. If 0G can't be reached in time, the drone flies home and the log says <q>0G unreachable, no decision made</q>. It never guesses. When the link is back, it resumes from the exact point it stopped.</p>
+    <div class="wrap split">
+      <p class="eyebrow"><i>02</i>How it works</p>
+      <div>
+        <h2>Every checkpoint, <em>five steps.</em></h2>
+        <ol class="steps">
+          <li><i>1</i><b>It holds.</b><span>The camera flags a mark. The robot stops and takes a photo, fingerprinted and tied to a fresh nonce.</span></li>
+          <li><i>2</i><b>It asks a sealed model.</b><span>The photo goes to a vision model running inside a hardware enclave (TEE).</span></li>
+          <li><i>3</i><b>The enclave answers and signs.</b><span>"Cracked cell, severity 2, go closer", signed by the enclave's key, echoing the nonce.</span></li>
+          <li><i>4</i><b>The robot checks.</b><span>Signer allowlisted? Signature covers these exact bytes? Nonce echoed? Otherwise it refuses.</span></li>
+          <li><i>5</i><b>It acts and records.</b><span>A robot-signed, hash-chained log entry, anchored on a public chain.</span></li>
+        </ol>
+        <p class="note">No answer, no motion. If the model can't be reached in time the drone flies home and the log says <q>0G unreachable, no decision made</q>. It never guesses, and it resumes from the exact point it stopped.</p>
+      </div>
     </div>
   </section>
 
   <section class="band" id="break">
-    <div class="wrap">
-      <p class="eyebrow">Try to break it</p>
-      <h2>Built for the operator you can't trust.</h2>
-      <div class="grid2">
-        <div class="attack"><b>Forge a decision</b><span>The operator signs a fake "continue" with its own key.</span><code>Refused: signer is not on the manifest allowlist</code></div>
-        <div class="attack"><b>Flip 0G's answer</b><span>Keep 0G's real signature, change what it said.</span><code>Refused: TEE signature does not cover this answer</code></div>
-        <div class="attack"><b>Edit the log</b><span>Lower a severity after the flight.</span><code>Verifier: entry #2 was changed after the robot signed it</code></div>
-        <div class="attack"><b>Cut the AI</b><span>Kill the link to 0G mid-flight.</span><code>Safe stop: 0G unreachable, no decision made</code></div>
+    <div class="wrap split">
+      <p class="eyebrow"><i>03</i>Try to break it</p>
+      <div>
+        <h2>Built for the operator <em>you can't trust.</em></h2>
+        <div class="grid2">
+          <div class="attack"><b>Forge a decision</b><span>The operator signs a fake "continue" with its own key.</span><code>Refused: signer is not on the manifest allowlist</code></div>
+          <div class="attack"><b>Flip the answer</b><span>Keep the enclave's real signature, change what it said.</span><code>Refused: TEE signature does not cover this answer</code></div>
+          <div class="attack"><b>Edit the log</b><span>Lower a severity after the flight.</span><code>Verifier: entry #2 was changed after the robot signed it</code></div>
+          <div class="attack"><b>Cut the AI</b><span>Kill the link to the model mid-flight.</span><code>Safe stop: 0G unreachable, no decision made</code></div>
+        </div>
+        <p class="note">And the counterfactual: replay the same flight with every answer forced to "continue", and a second drone flies straight past the damage. The model's answer is what moved the robot.</p>
       </div>
-      <p class="note">And the counterfactual: replay the same flight with every 0G answer forced to "continue", and a second drone flies straight past the damage. 0G's answer is what moved the robot.</p>
     </div>
   </section>
 
   <section class="band alt" id="mission">
-    <div class="wrap">
-      <p class="eyebrow">A real mission</p>
-      <h2>Flown on 0G. Check every line.</h2>
-      <p class="sub" id="m-sub">Loading…</p>
-      <div class="table-wrap">
-        <table class="decisions">
-          <thead><tr><th>Asset</th><th>0G answered</th><th>Robot did</th><th>request_id</th><th>Log entry</th></tr></thead>
-          <tbody id="m-rows"></tbody>
-        </table>
-      </div>
-      <div class="proof" id="m-proof"></div>
-      <div class="hero-cta">
-        <a class="btn solid lg" id="m-verify" href="/verify.html">Verify this mission on 0G</a>
+    <div class="wrap split">
+      <p class="eyebrow"><i>04</i>Proof</p>
+      <div>
+        <h2>A real flight. <em>Check every line.</em></h2>
+        <p class="sub" id="m-sub">Loading…</p>
+        <div class="table-wrap">
+          <table class="decisions">
+            <thead><tr><th>Asset</th><th>Model answered</th><th>Robot did</th><th>request_id</th><th>Log entry</th></tr></thead>
+            <tbody id="m-rows"></tbody>
+          </table>
+        </div>
+        <div class="proof" id="m-proof"></div>
+        <div class="hero-cta">
+          <a class="btn solid lg" id="m-verify" href="/verify.html">Verify this mission <span class="arr" aria-hidden="true">→</span></a>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="band" id="layers">
-    <div class="wrap">
-      <p class="eyebrow">Why 0G</p>
-      <h2>Three layers, all in the control loop.</h2>
-      <div class="grid3">
-        <div class="layer"><b>0G Compute</b><span>Sealed inference on 0G's own vision model. The TEE signature is what the robot checks before it moves.</span></div>
-        <div class="layer"><b>0G Storage</b><span>The manifest, every robot-signed log entry and the evidence, by content root. Camera crops are encrypted.</span></div>
-        <div class="layer"><b>0G Chain</b><span>BlackboxRegistry: mission registered before takeoff, anchored every two decisions, closed with the trajectory hash.</span></div>
+  <section class="band" id="numbers">
+    <div class="wrap split">
+      <p class="eyebrow"><i>05</i>The economics</p>
+      <div>
+        <h2>Verifiable costs <em>almost nothing.</em></h2>
+        <div class="figures">
+          <div class="figure"><b><span data-count="1">1</span> in 100</b><span>panels defective on a real 232,934-module drone survey (1.06%, Remote Sensing 2023).</span></div>
+          <div class="figure"><b>$<span data-count="0.0035" data-dp="4">0.0035</span></b><span>sealed inference per MW surveyed. Only flagged crops are sent: 1.5% of modules, measured in our sim.</span></div>
+          <div class="figure"><b><span data-count="65">65</span>×</b><span>fewer model calls than sending every panel. About 35 cents for 100 MW, against $30k–50k for the survey.</span></div>
+        </div>
+        <p class="note">Prices from 0G Router model pages (Nov 2026). Token counts are assumptions; the flag rate is from 8 sim runs with planted marks. Storage and chain fees not included.</p>
       </div>
-      <p class="note">Plus <b>Arkiv</b> as the query layer: every finding becomes a row you can search by panel, maker or batch, owned by the wallet that wrote it. Arkiv makes it searchable; 0G decides whether it's true.</p>
-    </div>
-  </section>
-
-  <section class="band" id="why">
-    <div class="wrap">
-      <p class="eyebrow">Why web3</p>
-      <h2>The one who runs the drone is the one who could edit the record.</h2>
-      <p class="sub">Owner, insurer, panel maker and contractor don't trust each other. A signed log alone proves the file wasn't edited. It can't prove which model decided, that the answer was made for this checkpoint, or that the robot did only what it was told. A public chain gives all four a commitment none of them can quietly rewrite, checkable from a phone with no account.</p>
-      <div class="grid3">
-        <div class="layer"><b>~1 in 100</b><span>panels defective on a real 232,934-module drone survey (1.06%, Remote Sensing 2023), varying 10x between blocks.</span></div>
-        <div class="layer"><b>~$0.0035 per MW</b><span>sealed 0G inference per survey: only flagged crops are sent (1.5% of ~1,800 modules/MW, measured in our sim), ~1,400 tokens each.</span></div>
-        <div class="layer"><b>$300–500 per MW</b><span>what a human drone survey costs. Verifiable decisions add well under 0.01% to it: about 35 cents for 100 MW.</span></div>
-      </div>
-      <p class="note">Gating on the on-board detector cuts 0G calls ~65x versus sending every panel. Prices from 0G Router model pages (Nov 2026); token counts are assumptions; the 1.5% flag rate is from 8 sim runs with planted marks. Storage and chain fees not included.</p>
-    </div>
-  </section>
-
-  <section class="band alt" id="arkiv">
-    <div class="wrap">
-      <p class="eyebrow">Why Arkiv, when we have 0G</p>
-      <h2>0G proves it. Arkiv makes it askable.</h2>
-      <p class="sub">0G Storage returns a file by its content root, and nothing else. Nobody at a solar farm asks for a root. They ask for module r2m13's history, which panels are still cracked, and whether cracks cluster in one maker's batch: a warranty claim.</p>
-      <div class="grid3">
-        <div class="layer"><b>Queries</b><span>Every finding is an Arkiv entity, filterable by panel, label, severity, maker and batch, straight from the browser.</span></div>
-        <div class="layer"><b>Ownership</b><span>The site owner's wallet owns the asset register, the inspector's wallet owns the findings. No admin who can rewrite both.</span></div>
-        <div class="layer"><b>Expiry + backup</b><span>The working set expires after 90 days; the proof on 0G stays. If 0G Storage can't serve a blob, the verifier reads Arkiv's mirror and re-checks it against 0G Chain.</span></div>
-      </div>
-      <p class="note">Arkiv is never trusted for the verdict, only for the question. Swap it for Postgres and the operator owns the database again.</p>
     </div>
   </section>
 
   <section class="band alt" id="sdk">
-    <div class="wrap two">
-      <div>
-        <p class="eyebrow">SDK</p>
-        <h2>Any robot. Three calls.</h2>
-        <p class="sub">Blackbox is a recorder SDK, not a one-off demo. Implement <code>Robot</code>, write a mission profile (one JSON file: what the AI may answer, what the robot may do), and every decision is sealed, signed and logged on 0G. Solar farms and bridge decks are two profiles on the same code. A pipeline weld or a turbine blade is another file.</p>
-        <p class="sub">The input doesn't have to be a camera. A typed note or a spoken command from the crew goes through the same sealed model and the same interlock.</p>
-        <div class="hero-cta"><a class="btn ghost lg" href="/workflows.html">See vision, text and voice workflows</a></div>
-      </div>
-      <pre class="code"><span class="k">from</span> blackbox_robot.sdk <span class="k">import</span> Robot
+    <div class="wrap split">
+      <p class="eyebrow"><i>06</i>SDK</p>
+      <div class="two">
+        <div>
+          <h2>Any robot. <em>Three calls.</em></h2>
+          <p class="sub">Implement <code>Robot</code>, write a mission profile (one JSON file: what the AI may answer, what the robot may do), and every decision is sealed, signed and logged. Solar farms and bridge decks are two profiles on the same code. A pipeline weld or a turbine blade is another file.</p>
+          <p class="sub">The input doesn't have to be a camera. A crew member can type or say what they see, and it goes through the same sealed model and the same interlock.</p>
+          <div class="hero-cta"><a class="btn ghost lg" href="/workflows.html">Vision, text and voice workflows <span class="arr" aria-hidden="true">→</span></a></div>
+        </div>
+        <pre class="code" data-parallax="-0.06"><span class="k">from</span> blackbox_robot.sdk <span class="k">import</span> Robot
 
 <span class="k">class</span> MyRobot(Robot):
     ACTIONS = (<span class="s">"descend"</span>, <span class="s">"continue"</span>)
@@ -178,25 +169,47 @@
         <span class="k">return</span> {<span class="s">"type"</span>: <span class="s">"checkpoint"</span>, <span class="s">"png"</span>: frame}
 
     <span class="k">def</span> resolve(self, action):
-        <span class="c"># only an action 0G signed, or "safe_stop"</span></pre>
+        <span class="c"># only a verified action, or "safe_stop"</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="stack">
+    <div class="wrap split">
+      <p class="eyebrow"><i>07</i>The stack</p>
+      <div>
+        <h2>Why a chain, and <em>why these.</em></h2>
+        <p class="sub">The parties don't trust each other, and the one running the robot has the most reason to edit the record. A signed log proves a file wasn't edited. It can't prove which model decided, that the answer was made for this checkpoint, or that the robot did only what it was told. A public chain gives everyone a commitment no one can quietly rewrite, checkable from a phone with no account.</p>
+        <div class="stack">
+          <div class="layer"><small>0G Compute</small><b>Decides.</b><span>Sealed inference in a TEE. The enclave's signature is what the robot checks before it moves.</span></div>
+          <div class="layer"><small>0G Storage</small><b>Remembers.</b><span>The manifest, every robot-signed entry and the evidence, by content root. Crops are encrypted.</span></div>
+          <div class="layer"><small>0G Chain</small><b>Commits.</b><span>Mission registered before takeoff, anchored every two decisions, closed with the trajectory hash.</span></div>
+          <div class="layer"><small>Arkiv</small><b>Answers questions.</b><span>Storage returns a file by its root, nothing else. Arkiv makes each finding queryable by panel, maker and batch, owned by the wallet that wrote it. Never trusted for the verdict.</span></div>
+        </div>
+      </div>
     </div>
   </section>
 
   <section class="band finale">
     <div class="wrap center">
-      <h2>See it decide.</h2>
+      <h2>See it <em>decide.</em></h2>
       <p class="sub">Verify the real mission above from your phone, or run the whole stack yourself.</p>
       <div class="hero-cta">
-        <a class="btn solid lg" data-console href="/console.html">Open the live console</a>
+        <a class="btn solid lg" data-console href="/console.html">Open the live console <span class="arr" aria-hidden="true">→</span></a>
         <a class="btn ghost lg" href="/verify.html" id="final-verify">Open the verifier</a>
         <a class="btn ghost lg" href="https://github.com/Pranav-d33/Blackbox" target="_blank" rel="noreferrer">Source on GitHub</a>
       </div>
     </div>
   </section>
 
-  <footer class="foot wrap">Tamper-evident, not tamper-proof. The robot acts only on answers signed by an allowlisted 0G TEE signer, each produced for its request. It does not prove what the camera saw. Built at ETHGlobal Mumbai 2026.</footer>
+  <footer class="foot wrap">
+    <span class="brand"><span class="brand-mark" aria-hidden="true"></span>Blackbox</span>
+    <span>Tamper-evident, not tamper-proof. The robot acts only on answers signed by an allowlisted TEE signer, each made for its request. It does not prove what the camera saw.</span>
+    <span>MIT · ETHGlobal Mumbai 2026</span>
+  </footer>
 
+  <script src="/vendor/lenis/lenis.min.js"></script>
   <script type="module" src="/landing-motion.js"></script>
-<script type="module" src="/landing.js"></script>
+  <script type="module" src="/landing.js"></script>
 </body>
 </html>

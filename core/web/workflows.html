@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#07080b" />
+  <meta name="theme-color" content="#0b0a09" />
   <title>Blackbox · Workflows</title>
   <meta name="description" content="Vision, text and voice workflows on the Blackbox SDK: every input ends in one signed action from the mission profile." />
-  <link rel="stylesheet" href="/vendor/fonts/fonts.css" />
+  <link rel="stylesheet" href="/vendor/fonts/editorial.css" />
   <script>document.documentElement.classList.add("js")</script>
   <link rel="stylesheet" href="/landing.css" />
 </head>
@@ -14,7 +14,7 @@
   <nav class="nav">
     <div class="wrap nav-in">
       <a class="brand" href="/">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.7" /><circle cx="12" cy="12" r="3.2" fill="currentColor" /></svg>
+        <span class="brand-mark" aria-hidden="true"></span>
         Blackbox
       </a>
       <div class="nav-links">
@@ -33,7 +33,7 @@
   <section class="band" id="top">
     <div class="wrap">
       <p class="eyebrow">SDK workflows</p>
-      <h2>Any input. One signed action.</h2>
+      <h1>Any input. <em>One signed action.</em></h1>
       <p class="sub">A camera frame, a typed note or a spoken command all end the same way: 0G's sealed model picks one action from the mission profile, the robot checks the signature, and the entry goes into the same hash-chained log. The model can never widen what the robot may do.</p>
     </div>
   </section>
@@ -41,7 +41,7 @@
   <section class="band alt" id="vision">
     <div class="wrap">
       <p class="eyebrow">Workflow 1 · Vision · <span class="tag">Built</span></p>
-      <h2>The camera asks, 0G decides.</h2>
+      <h2>The camera asks, <em>the model decides.</em></h2>
       <ol class="steps">
         <li><i>1</i><b>Detector flags a mark.</b><span>On-board, cheap. Only flagged crops go to 0G, about 1.5% of modules in our sim runs.</span></li>
         <li><i>2</i><b>Sealed vision call.</b><span>Crop + nonce to 0G's model in a TEE. Answer: one label from the profile, e.g. <code>cracked_cell</code>.</span></li>
@@ -56,7 +56,7 @@
   <section class="band" id="text">
     <div class="wrap">
       <p class="eyebrow">Workflow 2 · Text · <span class="tag">Built</span></p>
-      <h2>The crew types, 0G maps it to an action.</h2>
+      <h2>The crew types, <em>the robot checks.</em></h2>
       <ol class="steps">
         <li><i>1</i><b>Drone holds.</b><span>r3m14 is ambiguous. The console asks: descend or continue?</span></li>
         <li><i>2</i><b>Crew types what they see.</b><span><q>Glass is shattered from hail, send the repair crew.</q> Or <q>just bird droppings, move on.</q></span></li>
@@ -71,7 +71,7 @@
   <section class="band alt" id="voice">
     <div class="wrap">
       <p class="eyebrow">Workflow 3 · Voice · <span class="tag">Built</span></p>
-      <h2>Gloves on, screen off.</h2>
+      <h2>Gloves on, <em>screen off.</em></h2>
       <ol class="steps">
         <li><i>1</i><b>Drone speaks.</b><span><q>r3m14 unsure. Descend or continue?</q></span></li>
         <li><i>2</i><b>Crew chief answers.</b><span><q>Drone, go down and look at r3m14.</q></span></li>
@@ -86,7 +86,7 @@
   <section class="band" id="more">
     <div class="wrap">
       <p class="eyebrow">Same SDK, other profiles</p>
-      <h2>A new task is a new JSON file.</h2>
+      <h2>A new task is <em>a new JSON file.</em></h2>
       <div class="grid3">
         <div class="layer"><b>Bridge deck · Built</b><span>Crack vs decoy (stain, joint). <code>scenarios/bridge-deck.json</code></span></div>
         <div class="layer"><b>Warehouse pallets · Proposal</b><span>Damaged / intact / unsure, then flag for a human. New labels and prompt only.</span></div>
@@ -97,7 +97,7 @@
 
   <section class="band finale">
     <div class="wrap center">
-      <h2>Every path ends in the same log.</h2>
+      <h2>Every path ends in <em>the same log.</em></h2>
       <p class="sub">Who told the drone to descend, the camera or the crew, is answerable by anyone with the record.</p>
       <div class="hero-cta">
         <a class="btn solid lg" href="/console.html">Open the live console</a>
@@ -107,6 +107,7 @@
   </section>
 
   <footer class="foot wrap">Voice uses the browser's speech recognition (Chrome sends audio to its own service); the transcript, not the audio, is what 0G and the log see. Built at ETHGlobal Mumbai 2026.</footer>
+  <script src="/vendor/lenis/lenis.min.js"></script>
   <script type="module" src="/landing-motion.js"></script>
 </body>
 </html>

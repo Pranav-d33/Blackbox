@@ -39,7 +39,7 @@ const sealed = m.attestation !== "none";
 
 // ---- the decisions table and the on-chain proof
 const day = new Date(m.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
-$("m-sub").textContent = `${m.profile.title}, flown ${day} on 0G Galileo. ${m.checkpoints.length} checkpoints, each decided by ${m.model} through 0G's Router${sealed ? ", sealed in a TEE" : " (unsealed fallback: the verifier labels it)"}. ${m.entries} robot-signed log entries; replaying the flight from its seed reproduces the trajectory hash closed on chain.`;
+$("m-sub").textContent = `${m.profile.title}, flown ${day} on 0G Galileo. ${m.checkpoints.length} checkpoints, each decided by ${m.model} on 0G${sealed ? ", sealed in a TEE" : " (unsealed fallback: the verifier labels it)"}. ${m.entries} robot-signed log entries; replaying the flight from its seed reproduces the trajectory hash closed on chain.`;
 $("m-rows").innerHTML = m.checkpoints
   .map((c) => {
     const l = labelOf(c.label);
@@ -54,6 +54,13 @@ $("m-proof").innerHTML =
   link("Registered on 0G Chain", m.chain.register_tx) +
   m.chain.anchors.map((t, i) => link(i === m.chain.anchors.length - 1 ? "Anchored and closed" : `Anchor ${i + 1}`, t)).join("") +
   (ex ? `<a href="${ex}/address/${m.chain.registry}" target="_blank" rel="noreferrer">BlackboxRegistry<span>${m.chain.registry}</span></a>` : "");
+
+// ---- ticker: the real log entries of that mission, looping
+const tick1 = m.checkpoints
+  .map((c) => `<span><i>#${String(c.seq ?? c.k).padStart(4, "0")}</i> <b>${c.asset ?? "#" + c.k}</b> ${labelOf(c.label).name.toLowerCase()} → ${c.outcome} · req ${short(c.request_id ?? "", 8)} · ${sealed ? "TEE sig ✓" : "unsealed"}</span>`)
+  .concat(m.chain.anchors.map((t, j) => `<span><i>anchor ${j + 1}</i> head pinned on chain · tx ${short(t, 10)}</span>`))
+  .join("");
+if (tick1) $("ticker").innerHTML = tick1 + tick1;
 
 // ---- hero card
 $("hc-title").textContent = `${H.profile.title.replace(/ survey$/, "")} · ${short(H.mission_id, 10)}`;
@@ -105,11 +112,11 @@ function tick() {
   s3.setMarkers(
     seen.map((c) => {
       const l = labelOfH(c.label);
-      return { k: c.k, x_mm: c.target_mm[0], y_mm: c.target_mm[1], state: c.outcome, color: l.color, title: `${c.asset} · ${l.name}`, sub: `0G → ${c.outcome}` };
+      return { k: c.k, x_mm: c.target_mm[0], y_mm: c.target_mm[1], state: c.outcome, color: l.color, title: `${c.asset} · ${l.name}`, sub: `verified → ${c.outcome}` };
     }),
   );
   document.querySelectorAll("#hc-rows div").forEach((el) => el.classList.toggle("on", seen.some((c) => String(c.k) === el.dataset.k)));
-  $("hc-status").textContent = i >= pts.length - 1 ? `Landed · ${H.checkpoints.length} decisions by 0G` : `Replaying a real mission · ${seen.length}/${H.checkpoints.length} decisions`;
+  $("hc-status").textContent = i >= pts.length - 1 ? `Landed · ${H.checkpoints.length} verified decisions` : `Replaying a real mission · ${seen.length}/${H.checkpoints.length} decisions`;
   if (reduced) return;
   i = i >= pts.length - 1 ? 0 : i + 1;
   if (i === 0) s3.resetPose();
