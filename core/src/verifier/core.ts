@@ -3,13 +3,11 @@
  * Trusts nothing the operator says: recomputes every hash, signature, nonce and
  * TEE binding from the raw log, and compares the chain anchors on 0G Galileo.
  */
-import { AbiCoder, Contract, JsonRpcProvider, getBytes, hashMessage, id, keccak256, recoverAddress } from "ethers";
+import { AbiCoder, Contract, JsonRpcProvider, getBytes, hashMessage, keccak256, recoverAddress } from "ethers";
 import { BLACKBOX_REGISTRY_ABI, ROBOT_REGISTRY_ABI, type ChainAnchor, type ChainMission, toChainAnchors, toChainMission } from "../chain/abi";
 import { type Entry, ZERO_HASH, canonicalJson, entryHash, keccakHex } from "../lib/canonical";
 import { type Policy, checkpointNonce, extractContent, parseAnswer, verifyBundle, vocabulary } from "../lib/interlock";
 import { effectiveSigner } from "../zg/services";
-import { ASSET_KEYS, ENS_NETWORKS, KEYS, type EnsSection, assetName, parseFinding } from "../ens/names";
-import { type EnsRecord, EnsReader } from "../ens/reader";
 
 /** 0G Compute's InferenceServing on 0G mainnet: where TEE signers are registered and acknowledged. */
 export const SERVING = { rpc: "https://evmrpc.0g.ai", chainId: 16661, contract: "0x47340d900bdFec2BD393c626E12ea0656F938d84" };
@@ -55,17 +53,6 @@ export interface VerifyInputs {
   /** InferenceServing records for the manifest's providers, read from 0G mainnet by the verifier itself. */
   services?: ServiceView[] | null;
   servicesError?: string | null;
-  /** ENS records the verifier read itself through the ENSv2 Universal Resolver. */
-  ens?: EnsView | null;
-}
-
-export interface EnsView {
-  section: EnsSection;
-  agents: Record<string, EnsRecord>;
-  assets: Record<string, EnsRecord>;
-  /** ENSv2 Permissioned Registry facts: the parent's subregistry and who holds the drone's name token. */
-  registry?: { subregistry: string; droneOwner: string | null } | null;
-  error?: string;
 }
 
 export interface DecisionRow {
@@ -84,9 +71,8 @@ export interface DecisionRow {
   latency_ms?: number;
   reason?: string;
   root?: string | null;
-  /** ENS label of the inspected asset (r2m14) and its full name (r2m14.solar.<parent>). */
+  /** Label of the inspected asset, signed by the robot: r2m14 (PV module), x12y03 (1 m² deck square). */
   asset?: string | null;
-  ens_name?: string | null;
 }
 
 export interface Report {
@@ -299,11 +285,10 @@ export function verifyMission(inp: VerifyInputs): Report {
   let proofs = 0;
   const decided = new Set<number>();
   const holds = new Set<number>();
-  const ensSec: EnsSection | null = manifest?.ens ?? null;
   E.forEach((e, i) => {
     const b = e.body ?? {};
     const k = typeof b.checkpoint === "number" ? b.checkpoint : null;
-    const row: DecisionRow = { seq: i, kind: e.kind, checkpoint: k, root: inp.roots?.[i] ?? null, asset: b.asset ?? null, ens_name: b.asset && ensSec?.zone ? assetName(b.asset, ensSec.zone, ensSec.parent) : null };
+    const row: DecisionRow = { seq: i, kind: e.kind, checkpoint: k, root: inp.roots?.[i] ?? null, asset: b.asset ?? null };
     if (PROOF_KINDS.has(e.kind)) {
       proofs++;
       const z = b.zg ?? {};
@@ -379,7 +364,6 @@ export function verifyMission(inp: VerifyInputs): Report {
   }
 
   resumeCheck(manifest, ch, add);
-  ensChecks(inp, manifest, robot, E, add);
 
   const first = checks.find((c) => c.status === "fail");
   return {
@@ -420,114 +404,6 @@ function resumeCheck(manifest: any, ch: ChainView | null | undefined, add: (c: C
   });
 }
 
-/**
- * ENS is the fleet's address book, not a trust root. The names the manifest claims must resolve to the
- * keys that actually signed this log, and an asset record that names this mission must point at a
- * robot-signed entry with the same finding. A later inspection overwriting an asset is fine (skip).
- */
-function ensChecks(inp: VerifyInputs, manifest: any, robot: string | null, E: Entry[], add: (c: Check) => void) {
-  const sec: EnsSection | null = manifest?.ens ?? null;
-  const T1 = "ENS names resolve to the keys that signed this mission";
-  const T2 = "ENS asset records point at robot-signed entries";
-  if (!sec) {
-    add({ id: "ens-agents", title: T1, status: "skip", detail: "this mission has no ENS names (ENS=none)" });
-    return;
-  }
-  const v = inp.ens;
-  if (!v || v.error) {
-    add({ id: "ens-agents", title: T1, status: "skip", detail: v?.error ? `could not read ENS on ${sec.network}: ${v.error}` : "ENS not read" });
-    return;
-  }
-  const unread = [v.agents.robot, v.agents.tee].find((r) => r?.error && r.error !== "no resolver for this name");
-  if (unread) {
-    add({ id: "ens-agents", title: T1, status: "skip", detail: `could not read ENS on ${sec.network}: ${unread.error}` });
-    return;
-  }
-  const eq = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
-  const probs: string[] = [];
-  const drone = v.agents.robot;
-  if (!eq(drone?.addr, robot)) probs.push(`${sec.names.robot} resolves to ${drone?.addr ?? "nothing"}, not the robot key ${short(robot)}`);
-  const tee = v.agents.tee;
-  const signers: string[] = manifest.policy?.tee_signers ?? [];
-  if (manifest.policy?.attestation !== "none" && !signers.some((s) => eq(s, tee?.addr))) probs.push(`${sec.names.tee} resolves to ${tee?.addr ?? "nothing"}, not an allowlisted TEE signer`);
-  const reg = v.registry;
-  if (reg && !eq(reg.droneOwner, robot)) probs.push(`the ${sec.names.robot} name token in the ENSv2 registry is held by ${reg.droneOwner ?? "nobody"}, not the robot key`);
-  add({
-    id: "ens-agents",
-    title: T1,
-    status: probs.length ? "warn" : "pass",
-    detail: probs.length
-      ? `${probs.join("; ")}. The log and chain checks above do not depend on ENS.`
-      : `${sec.names.robot} = robot ${short(robot)}${reg ? ` and its ENSv2 name token is held by the robot key (UserRegistry ${short(reg.subregistry)})` : ""}, ${sec.names.tee} = TEE signer ${short(tee?.addr)} (${sec.network}, Universal Resolver ${short(sec.universal_resolver)})`,
-  });
-
-  const byAsset = new Map<string, Entry>();
-  for (const e of E) if (["decision", "human", "safe_stop"].includes(e.kind) && e.body?.asset) byAsset.set(e.body.asset, e);
-  if (!byAsset.size || !sec.zone) {
-    add({ id: "ens-assets", title: T2, status: "skip", detail: "no decisions on named assets in this mission" });
-    return;
-  }
-  let mine = 0, later = 0, missing = 0;
-  let bad: { seq: number; why: string } | null = null;
-  for (const [label, e] of byAsset) {
-    const name = assetName(label, sec.zone, sec.parent);
-    const r = v.assets[label];
-    const t = r?.texts ?? {};
-    if (!t[KEYS.mission]) missing++;
-    else if (!eq(t[KEYS.mission], inp.missionId)) later++;
-    else {
-      mine++;
-      const [seq, hash] = (t[KEYS.entry] ?? "").split(":");
-      const f = parseFinding(t[KEYS.finding]);
-      const ans = e.kind === "decision" ? e.body.answer : e.kind === "human" ? E.filter((x) => x.kind === "hold" && x.body.checkpoint === e.body.checkpoint).at(-1)?.body?.answer : null;
-      const action = e.kind === "decision" ? e.body.action_applied : e.kind === "human" ? e.body.action : "safe_stop";
-      if (Number(seq) !== e.seq || !eq(hash, e.hash)) bad ??= { seq: e.seq, why: `${name} points at entry ${t[KEYS.entry]}, but the robot-signed entry for ${label} is #${e.seq} ${short(e.hash)}` };
-      else if (!t[KEYS.finding] && manifest.privacy?.ens === "pointer") continue; // pointer mode: the entry hash is the claim
-      else if (!f || f.action !== action || (ans && (f.label !== ans.label || f.severity !== ans.severity)))
-        bad ??= { seq: e.seq, why: `${name} says "${t[KEYS.finding]}", but entry #${e.seq} says ${ans ? `${ans.label}/${ans.severity}/` : ""}${action}` };
-    }
-  }
-  add({
-    id: "ens-assets",
-    title: T2,
-    status: bad ? "fail" : mine ? "pass" : "skip",
-    detail: bad
-      ? `Entry #${bad.seq}: ${bad.why}`
-      : `${byAsset.size} asset(s): ${mine} point at this mission's signed entries${later ? `, ${later} re-inspected by a later mission` : ""}${missing ? `, ${missing} not written to ENS yet` : ""}`,
-    seq: bad?.seq,
-  });
-}
-
-/** Read the manifest's ENS names and every asset this log decided on, from ENS itself. */
-export async function loadEns(manifest: any, entries: Entry[], rpcOverride?: string): Promise<EnsView | null> {
-  const sec: EnsSection | null = manifest?.ens ?? null;
-  if (!sec) return null;
-  try {
-    const rpc = rpcOverride || ENS_NETWORKS[sec.network]?.rpc;
-    if (!rpc) throw new Error(`no RPC for ENS network ${sec.network}`);
-    const r = new EnsReader(rpc, sec.chain_id, sec.universal_resolver);
-    const agents: Record<string, EnsRecord> = {};
-    await Promise.all(Object.entries(sec.names).map(async ([role, name]) => (agents[role] = await r.record(name, [KEYS.role]))));
-    const labels = [...new Set(entries.map((e) => e.body?.asset).filter((a): a is string => typeof a === "string"))];
-    const assets: Record<string, EnsRecord> = {};
-    if (sec.zone) await pool(labels, 4, async (l) => (assets[l] = await r.record(assetName(l, sec.zone!, sec.parent), ASSET_KEYS)));
-    let registry: EnsView["registry"] = null;
-    const ethReg = ENS_NETWORKS[sec.network]?.ethRegistry;
-    const [label, tld, ...rest] = sec.parent.split(".");
-    if (ethReg && tld === "eth" && !rest.length) {
-      const prov = new JsonRpcProvider(rpc, sec.chain_id, { staticNetwork: true });
-      const sub: string = await new Contract(ethReg, ["function getSubregistry(string) view returns (address)"], prov).getSubregistry(label);
-      if (sub !== "0x0000000000000000000000000000000000000000") {
-        const o: string = await new Contract(sub, ["function getOwner(uint256) view returns (address)"], prov).getOwner(BigInt(id(sec.names.robot.split(".")[0])));
-        registry = { subregistry: sub, droneOwner: o === "0x0000000000000000000000000000000000000000" ? null : o };
-      }
-    }
-    return { section: sec, agents, assets, registry };
-  } catch (e) {
-    return { section: sec, agents: {}, assets: {}, error: (e as Error).message.slice(0, 160) };
-  }
-}
-
 export interface LoadOptions {
   rpc: string;
   chainId: number;
@@ -537,8 +413,6 @@ export interface LoadOptions {
   fetchRoot: (root: string) => Promise<Uint8Array>;
   /** Override the 0G mainnet RPC used to read InferenceServing. */
   servingRpc?: string;
-  /** Override the RPC of the manifest's ENS network. */
-  ensRpc?: string;
 }
 
 /** Read each manifest provider's service record from InferenceServing. Never trusts the manifest's signer field. */
@@ -615,12 +489,6 @@ export async function loadFromChain(o: LoadOptions): Promise<VerifyInputs & { in
   } catch (e) {
     servicesError = (e as Error).message.slice(0, 160);
   }
-  let ens: EnsView | null = null;
-  try {
-    ens = await loadEns(JSON.parse(manifestText), entries, o.ensRpc);
-  } catch {
-    /* manifest not JSON: the manifest check reports it */
-  }
   return {
     missionId: o.missionId,
     entries,
@@ -629,7 +497,6 @@ export async function loadFromChain(o: LoadOptions): Promise<VerifyInputs & { in
     index,
     services,
     servicesError,
-    ens,
     chain: { network: o.network, chainId: o.chainId, registry: o.registry, robotRegistry, mission, anchors, robotIsOperator, parent },
   };
 }

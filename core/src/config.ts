@@ -1,8 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
-import { ENS_NETWORKS } from "./ens/names";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = resolve(HERE, "..", "..");
@@ -71,28 +70,6 @@ function parseEndpoints(raw: string, fallback: Endpoint[]): Endpoint[] {
   });
 }
 
-/** ENS (ENSv2) naming for the fleet and its assets. ENS=none turns it off. */
-function ensConfig(chainName: string) {
-  const network = env("ENS", chainName === "local" ? "local" : "none");
-  if (network === "none") return null;
-  const net = ENS_NETWORKS[network];
-  if (!net) throw new Error(`ENS must be sepolia, mainnet, local or none (got ${network})`);
-  let dev: { universalResolver?: string; resolver?: string } = {};
-  const devFile = resolve(REPO_ROOT, "contracts", "deployments", `ens-${net.chainId}.json`);
-  if (network === "local" && existsSync(devFile)) dev = JSON.parse(readFileSync(devFile, "utf8"));
-  return {
-    network,
-    chainId: net.chainId,
-    rpc: env("ENS_RPC_URL", net.rpc),
-    universalResolver: env("ENS_UNIVERSAL_RESOLVER", dev.universalResolver ?? net.universalResolver),
-    resolver: env("ENS_RESOLVER", dev.resolver ?? ""),
-    parent: env("ENS_PARENT", network === "local" ? "blackbox.eth" : "").toLowerCase(),
-    key: env("ENS_PRIVATE_KEY", env("OPERATOR_PRIVATE_KEY")),
-    // full: readable finding on each asset name; pointer: only the mission and the robot-signed entry it points at
-    records: (env("ENS_RECORDS", "full") === "pointer" ? "pointer" : "full") as "full" | "pointer",
-  };
-}
-
 export function loadConfig() {
   const chainName = env("CHAIN", "galileo");
   const chainEnabled = chainName !== "none";
@@ -156,7 +133,6 @@ export function loadConfig() {
       holdBelowPermille: int("DECISION_HOLD_BELOW", 600),
       requestTimeoutMs: int("ZG_REQUEST_TIMEOUT_MS", 15000),
     },
-    ens: ensConfig(chainName),
     policy: {
       leaseMs: int("LEASE_MS", zgMode === "mock" ? 6000 : 12000),
       nonceHexLen: int("NONCE_HEX_LEN", 64),

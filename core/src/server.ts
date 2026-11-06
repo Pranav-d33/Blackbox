@@ -10,8 +10,6 @@ import { extname, join, normalize } from "node:path";
 import { CORE_ROOT, loadConfig } from "./config";
 import { RegistryClient } from "./chain/registry";
 import { Missions } from "./mission";
-import { ASSET_KEYS, KEYS } from "./ens/names";
-import { EnsWriter } from "./ens/writer";
 import { RobotClient } from "./robotClient";
 import { listProfiles, loadProfile, simSection } from "./profile";
 import { makeStorage } from "./storage";
@@ -38,11 +36,7 @@ const registry = cfg.chain.enabled ? new RegistryClient(cfg.chain) : null;
 const robot = new RobotClient(cfg.robotUrl);
 const router = new RouterClient(cfg.zg, { down: false });
 const decider = new ZgDecider(cfg, router, new ServiceDirectory(cfg.zg));
-const ens = cfg.ens?.parent && cfg.ens.resolver && cfg.ens.universalResolver && cfg.ens.key ? new EnsWriter(cfg.ens) : null;
-if (ens && cfg.ens!.chainId === cfg.chain.network.chainId && cfg.chain.enabled && cfg.ens!.key === cfg.chain.operatorKey)
-  console.warn("[core] ENS and 0G Chain are the same chain with the same key: their nonces will collide. Set ENS_PRIVATE_KEY to another key.");
-if (cfg.ens && !ens) console.warn(`[core] ENS=${cfg.ens.network} but ENS_PARENT, ENS_RESOLVER or the key is missing (run: npm run setup:ens). ENS naming is off.`);
-const missions = new Missions(cfg, decider, storage, registry, robot, ens);
+const missions = new Missions(cfg, decider, storage, registry, robot);
 
 const WEB = join(CORE_ROOT, "web");
 const MIME: Record<string, string> = {
@@ -75,7 +69,6 @@ function publicConfig() {
       endpoints: cfg.zg.endpoints.map((e) => e.name),
       decisionModel: cfg.zg.decisionModel || null,
     },
-    ens: ens && cfg.ens ? { network: cfg.ens.network, chainId: cfg.ens.chainId, parent: cfg.ens.parent, universalResolver: cfg.ens.universalResolver, rpc: cfg.ens.network === "local" ? cfg.ens.rpc : null } : null,
     policy: cfg.policy,
     publicVerifierUrl: cfg.publicVerifierUrl || null,
   };
@@ -123,16 +116,6 @@ const routes: [string, RegExp, Handler][] = [
       queue: missions.queue.pending + (missions.chainQueue === missions.queue ? 0 : missions.chainQueue.pending),
       missions: [...missions.records.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20).map((r) => ({ id: r.id, status: r.status, createdAt: r.createdAt })),
     }),
-  ],
-  [
-    "GET",
-    /^\/api\/ens\/lookup$/,
-    async (_q, _m, u) => {
-      if (!ens) throw new Error("ENS is off");
-      const name = (u.searchParams.get("name") ?? "").toLowerCase();
-      if (!name.endsWith(`.${ens.parent}`) && name !== ens.parent) throw new Error(`only names under ${ens.parent}`);
-      return ens.reader.record(name, [...new Set([...ASSET_KEYS, KEYS.role, KEYS.robotId, KEYS.model, KEYS.signers, KEYS.chain])]);
-    },
   ],
   ["GET", /^\/api\/robot\/state$/, async (_q, _m, u) => robot.state(Number(u.searchParams.get("since") ?? 0))],
   ["POST", /^\/api\/mission\/start$/, async (q) => ({ mission: missions.summary(await missions.start({ ...(await body(q)), background: true })) })],

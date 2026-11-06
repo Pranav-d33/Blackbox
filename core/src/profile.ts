@@ -24,8 +24,8 @@ export interface Profile {
   summary: string;
   robot: string;
   world: { kind: string; kinds: WorldKind[]; [k: string]: unknown };
-  /** ENS naming of the inspected assets: <label>.<zone>.<ENS parent>, e.g. r2m14.solar.blackbox.eth */
-  assets?: { zone: string; unit: string; label: string; example: string };
+  /** How the robot labels the asset it inspected (robot-signed in each decision): r2m14 = row 2, module 14 */
+  assets?: { unit: string; label: string; example: string };
   sim: Record<string, unknown>;
   decision: {
     labels: string[];
@@ -63,7 +63,6 @@ export function validateProfile(p: any): Profile {
     if (!d.actions.includes(action as string)) fail(`label_actions maps ${label} to unknown action ${action}`);
   }
   if (typeof p.world?.kind !== "string" || !Array.isArray(p.world?.kinds) || !p.world.kinds.length) fail("world.kind and world.kinds are required");
-  if (p.assets !== undefined && !/^[a-z0-9][a-z0-9-]{0,31}$/.test(p.assets?.zone ?? "")) fail("assets.zone must be one lowercase ENS label");
   if (!Array.isArray(p.sim?.deck_mm) || p.sim.deck_mm.length !== 2) fail("sim.deck_mm must be [w, h]");
   return p as Profile;
 }
