@@ -409,6 +409,11 @@ function ensChecks(inp: VerifyInputs, manifest: any, robot: string | null, E: En
     add({ id: "ens-agents", title: T1, status: "skip", detail: v?.error ? `could not read ENS on ${sec.network}: ${v.error}` : "ENS not read" });
     return;
   }
+  const unread = [v.agents.robot, v.agents.tee].find((r) => r?.error && r.error !== "no resolver for this name");
+  if (unread) {
+    add({ id: "ens-agents", title: T1, status: "skip", detail: `could not read ENS on ${sec.network}: ${unread.error}` });
+    return;
+  }
   const eq = (a?: string | null, b?: string | null) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
   const probs: string[] = [];
   const drone = v.agents.robot;

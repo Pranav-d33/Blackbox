@@ -7,13 +7,15 @@ for (const k of ["mission", "network", "registry", "api"]) if (q.get(k)) $(k).va
 
 // ENS: a name like r2m14.solar.blackbox-demo.eth can stand in for the mission id.
 let ensCfg = { network: q.get("ens") || "sepolia" };
+let coreRpc = {}; // the serving core's own RPC for its network (RPC_URL), else the public default
+const config = fetch("/api/config").then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
 // When served by a Blackbox core, prefill from its config.
-fetch("/api/config")
-  .then((r) => (r.ok ? r.json() : null))
+config
   .then((c) => {
-    if (c?.ens && !q.get("ens")) ensCfg = { network: c.ens.network, universalResolver: c.ens.universalResolver, rpc: c.ens.network === "local" ? "http://127.0.0.1:8545" : undefined };
+    if (c?.ens && (!q.get("ens") || q.get("ens") === c.ens.network)) ensCfg = { network: c.ens.network, universalResolver: c.ens.universalResolver, rpc: c.ens.rpc ?? undefined };
     if (!c?.chain) return;
+    coreRpc = { [c.chain.network]: c.chain.rpc };
     if (!q.get("network")) $("network").value = c.chain.network;
     if (!q.get("registry")) $("registry").value = c.chain.registry;
     if (!q.get("api") && c.storage.kind !== "0g") $("api").value = location.origin;
@@ -48,11 +50,12 @@ function storageLink(network) {
 }
 
 async function run(localEntries) {
+  await config; // the prefill from the serving core lands first
   const out = $("out");
   out.hidden = false;
   let missionId = $("mission").value.trim();
   const network = $("network").value;
-  const net = V.NETWORK_DEFAULTS[network];
+  const net = { ...V.NETWORK_DEFAULTS[network], ...(coreRpc[network] ? { rpc: coreRpc[network] } : {}) };
   let via = "";
   out.innerHTML = `<div class="muted">Reading ${esc(network)} registry and 0G Storage…</div>`;
   try {
@@ -63,7 +66,7 @@ async function run(localEntries) {
       missionId = r.mission;
     }
     if (!/^0x[0-9a-fA-F]{64}$/.test(missionId)) throw new Error("enter a mission id (0x + 64 hex)");
-    const inputs = await V.loadFromChain({ rpc: net.rpc, chainId: net.chainId, network, registry: $("registry").value.trim(), missionId, fetchRoot: fetchRootFn(network) });
+    const inputs = await V.loadFromChain({ rpc: net.rpc, chainId: net.chainId, network, registry: $("registry").value.trim(), missionId, fetchRoot: fetchRootFn(network), ensRpc: ensCfg.rpc });
     if (localEntries) inputs.entries = localEntries;
     const report = V.verifyMission(inputs);
     const ex = net.explorer;

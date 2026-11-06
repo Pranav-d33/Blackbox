@@ -75,7 +75,7 @@ function publicConfig() {
       endpoints: cfg.zg.endpoints.map((e) => e.name),
       decisionModel: cfg.zg.decisionModel || null,
     },
-    ens: ens && cfg.ens ? { network: cfg.ens.network, chainId: cfg.ens.chainId, parent: cfg.ens.parent, universalResolver: cfg.ens.universalResolver } : null,
+    ens: ens && cfg.ens ? { network: cfg.ens.network, chainId: cfg.ens.chainId, parent: cfg.ens.parent, universalResolver: cfg.ens.universalResolver, rpc: cfg.ens.network === "local" ? cfg.ens.rpc : null } : null,
     policy: cfg.policy,
     publicVerifierUrl: cfg.publicVerifierUrl || null,
   };

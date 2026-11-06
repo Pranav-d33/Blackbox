@@ -145,7 +145,7 @@ function verdicts(sim, mission) {
     return {
       k: cp.k, x_mm: cp.target_mm[0], y_mm: cp.target_mm[1], state: cp.outcome ?? "waiting",
       color: stop ? "#ff453a" : u.color ?? "#ffd60a",
-      title: stop ? `#${cp.k} safe stop` : `#${cp.k} ${u.name ?? lab ?? "asking 0G"}`,
+      title: stop ? `${cp.asset ?? `#${cp.k}`} · safe stop` : `${cp.asset ?? `#${cp.k}`} · ${u.name ?? lab ?? "asking 0G"}`,
       sub: stop ? "no decision made" : d ? `0G → ${d.action_applied}` : "",
     };
   });
