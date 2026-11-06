@@ -12,6 +12,7 @@ import type { Config } from "./config";
 import { RegistryClient } from "./chain/registry";
 import { type EnsAssetState, EnsWriter } from "./ens/writer";
 import { finding } from "./ens/names";
+import { cropMasterKey, encryptCrop, keyId, missionCropKey } from "./privacy";
 import { type Entry, canonicalJson, entryHash, goJson, sha256Hex } from "./lib/canonical";
 import { type Bundle, type Policy, expectedEcho, extractContent, parseAnswer } from "./lib/interlock";
 import { SerialQueue } from "./lib/queue";
@@ -73,10 +74,14 @@ export class Missions {
   current: MissionRecord | null = null;
   records = new Map<string, MissionRecord>();
   demo = { forgeArmed: false, tamperArmed: false };
+  /** 0G Storage uploads. They drain in the background: chain writes use roots computed locally. */
   readonly queue = new SerialQueue();
+  /** 0G Chain writes. Its own queue when Storage pays from another key, else the same one (one nonce). */
+  readonly chainQueue: SerialQueue;
   private cropB64 = new Map<string, string>();
   private dir: string;
   private saveTimers = new Map<string, NodeJS.Timeout>();
+  private cropMaster: Buffer | null = null;
 
   constructor(
     private cfg: Config,
@@ -86,6 +91,9 @@ export class Missions {
     public robot: RobotClient,
     public ens: EnsWriter | null = null,
   ) {
+    if (cfg.storage.storeCrops && cfg.storage.cropPrivacy === "encrypted") this.cropMaster = cropMasterKey(cfg.storage.cropKey, cfg.dataDir);
+    const chainKey = registry?.wallet?.address ?? null;
+    this.chainQueue = chainKey && storage.payer && chainKey.toLowerCase() !== storage.payer.toLowerCase() ? new SerialQueue() : this.queue;
     this.dir = join(cfg.dataDir, "missions");
     mkdirSync(this.dir, { recursive: true });
     for (const f of readdirSync(this.dir).filter((f) => f.endsWith(".json"))) {
@@ -121,7 +129,9 @@ export class Missions {
   }
 
   // ------------------------------------------------------------------ start
-  async start(opts: { defects?: any[]; seed?: number; scenario?: string; background?: boolean }): Promise<MissionRecord> {
+  async start(opts: { defects?: any[]; seed?: number; scenario?: string; background?: boolean; resume?: string }): Promise<MissionRecord> {
+    const resume = opts.resume ? this.resumeFrom(opts.resume) : null;
+    if (resume) opts = { ...opts, seed: resume.seed, scenario: resume.scenario, defects: resume.defects };
     if (this.current && (this.current.status === "preparing" || this.current.status === "flying"))
       throw new Error("a mission is already in progress");
     const health = await this.robot.health().catch(() => {
@@ -160,7 +170,8 @@ export class Missions {
       robot_registry: chain.enabled ? chain.robotRegistry : null,
       seed,
       profile,
-      sim: simSection(profile, backend),
+      sim: resume ? { ...simSection(profile, backend), resume: resume.point } : simSection(profile, backend),
+      resume: resume?.link ?? null,
       policy: {
         ...vocabulary(profile),
         vision_model: this.cfg.zg.visionModel,
@@ -184,6 +195,14 @@ export class Missions {
       },
       storage: { kind: this.storage.kind, network: this.cfg.storage.network.name },
       ens: this.ens ? this.ens.section(profile.assets?.zone ?? null) : null,
+      // what is public and what is not (docs/privacy.md). Fixed in the manifest, so it is anchored with the mission.
+      privacy: {
+        crops: !this.cfg.storage.storeCrops ? "not stored" : this.cropMaster ? "aes-256-gcm" : "public",
+        crop_key_id: this.cropMaster ? keyId(missionCropKey(this.cropMaster, missionId)) : null,
+        inference: this.cfg.zg.attestation === "tee" ? `sealed (${this.cfg.zg.trustMode} trust, TEE)` : "unsealed",
+        log: "public (hashes, answers, positions, TEE signatures)",
+        ens: this.ens ? this.cfg.ens!.records : null,
+      },
       created_at: new Date().toISOString(),
     };
     const manifestText = canonicalJson(manifest);
@@ -214,18 +233,20 @@ export class Missions {
     this.current = rec;
     const launch = async () => {
     try {
-      rec.stage = "Uploading the manifest to 0G Storage";
-      const up = await this.queue.run(() => this.storage.upload(toUtf8Bytes(manifestText)));
-      rec.manifestRoot = up.root;
-      rec.manifestTx = up.txHash;
+      // The manifest's 0G Storage root is computed locally, so the robot and the registry get it at once
+      // and the upload drains behind them. Takeoff still waits for registerMission on 0G Chain.
+      const bytes = toUtf8Bytes(manifestText);
+      const root = await this.storage.rootOf(bytes);
+      rec.manifestRoot = root;
+      this.upload(rec, bytes, root, (s) => (rec.manifestTx = s.txHash), "manifest");
       rec.stage = "Robot is loading the manifest";
-      const prep = await this.robot.prepare({ manifest_text: manifestText, manifest_root: up.root, defects: opts.defects ?? [] });
+      const prep = await this.robot.prepare({ manifest_text: manifestText, manifest_root: root, defects: opts.defects ?? [] });
       await this.onEntry(prep.genesis);
       if (this.registry) {
         rec.stage = "Registering the mission on 0G Chain (BlackboxRegistry)";
         const seedHash = keccak256(AbiCoder.defaultAbiCoder().encode(["uint256"], [seed]));
-        rec.chain.registerTx = await this.queue.run(() =>
-          this.registry!.registerMission(missionId, robotId, robot, seedHash, up.root, prep.genesis.hash),
+        rec.chain.registerTx = await this.chainQueue.run(() =>
+          this.registry!.registerMission(missionId, robotId, robot, seedHash, root, prep.genesis.hash),
         );
         this.persist(rec);
       }
@@ -262,11 +283,13 @@ export class Missions {
     if (!this.cropB64.has(cropKey)) {
       this.cropB64.set(cropKey, req.crop_png_b64);
       if (this.cfg.storage.storeCrops) {
+        const png = Buffer.from(req.crop_png_b64, "base64");
+        const bytes = this.cropMaster ? encryptCrop(missionCropKey(this.cropMaster, rec.id), png) : png;
         rec.crops[k] = { root: null, tx: null };
-        this.queue
-          .run(() => this.storage.upload(Buffer.from(req.crop_png_b64, "base64")))
-          .then((s) => ((rec.crops[k] = { root: s.root, tx: s.txHash }), this.persist(rec)))
-          .catch((e) => this.fail(rec, `crop ${k} upload: ${e.message}`));
+        this.storage.rootOf(bytes).then((root) => {
+          rec.crops[k] = { root, tx: null };
+          this.upload(rec, bytes, root, (s) => (rec.crops[k].tx = s.txHash), `crop ${k}`);
+        });
       }
     }
     if (this.demo.forgeArmed) {
@@ -321,10 +344,9 @@ export class Missions {
     if (entryHash(entry) !== entry.hash) return { ok: false, error: `entry #${entry.seq} hash does not recompute` };
     rec.entries[entry.seq] = entry;
     const seq = entry.seq;
-    this.queue
-      .run(() => this.storage.upload(toUtf8Bytes(canonicalJson(entry))))
-      .then((s) => ((rec.roots[seq] = { root: s.root, tx: s.txHash }), this.persist(rec)))
-      .catch((e) => this.fail(rec, `entry #${seq} upload: ${e.message}`));
+    const bytes = toUtf8Bytes(canonicalJson(entry));
+    rec.roots[seq] = { root: await this.storage.rootOf(bytes), tx: null };
+    this.upload(rec, bytes, rec.roots[seq].root, (s) => (rec.roots[seq].tx = s.txHash), `entry #${seq}`);
     if (["decision", "human", "safe_stop"].includes(entry.kind)) {
       rec.decisionsSinceAnchor++;
       if (rec.decisionsSinceAnchor >= this.cfg.policy.anchorEvery) {
@@ -339,6 +361,18 @@ export class Missions {
     }
     this.persist(rec);
     return { ok: true };
+  }
+
+  /** Queue an upload whose root is already known; check 0G Storage agrees on it. */
+  private upload(rec: MissionRecord, bytes: Uint8Array, root: string, done: (s: { txHash: string | null }) => void, what: string) {
+    this.queue
+      .run(() => this.storage.upload(bytes))
+      .then((s) => {
+        if (s.root.toLowerCase() !== root.toLowerCase()) throw new Error(`0G Storage returned root ${s.root}, computed ${root}`);
+        done(s);
+        this.persist(rec);
+      })
+      .catch((e) => this.fail(rec, `${what} upload: ${e.message}`));
   }
 
   private contiguous(rec: MissionRecord) {
@@ -359,12 +393,16 @@ export class Missions {
   }
 
   private queueAnchor(rec: MissionRecord, close: boolean) {
-    this.queue
+    this.chainQueue
       .run(async () => {
         const count = this.contiguous(rec);
         if (!close && count <= rec.anchoredCount) return;
         const head = rec.entries[count - 1].hash;
-        const idx = await this.storage.upload(toUtf8Bytes(canonicalJson(this.index(rec, count))));
+        for (const e of rec.entries.slice(0, count)) // an entry still computing its root in a parallel request
+          if (!rec.roots[e.seq]) rec.roots[e.seq] = { root: await this.storage.rootOf(toUtf8Bytes(canonicalJson(e))), tx: null };
+        const ib = toUtf8Bytes(canonicalJson(this.index(rec, count)));
+        const idx = { root: await this.storage.rootOf(ib) };
+        this.upload(rec, ib, idx.root, () => {}, `index at ${count}`);
         rec.chain.indexRoot = idx.root;
         let tx: string | null = null;
         if (close) {
@@ -389,6 +427,36 @@ export class Missions {
         }
       })
       .catch((e) => this.fail(rec, `${close ? "close" : "anchor"}: ${e.message}`));
+  }
+
+  /**
+   * Resume a survey a safe stop interrupted. The parent must be closed on chain, and its last entry, the
+   * robot-signed mission_end, must carry the stop point. The new mission keeps the seed, profile and marks,
+   * takes off, flies back to that point and asks 0G again about the mark that was never decided.
+   */
+  private resumeFrom(parentId: string) {
+    const p = this.records.get(parentId);
+    if (!p) throw new Error("unknown mission to resume");
+    const end = p.entries.filter(Boolean).at(-1);
+    if (end?.kind !== "mission_end") throw new Error("that mission has not ended yet");
+    if (!end.body.resume) throw new Error(end.body.final === "landed" ? "that mission finished its survey: nothing to resume" : "that mission stopped with no resume point");
+    if (p.status !== "closed") throw new Error("wait until the mission is closed on 0G Chain, then resume");
+    const start = p.entries[0].body;
+    const placed = [...(start.defects ?? []), ...p.entries.filter((e) => e?.kind === "world").map((e) => e.body.defect)];
+    return {
+      seed: p.seed,
+      scenario: p.manifest.profile?.id,
+      defects: placed.map((d: any) => ({ kind: d.kind, x_mm: d.x_mm, y_mm: d.y_mm, variant: d.variant })),
+      point: end.body.resume,
+      link: { parent: p.id, parent_head: end.hash, parent_count: p.entries.length, wp_idx: end.body.resume.wp_idx, pose_mm: end.body.resume.pose_mm },
+    };
+  }
+
+  /** For an auditor: the mission's crop key. Released by the operator, never uploaded. */
+  cropKey(missionId: string) {
+    if (!this.cropMaster) throw new Error("crops are not encrypted (CROP_PRIVACY=public or STORE_CROPS=false)");
+    const key = missionCropKey(this.cropMaster, missionId);
+    return { mission: missionId, cipher: "aes-256-gcm", key: "0x" + key.toString("hex"), key_id: keyId(key) };
   }
 
   // -------------------------------------------------------------------- ENS
@@ -440,12 +508,15 @@ export class Missions {
     const [mission, anchors] = await Promise.all([this.registry.getMission(missionId), this.registry.getAnchors(missionId)]);
     const robotIsOperator = mission ? await this.registry.isOperator(mission.robotId, mission.robot) : null;
     const net = this.cfg.chain.network;
-    return { network: net.name, chainId: net.chainId, registry: this.cfg.chain.registry, robotRegistry: this.cfg.chain.robotRegistry, mission, anchors, robotIsOperator };
+    const parentId = this.records.get(missionId)?.manifest?.resume?.parent;
+    const parent = parentId ? await this.registry.getMission(parentId) : undefined;
+    return { network: net.name, chainId: net.chainId, registry: this.cfg.chain.registry, robotRegistry: this.cfg.chain.robotRegistry, mission, anchors, robotIsOperator, parent };
   }
 
   /** source=storage re-reads everything from 0G Chain + 0G Storage; source=local uses the core's copy. */
   async verify(missionId: string, source: "storage" | "local" = "storage", entriesOverride?: Entry[]): Promise<Report> {
     const rec = this.records.get(missionId);
+    if (source === "storage") await Promise.all([this.queue.idle(), this.chainQueue.idle()]); // read back what was written
     if (source === "storage" && this.registry && !entriesOverride) {
       const n = this.cfg.chain.network;
       const inp = await loadFromChain({
@@ -530,6 +601,12 @@ export class Missions {
       checkpoints: rec.checkpoints,
       crops: rec.crops,
       replay: rec.replay,
+      resumeOf: rec.manifest.resume ?? null,
+      privacy: rec.manifest.privacy ?? null,
+      resumable: (() => {
+        const end = rec.entries.filter(Boolean).at(-1);
+        return end?.kind === "mission_end" && end.body.resume ? { ...end.body.resume, stoppedAt: rec.entries.filter((e) => e?.kind === "safe_stop").at(-1)?.body ?? null } : null;
+      })(),
       ens: rec.manifest.ens ? { ...rec.manifest.ens, ...(rec.ens ?? { agents: null, assets: {} }) } : null,
       errors: rec.errors.slice(-8),
       entries: rec.entries.filter(Boolean).map((e) => ({

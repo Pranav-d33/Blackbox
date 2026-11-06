@@ -41,6 +41,8 @@ export interface ChainView {
   mission: ChainMission | null;
   anchors: ChainAnchor[];
   robotIsOperator?: boolean | null;
+  /** For a resumed mission: the parent mission as BlackboxRegistry has it. */
+  parent?: ChainMission | null;
 }
 
 export interface VerifyInputs {
@@ -374,6 +376,7 @@ export function verifyMission(inp: VerifyInputs): Report {
     add({ id: "replay", title: "Replay from seed + logged answers", status: "skip", detail: "run: python -m blackbox_robot.replay --core <url> --mission <id>" });
   }
 
+  resumeCheck(manifest, ch, add);
   ensChecks(inp, manifest, robot, E, add);
 
   const first = checks.find((c) => c.status === "fail");
@@ -389,6 +392,30 @@ export function verifyMission(inp: VerifyInputs): Report {
     chain: inp.chain ?? null,
     generatedAt: new Date().toISOString(),
   };
+}
+
+/** A resumed mission must continue a parent that is closed on chain at exactly the head the manifest names. */
+function resumeCheck(manifest: any, ch: ChainView | null | undefined, add: (c: Check) => void) {
+  const r = manifest?.resume;
+  if (!r) return;
+  const T = "Resumes a closed mission from its robot-signed stop point";
+  if (!ch) return add({ id: "resume", title: T, status: "skip", detail: `resumes ${short(r.parent)}; no chain to check it on` });
+  const p = ch.parent;
+  const probs: string[] = [];
+  if (!p) probs.push(`parent mission ${short(r.parent)} is not registered`);
+  else {
+    if (!p.closedAt) probs.push("parent mission is not closed on chain");
+    if (p.head !== r.parent_head) probs.push(`parent closed at head ${short(p.head)}, manifest says ${short(r.parent_head)}`);
+    if (p.count !== r.parent_count) probs.push(`parent closed with ${p.count} entries, manifest says ${r.parent_count}`);
+    if (ch.mission && p.robotId !== ch.mission.robotId) probs.push("parent belongs to another robot");
+    if (manifest.seed !== undefined && p.seedHash !== keccak256(AbiCoder.defaultAbiCoder().encode(["uint256"], [manifest.seed]))) probs.push("seed differs from the parent's");
+  }
+  add({
+    id: "resume",
+    title: T,
+    status: probs.length ? "fail" : "pass",
+    detail: probs.length ? probs.join("; ") : `continues ${short(r.parent)} (closed at ${r.parent_count} entries, head ${short(r.parent_head)}; its last entry, signed by the robot, is the stop point) from waypoint ${r.wp_idx}, same seed`,
+  });
 }
 
 /**
@@ -451,6 +478,7 @@ function ensChecks(inp: VerifyInputs, manifest: any, robot: string | null, E: En
       const ans = e.kind === "decision" ? e.body.answer : e.kind === "human" ? E.filter((x) => x.kind === "hold" && x.body.checkpoint === e.body.checkpoint).at(-1)?.body?.answer : null;
       const action = e.kind === "decision" ? e.body.action_applied : e.kind === "human" ? e.body.action : "safe_stop";
       if (Number(seq) !== e.seq || !eq(hash, e.hash)) bad ??= { seq: e.seq, why: `${name} points at entry ${t[KEYS.entry]}, but the robot-signed entry for ${label} is #${e.seq} ${short(e.hash)}` };
+      else if (!t[KEYS.finding] && manifest.privacy?.ens === "pointer") continue; // pointer mode: the entry hash is the claim
       else if (!f || f.action !== action || (ans && (f.label !== ans.label || f.severity !== ans.severity)))
         bad ??= { seq: e.seq, why: `${name} says "${t[KEYS.finding]}", but entry #${e.seq} says ${ans ? `${ans.label}/${ans.severity}/` : ""}${action}` };
     }
@@ -549,6 +577,13 @@ export async function loadFromChain(o: LoadOptions): Promise<VerifyInputs & { in
   let index: MissionIndex | null = null;
   if (mission.indexRoot !== ZERO_HASH) index = JSON.parse(dec(await o.fetchRoot(mission.indexRoot)));
   const manifestText = dec(await o.fetchRoot(mission.manifestRoot));
+  let parent: ChainMission | null | undefined;
+  try {
+    const r = JSON.parse(manifestText)?.resume;
+    if (r?.parent) parent = toChainMission(await reg.getMission(r.parent));
+  } catch {
+    /* manifest not JSON: the manifest check reports it */
+  }
   const roots: Record<number, string | null> = {};
   let entries: Entry[] = [];
   if (index) {
@@ -580,7 +615,7 @@ export async function loadFromChain(o: LoadOptions): Promise<VerifyInputs & { in
     services,
     servicesError,
     ens,
-    chain: { network: o.network, chainId: o.chainId, registry: o.registry, robotRegistry, mission, anchors, robotIsOperator },
+    chain: { network: o.network, chainId: o.chainId, registry: o.registry, robotRegistry, mission, anchors, robotIsOperator, parent },
   };
 }
 

@@ -23,11 +23,11 @@
     "home_mm": [-2500, 8000],
     "cruise_mm": 3000,
     "inspect_mm": 1000,
-    "speed_mm_s": 3000,
+    "speed_mm_s": 4500,
     "lanes": 4,
     "footprint_mm": 1400,
     "detector_min": 10,
-    "inspect_hover_ms": 1000,
+    "inspect_hover_ms": 600,
     "crop_mm": 1000
   },
   "decision": {

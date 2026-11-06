@@ -1,4 +1,4 @@
-import { engine } from "../engine.js";
+import { engine, short } from "../engine.js";
 import { Button, Dot, toneText } from "./ui.jsx";
 
 const COPY = {
@@ -155,6 +155,33 @@ function Live() {
   );
 }
 
+/** After a safe stop: pick the survey up where the drone stopped, once 0G is back. */
+function Resume() {
+  const m = engine.mission();
+  const r = m?.resumable;
+  if (!r) return null;
+  const down = engine.S.status?.demo?.linkDown;
+  const closed = m.status === "closed";
+  const at = engine.assetAt(...r.pose_mm) ?? (r.stoppedAt?.asset || null);
+  const where = r.stoppedAt?.asset ? engine.ensName(r.stoppedAt.asset) : at ? engine.ensName(at) : `waypoint ${r.wp_idx}`;
+  return (
+    <div className="mt-3 rounded-2xl bg-wait/[0.08] p-3.5 shadow-[inset_0_0_0_1px_rgb(251_191_36/0.2)]">
+      <p className="text-[13px] font-semibold text-wait">Survey interrupted</p>
+      <p className="mt-1 text-[12px] leading-relaxed text-white/65">
+        The drone safe-stopped at <span className="ens-name">{where}</span> ({r.stoppedAt?.reason ?? "no decision made"}) and flew home. The stop point is in its signed log.
+      </p>
+      <div className="mt-2.5 flex flex-wrap gap-2">
+        {down ? (
+          <Button variant="primary" onClick={engine.toggleLink}>Restore 0G</Button>
+        ) : null}
+        <Button variant={down ? "glass" : "primary"} disabled={down || !closed || engine.S.starting} onClick={engine.resume} title={closed ? "Same seed and marks: fly back to where it stopped and ask 0G again" : "Waiting for the close on 0G Chain"}>
+          {closed ? "Resume survey" : "Closing on chain…"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function Prove() {
   const f = engine.findings();
   const m = engine.mission();
@@ -185,6 +212,7 @@ function Prove() {
           </span>
         </button>
       ) : null}
+      <Resume />
       <div className="mt-3 flex flex-col gap-2">
         <Button variant="zg" size="md" onClick={engine.verify} title={closed ? "" : "Works while open too; the close transaction lands a few seconds after landing"}>
           Verify on 0G{engine.ens() ? " + ENS" : ""}
@@ -219,6 +247,11 @@ export default function Flow() {
       <div className="px-5 pt-5 pb-1">
         <p className="text-[11px] font-semibold tracking-[0.08em] text-zg uppercase">{p?.assets?.unit ? `${p.title.replace(/ survey$/, "")}` : "Mission"}</p>
         <p className="mt-1 text-[13px] leading-snug text-white/50">{p?.summary}</p>
+        {m?.resumeOf && engine.S.view === "mission" ? (
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-wait/[0.1] px-2 py-1 text-[11.5px] text-wait">
+            Resumed from {short(m.resumeOf.parent, 8)} at waypoint {m.resumeOf.wp_idx}
+          </p>
+        ) : null}
       </div>
       <div className="scroll-soft min-h-0 flex-1 divide-y divide-white/[0.06] overflow-y-auto">
         <Step n={1} title="Mark the site" state={st("mark")} summary={engine.inMission() ? `${engine.S.robot?.sim?.defects?.length ?? 0} marks` : null}>

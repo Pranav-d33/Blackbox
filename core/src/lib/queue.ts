@@ -12,4 +12,9 @@ export class SerialQueue {
     );
     return p;
   }
+
+  /** Resolves once everything queued so far has run (successfully or not). */
+  idle(): Promise<void> {
+    return this.tail.then(() => undefined);
+  }
 }

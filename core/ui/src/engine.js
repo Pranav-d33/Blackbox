@@ -288,6 +288,11 @@ class Engine {
       { k: "closeMission", v: m.closeTx ? short(m.closeTx, 12) : m.status, href: m.closeTxUrl, mono: !!m.closeTx },
       { k: "Replay", v: replay.text, tone: replay.tone },
       { k: "Writer queue", v: st?.queue ? `${st.queue} pending` : "Idle" },
+      ...(m.privacy ? [
+        { k: "Crops on 0G Storage", v: m.privacy.crops === "aes-256-gcm" ? "Encrypted (AES-256-GCM), key held by the operator" : m.privacy.crops },
+        { k: "Inference", v: m.privacy.inference },
+        ...(m.privacy.ens ? [{ k: "ENS records", v: m.privacy.ens === "pointer" ? "Pointer only: mission + signed entry" : "Readable finding + pointer" }] : []),
+      ] : []),
     ];
     if (m.errors.length) rows.push({ k: "Error", v: m.errors.at(-1), tone: "bad" });
     const entries = m.entries.slice().reverse().map((e) => ({ seq: e.seq, kind: e.kind, hash: short(e.hash, 6), root: e.root ? short(e.root, 6) : null, href: e.txUrl || e.rootUrl }));
@@ -549,13 +554,21 @@ class Engine {
   }
 
   // ------------------------------------------------------------ beats
-  start = this.guard(async () => {
+  start = this.guard(() => this.launch({ scenario: this.S.scenario?.id, defects: this.S.pending }));
+  /** Resume the survey a safe stop interrupted: same seed and marks, back to the stop point, ask 0G again. */
+  resume = this.guard(async () => {
+    const m = this.mission();
+    if (this.S.status?.demo?.linkDown) throw new Error("0G is still cut. Restore 0G first, then resume.");
+    await this.launch({ resume: m.id });
+    this.toast(`Resuming from waypoint ${m.resumable.wp_idx}: the drone flies back to where it stopped and asks 0G again.`, 9000);
+  });
+  async launch(body) {
     const S = this.S;
-    if (!S.scenario) throw new Error("Pick a scenario first.");
+    if (!body.scenario && !body.resume) throw new Error("Pick a scenario first.");
     S.starting = true;
     this.toast("Uploading the manifest with the mission profile to 0G Storage and registering it on 0G Chain…", 8000);
     try {
-      const r = await api("/api/mission/start", { scenario: S.scenario.id, defects: S.pending });
+      const r = await api("/api/mission/start", body);
       S.done = { fly: true };
       S.seenMission = r.mission.id;
       this.exitCompare();
@@ -565,7 +578,7 @@ class Engine {
       S.starting = false;
       this.emit();
     }
-  });
+  }
   /** start returns at once; follow the real stages (Storage upload, Chain registration, takeoff) until the drone is flying or it fails. */
   async watchLaunch(id) {
     let last = "";

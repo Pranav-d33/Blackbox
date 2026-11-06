@@ -88,6 +88,8 @@ function ensConfig(chainName: string) {
     resolver: env("ENS_RESOLVER", dev.resolver ?? ""),
     parent: env("ENS_PARENT", network === "local" ? "blackbox.eth" : "").toLowerCase(),
     key: env("ENS_PRIVATE_KEY", env("OPERATOR_PRIVATE_KEY")),
+    // full: readable finding on each asset name; pointer: only the mission and the robot-signed entry it points at
+    records: (env("ENS_RECORDS", "full") === "pointer" ? "pointer" : "full") as "full" | "pointer",
   };
 }
 
@@ -132,6 +134,9 @@ export function loadConfig() {
       operatorKey: env("STORAGE_PRIVATE_KEY", env("OPERATOR_PRIVATE_KEY")),
       waitFinality: env("STORAGE_WAIT_FINALITY", "false") === "true",
       storeCrops: env("STORE_CROPS", "true") === "true",
+      // encrypted: each crop goes to 0G Storage as AES-256-GCM with a per-mission key (privacy.ts); public: plain PNG
+      cropPrivacy: (env("CROP_PRIVACY", "encrypted") === "public" ? "public" : "encrypted") as "public" | "encrypted",
+      cropKey: env("CROP_KEY"),
     },
     zg: {
       mode: zgMode,

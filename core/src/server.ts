@@ -120,7 +120,7 @@ const routes: [string, RegExp, Handler][] = [
     async () => ({
       mission: missions.summary(missions.current),
       demo: { linkDown: router.link.down, ...missions.demo },
-      queue: missions.queue.pending,
+      queue: missions.queue.pending + (missions.chainQueue === missions.queue ? 0 : missions.chainQueue.pending),
       missions: [...missions.records.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20).map((r) => ({ id: r.id, status: r.status, createdAt: r.createdAt })),
     }),
   ],
@@ -156,6 +156,7 @@ const routes: [string, RegExp, Handler][] = [
     async (_q, m) => ({ entries: missions.records.get(m[1])?.entries ?? [], manifest: missions.records.get(m[1])?.manifestText ?? null }),
   ],
   ["GET", /^\/api\/missions\/(0x[0-9a-fA-F]{64})\/verify$/, async (_q, m, u) => missions.verify(m[1], (u.searchParams.get("source") as any) ?? "storage")],
+  ["GET", /^\/api\/missions\/(0x[0-9a-fA-F]{64})\/crop-key$/, async (_q, m) => missions.cropKey(m[1])],
   ["POST", /^\/api\/missions\/(0x[0-9a-fA-F]{64})\/replay$/, async (_q, m) => robot.replay(missions.records.get(m[1])?.entries)],
 ];
 

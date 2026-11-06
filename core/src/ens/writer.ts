@@ -103,7 +103,9 @@ export class EnsWriter {
         [KEYS.checked]: new Date().toISOString(),
         [KEYS.url]: u.url,
       };
-      return this.send(ASSET_KEYS.map((k) => RESOLVER.encodeFunctionData("setText", [dns, k, texts[k]])));
+      // pointer mode: no readable finding on ENS, only where the robot-signed decision is
+      const keys = this.cfg.records === "pointer" ? [KEYS.mission, KEYS.entry, KEYS.checked] : ASSET_KEYS;
+      return this.send(keys.map((k) => RESOLVER.encodeFunctionData("setText", [dns, k, texts[k]])));
     });
   }
 }

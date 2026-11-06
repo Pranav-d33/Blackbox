@@ -63,6 +63,13 @@ class MissionSim:
         self.samples: List[List[int]] = []
         self.final: Optional[str] = None
         self._hover_left = 0
+        # where a safe stop interrupted the survey: the robot signs it into mission_end so a
+        # later mission can resume from there (manifest sim.resume, set by the core)
+        self.stop_point: Optional[dict] = None
+        self.resume: Optional[dict] = c.get("resume")
+        if self.resume:
+            self.wp_idx = int(self.resume["wp_idx"])
+            self.handled = {(int(i), int(j)) for i, j in self.resume.get("handled", [])}
 
     # ----------------------------------------------------------------- setup
     def _lawnmower(self) -> List[Tuple[int, int]]:
@@ -79,8 +86,12 @@ class MissionSim:
         if self.phase != "READY":
             raise RuntimeError("mission already started")
         hx, hy = self.cfg["home_mm"]
+        cruise = self.cfg["cruise_mm"] / 1000.0
         self.phase = "TAKEOFF"
-        self.targets = deque([(hx / 1000.0, hy / 1000.0, self.cfg["cruise_mm"] / 1000.0, 0)])
+        self.targets = deque([(hx / 1000.0, hy / 1000.0, cruise, 0)])
+        if self.resume:  # climb, then fly straight back to where the last mission stopped
+            sx, sy = self.resume["pose_mm"][:2]
+            self.targets.append((sx / 1000.0, sy / 1000.0, cruise, 0))
 
     def place(self, kind: str, x_mm: int, y_mm: int, variant: int = 0) -> dict:
         return self.world.add_defect(kind, x_mm, y_mm, variant).to_json()
@@ -108,8 +119,11 @@ class MissionSim:
         self._advance(pos, vel)
         if self.phase in ("LANDED", "STOPPED"):
             self.final = "landed" if self.phase == "LANDED" else "safe_stopped"
-            return {"type": "done", "final": self.final, "step": self.step_idx,
+            done = {"type": "done", "final": self.final, "step": self.step_idx,
                     "trajectory_hash": self.trajectory_hash()}
+            if self.final == "safe_stopped" and self.stop_point:
+                done["resume"] = dict(self.stop_point, handled=sorted([list(c) for c in self.handled]))
+            return done
         if self.phase == "SURVEY" and self.step_idx % CONTROL_EVERY == 0:
             return self._detect(pos)
         if self.step_idx >= MAX_STEPS and self.phase not in ("RTH", "SAFE_RTH"):
@@ -163,6 +177,9 @@ class MissionSim:
     def _go_home(self, phase: str) -> None:
         hx, hy = self.cfg["home_mm"]
         pos, _ = self.body.state()
+        if phase == "SAFE_RTH" and self.stop_point is None and self.wp_idx < len(self.waypoints):
+            at = self.pending["pose_mm"] if self.pending else [int(round(v * 1000)) for v in pos]
+            self.stop_point = {"wp_idx": self.wp_idx, "pose_mm": [int(at[0]), int(at[1])]}
         cruise = self.cfg["cruise_mm"] / 1000.0
         self.phase = phase
         self.targets = deque([
@@ -244,6 +261,11 @@ class MissionSim:
         if outcome not in OUTCOMES:
             raise ValueError(f"bad outcome {outcome!r}")
         cp = self.pending
+        if outcome == "safe_stop":
+            self._go_home("SAFE_RTH")  # records the stop point while the checkpoint is still pending
+            self.pending = None
+            self.checkpoints[cp["k"]]["outcome"] = outcome
+            return
         self.pending = None
         self.handled.update(cp["cluster"])
         self.checkpoints[cp["k"]]["outcome"] = outcome

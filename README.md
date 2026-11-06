@@ -8,7 +8,7 @@
 
 Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJoCo drone), plus an optional real rover twin.
 
-**Why 0G, and why a chain:** [docs/why-0g.md](docs/why-0g.md). **Video and booth script:** [docs/demo-script.md](docs/demo-script.md).
+**The story in one page:** [docs/narrative.md](docs/narrative.md). **Why 0G, and why a chain:** [docs/why-0g.md](docs/why-0g.md). **Privacy model:** [docs/privacy.md](docs/privacy.md). **Video and booth script:** [docs/demo-script.md](docs/demo-script.md).
 
 > Built on [zerobot](https://github.com/0gfoundation/zerobot): robots are identified by zerobot's `RobotRegistry`, and `BlackboxRegistry` checks `isOperator()` on it.
 
@@ -49,6 +49,7 @@ The operator console is a full-screen 3D view of the mission: the scenario's wor
 | **3b. Tampered answer** | The core flips 0G's real answer but keeps 0G's real signature | The robot refuses: *"TEE signature does not cover this answer"*, asks 0G again, then acts on the genuine answer | *Tamper answer* |
 | **3c. Tampered log** | Lowers a severity in a local copy of the log | The verifier turns red and names the entry (*"Entry #2 (decision) was changed after the robot signed it"*) | *Edit log* |
 | **4. Kill switch** | Cuts the 0G link mid-mission (or kills the core) | The lease expires, the drone returns home, and the log reads *"0G unreachable, no decision made"*. There is no cached or local stand-in | *Cut 0G link*, *E-stop* |
+| **4b. Resume** | Restores 0G after the kill switch and presses *Resume from the stop point* | A new mission takes off with the same seed and marks, flies back to the waypoint where the drone stopped (signed into the parent's last entry), and asks 0G again only about the undecided mark. The verifier checks the parent is closed on 0G Chain at the head the new manifest names | *Restore 0G*, *Resume* |
 | **5. Verify on your phone** | Scans the QR | The public verifier reads 0G Chain and 0G Storage **in the browser**: robot signatures, TEE signer, nonces, anchors, manifest, replay | *Verify on 0G*, *Public ↗*, *QR* |
 
 ---

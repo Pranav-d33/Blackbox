@@ -124,6 +124,44 @@ class AssetNameTest(unittest.TestCase):
         self.assertEqual(ev["asset"], sim.world.asset_at(*ev["target_mm"]))
 
 
+class ResumeTest(unittest.TestCase):
+    """A safe stop records where the survey stopped; a resumed mission flies back and asks again."""
+
+    def run_until(self, sim, want, limit=60000):
+        for _ in range(limit):
+            ev = sim.step()
+            if ev and ev.get("type") == want:
+                return ev
+        self.fail(f"no {want} event")
+
+    def test_resume_from_safe_stop(self):
+        p = profile("bridge-deck")
+        cfg = dict(p["sim"], world=p["world"], backend="native")
+        marks = [("crack", 4500, 1300), ("crack", 16500, 1300)]
+        sim = MissionSim(MID, 5, cfg)
+        for kind, x, y in marks:
+            sim.place(kind, x, y, 0)
+        sim.start()
+        first = self.run_until(sim, "checkpoint")
+        sim.resolve("continue")  # 0G decided the first mark
+        second = self.run_until(sim, "checkpoint")
+        sim.resolve("safe_stop")  # 0G unreachable at the second
+        done = self.run_until(sim, "done")
+        self.assertEqual(done["final"], "safe_stopped")
+        r = done["resume"]
+        self.assertEqual(r["pose_mm"], second["pose_mm"][:2])
+
+        again = MissionSim(MID, 5, dict(cfg, resume=r))
+        for kind, x, y in marks:
+            again.place(kind, x, y, 0)
+        again.start()
+        cp = self.run_until(again, "checkpoint")
+        self.assertEqual(cp["asset"], second["asset"])  # the undecided mark, not the decided one
+        self.assertNotEqual(cp["asset"], first["asset"])
+        again.resolve("descend")
+        self.assertEqual(self.run_until(again, "done")["final"], "landed")
+
+
 class MuJoCoDroneTest(unittest.TestCase):
     def fly(self):
         p = profile("solar-farm")

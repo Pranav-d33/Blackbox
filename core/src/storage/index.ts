@@ -20,6 +20,10 @@ export interface Storage {
   kind: "0g" | "local";
   label: string;
   upload(bytes: Uint8Array): Promise<Stored>;
+  /** The root upload() will return, computed locally (no network), so chain writes need not wait for the upload. */
+  rootOf(bytes: Uint8Array): Promise<string>;
+  /** The key that pays for uploads: chain writes from the same key share one nonce queue. */
+  readonly payer: string | null;
   download(root: string): Promise<Uint8Array>;
   fileUrl(root: string): string | null;
   txUrl(tx: string | null): string | null;
@@ -36,6 +40,15 @@ export class ZgStorage implements Storage {
     this.indexer = new Indexer(cfg.indexer);
     this.signer = new Wallet(cfg.operatorKey, new JsonRpcProvider(cfg.rpc));
     this.label = `0G Storage (${cfg.network.name}, ${cfg.indexer})`;
+    this.payer = this.signer.address;
+  }
+
+  readonly payer: string;
+
+  async rootOf(bytes: Uint8Array): Promise<string> {
+    const [tree, err] = await new MemData(bytes).merkleTree();
+    if (err || !tree) throw new Error(`merkle tree: ${err}`);
+    return tree.rootHash() as string;
   }
 
   async upload(bytes: Uint8Array): Promise<Stored> {
@@ -80,6 +93,7 @@ export class ZgStorage implements Storage {
 export class LocalStorage implements Storage {
   kind = "local" as const;
   label = "local dev storage (NOT 0G - set STORAGE=0g)";
+  readonly payer = null;
   private dir: string;
 
   constructor(dataDir: string, private publicBase: string) {
@@ -92,6 +106,10 @@ export class LocalStorage implements Storage {
     const p = join(this.dir, root);
     if (!existsSync(p)) writeFileSync(p, bytes);
     return { root, txHash: null, size: bytes.length };
+  }
+
+  async rootOf(bytes: Uint8Array): Promise<string> {
+    return keccakHex(bytes);
   }
 
   async download(root: string): Promise<Uint8Array> {

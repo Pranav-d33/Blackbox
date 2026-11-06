@@ -266,6 +266,7 @@ class Adapter:
                 "refusals": n.get("rejected", 0),
                 "safe_stops": n.get("safe_stop", 0),
                 "backend": self.sim.backend,
+                **({"resume": ev["resume"]} if ev.get("resume") else {}),
             })
             self._event("info", f"mission ended: {ev['final']}, trajectory {ev['trajectory_hash'][:12]}")
 
