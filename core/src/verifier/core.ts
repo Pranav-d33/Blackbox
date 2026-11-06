@@ -53,6 +53,8 @@ export interface VerifyInputs {
   /** InferenceServing records for the manifest's providers, read from 0G mainnet by the verifier itself. */
   services?: ServiceView[] | null;
   servicesError?: string | null;
+  /** Where the blobs came from: 0G Storage, or the Arkiv mirror when 0G Storage could not serve one. */
+  sources?: { zg: number; mirror: number; failed: string[] } | null;
 }
 
 export interface DecisionRow {
@@ -365,6 +367,17 @@ export function verifyMission(inp: VerifyInputs): Report {
 
   resumeCheck(manifest, ch, add);
 
+  const src = inp.sources;
+  if (src)
+    add({
+      id: "availability",
+      title: "Every blob was read and matched the hashes anchored on 0G Chain",
+      status: src.mirror ? "warn" : "pass",
+      detail: src.mirror
+        ? `${src.mirror} of ${src.zg + src.mirror} blobs came from the Arkiv mirror because 0G Storage did not serve them (${src.failed.slice(0, 2).join("; ")}). The hash checks above ran on those bytes, so the mirror cannot change the verdict.`
+        : `${src.zg} blobs from 0G Storage`,
+    });
+
   const first = checks.find((c) => c.status === "fail");
   return {
     missionId: inp.missionId,
@@ -411,6 +424,8 @@ export interface LoadOptions {
   registry: string;
   missionId: string;
   fetchRoot: (root: string) => Promise<Uint8Array>;
+  /** A second source for a blob 0G Storage cannot serve: the Arkiv mirror. Never trusted, the hashes decide. */
+  fallback?: ((root: string) => Promise<Uint8Array | null>) | null;
   /** Override the 0G mainnet RPC used to read InferenceServing. */
   servingRpc?: string;
 }
@@ -455,6 +470,24 @@ async function pool<T, R>(items: T[], n: number, fn: (t: T) => Promise<R>): Prom
 
 /** Everything from public sources: the registry on 0G Chain, then the index, manifest and entries on 0G Storage. */
 export async function loadFromChain(o: LoadOptions): Promise<VerifyInputs & { index: MissionIndex | null }> {
+  const sources = { zg: 0, mirror: 0, failed: [] as string[] };
+  const primary = o.fetchRoot;
+  o = {
+    ...o,
+    fetchRoot: async (root) => {
+      try {
+        const b = await primary(root);
+        sources.zg++;
+        return b;
+      } catch (e) {
+        const b = o.fallback ? await o.fallback(root).catch(() => null) : null;
+        if (!b) throw e;
+        sources.mirror++;
+        sources.failed.push(`${root.slice(0, 10)}…: ${(e as Error).message.slice(0, 60)}`);
+        return b;
+      }
+    },
+  };
   const provider = new JsonRpcProvider(o.rpc, o.chainId, { staticNetwork: true });
   const reg = new Contract(o.registry, BLACKBOX_REGISTRY_ABI, provider);
   const mission = toChainMission(await reg.getMission(o.missionId));
@@ -497,6 +530,7 @@ export async function loadFromChain(o: LoadOptions): Promise<VerifyInputs & { in
     index,
     services,
     servicesError,
+    sources,
     chain: { network: o.network, chainId: o.chainId, registry: o.registry, robotRegistry, mission, anchors, robotIsOperator, parent },
   };
 }

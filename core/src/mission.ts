@@ -11,13 +11,15 @@ import { AbiCoder, Wallet, hexlify, keccak256, randomBytes, toUtf8Bytes } from "
 import type { Config } from "./config";
 import { RegistryClient } from "./chain/registry";
 import { cropMasterKey, encryptCrop, keyId, missionCropKey } from "./privacy";
+import type { ArkivWriter } from "./arkiv/write";
+import { mirroredBlob } from "./arkiv/read";
 import { type Entry, canonicalJson, entryHash, goJson, sha256Hex } from "./lib/canonical";
 import { type Bundle, type Policy, expectedEcho, extractContent, parseAnswer } from "./lib/interlock";
 import { SerialQueue } from "./lib/queue";
 import { RobotClient } from "./robotClient";
 import type { Storage } from "./storage";
 import { type AllowlistEntry, type CheckpointRequest, DEFAULT_TASK, type Task, ZgDecider } from "./zg/decide";
-import { type Profile, loadProfile, simSection, vocabulary } from "./profile";
+import { type Profile, loadProfile, registerOf, simSection, vocabulary } from "./profile";
 import { ZgUnreachable } from "./zg/router";
 import { type MissionIndex, type Report, type ServiceView, loadFromChain, loadServices, verifyMission } from "./verifier/core";
 
@@ -85,6 +87,7 @@ export class Missions {
     public storage: Storage,
     public registry: RegistryClient | null,
     public robot: RobotClient,
+    public arkiv: ArkivWriter | null = null,
   ) {
     if (cfg.storage.storeCrops && cfg.storage.cropPrivacy === "encrypted") this.cropMaster = cropMasterKey(cfg.storage.cropKey, cfg.dataDir);
     const chainKey = registry?.wallet?.address ?? null;
@@ -230,7 +233,7 @@ export class Missions {
       const bytes = toUtf8Bytes(manifestText);
       const root = await this.storage.rootOf(bytes);
       rec.manifestRoot = root;
-      this.upload(rec, bytes, root, (s) => (rec.manifestTx = s.txHash), "manifest");
+      this.upload(rec, bytes, root, (s) => (rec.manifestTx = s.txHash), "manifest", { kind: "manifest", seq: -1 });
       rec.stage = "Robot is loading the manifest";
       const prep = await this.robot.prepare({ manifest_text: manifestText, manifest_root: root, defects: opts.defects ?? [] });
       await this.onEntry(prep.genesis);
@@ -245,6 +248,7 @@ export class Missions {
       rec.stage = "Taking off";
       await this.robot.go();
       rec.status = "flying";
+      this.arkivMission(rec);
       rec.stage = undefined;
       this.persist(rec);
       console.log(`[core] mission ${missionId.slice(0, 10)} flying (seed ${seed}, ${allow.signers.length} TEE signer(s)) register tx ${rec.chain.registerTx ?? "(no chain)"}`);
@@ -337,7 +341,8 @@ export class Missions {
     const seq = entry.seq;
     const bytes = toUtf8Bytes(canonicalJson(entry));
     rec.roots[seq] = { root: await this.storage.rootOf(bytes), tx: null };
-    this.upload(rec, bytes, rec.roots[seq].root, (s) => (rec.roots[seq].tx = s.txHash), `entry #${seq}`);
+    this.upload(rec, bytes, rec.roots[seq].root, (s) => (rec.roots[seq].tx = s.txHash), `entry #${seq}`, { kind: "entry", seq });
+    if (this.arkiv && ["decision", "human", "safe_stop"].includes(entry.kind) && entry.body?.asset) this.arkivFinding(rec, entry);
     if (["decision", "human", "safe_stop"].includes(entry.kind)) {
       rec.decisionsSinceAnchor++;
       if (rec.decisionsSinceAnchor >= this.cfg.policy.anchorEvery) {
@@ -354,7 +359,9 @@ export class Missions {
   }
 
   /** Queue an upload whose root is already known; check 0G Storage agrees on it. */
-  private upload(rec: MissionRecord, bytes: Uint8Array, root: string, done: (s: { txHash: string | null }) => void, what: string) {
+  private upload(rec: MissionRecord, bytes: Uint8Array, root: string, done: (s: { txHash: string | null }) => void, what: string, mirror?: { kind: "manifest" | "entry" | "index"; seq: number }) {
+    // the Arkiv copy, keyed by the same 0G root: a backup the verifier re-checks against 0G Chain
+    if (this.arkiv && mirror) this.arkiv.mirror(root, mirror.kind, rec.id, mirror.seq, bytes);
     this.queue
       .run(() => this.storage.upload(bytes))
       .then((s) => {
@@ -392,7 +399,7 @@ export class Missions {
           if (!rec.roots[e.seq]) rec.roots[e.seq] = { root: await this.storage.rootOf(toUtf8Bytes(canonicalJson(e))), tx: null };
         const ib = toUtf8Bytes(canonicalJson(this.index(rec, count)));
         const idx = { root: await this.storage.rootOf(ib) };
-        this.upload(rec, ib, idx.root, () => {}, `index at ${count}`);
+        this.upload(rec, ib, idx.root, () => {}, `index at ${count}`, { kind: "index", seq: -1 });
         rec.chain.indexRoot = idx.root;
         let tx: string | null = null;
         if (close) {
@@ -403,6 +410,7 @@ export class Missions {
           if (this.registry) tx = await this.registry.close(rec.id, count, head, idx.root, traj, signature);
           rec.chain.closeTx = tx;
           rec.status = "closed";
+          this.arkivMission(rec);
         } else {
           const { signature } = await this.robot.sign({ type: "anchor", mission_id: rec.id, count, head, index_root: idx.root });
           if (this.registry) tx = await this.registry.anchor(rec.id, count, head, idx.root, signature);
@@ -449,6 +457,57 @@ export class Missions {
     return { mission: missionId, cipher: "aes-256-gcm", key: "0x" + key.toString("hex"), key_id: keyId(key) };
   }
 
+  // ------------------------------------------------------------------ Arkiv
+  /** A decision, human decision or safe stop on an asset becomes a queryable Arkiv row, joined with the asset register. */
+  private arkivFinding(rec: MissionRecord, entry: Entry) {
+    const profile: Profile = rec.manifest.profile;
+    const b = entry.body;
+    const reg = registerOf(profile, b.asset);
+    const hold = entry.kind === "human" ? rec.entries.filter((e) => e?.kind === "hold" && e.body.checkpoint === b.checkpoint).at(-1)?.body : null;
+    const ans = entry.kind === "decision" ? b.answer : hold?.answer;
+    this.arkiv!.finding({
+      site: profile.id,
+      asset: b.asset,
+      label: entry.kind === "safe_stop" ? "safe_stop" : ans?.label ?? "unsure",
+      severity: entry.kind === "safe_stop" ? -1 : ans?.severity ?? -1,
+      action: entry.kind === "decision" ? b.action_applied : entry.kind === "human" ? b.action : "safe_stop",
+      source: entry.kind === "decision" ? "0g" : entry.kind === "human" ? "human" : "safe_stop",
+      mission: rec.id,
+      seq: entry.seq,
+      at: Math.floor(Date.now() / 1000),
+      maker: reg?.maker,
+      model: reg?.model,
+      batch: reg?.batch,
+      detail: {
+        entry_hash: entry.hash,
+        storage_root: rec.roots[entry.seq]?.root ?? null,
+        request_id: b.zg?.request_id ?? null,
+        tee_signer: b.interlock?.signer ?? null,
+        reason: b.reason ?? null,
+        outcome: ans ? profile.ui.outcomes?.[ans.label] ?? null : "Safe stop, inspect again",
+        checkpoint: b.checkpoint,
+      },
+    });
+  }
+
+  private arkivMission(rec: MissionRecord) {
+    if (!this.arkiv) return;
+    const n = (k: string) => rec.entries.filter((e) => e?.kind === k).length;
+    this.arkiv
+      .mission({
+        mission: rec.id,
+        site: rec.manifest.profile?.id ?? "",
+        status: rec.status,
+        robot: rec.robot,
+        decisions: n("decision") + n("human"),
+        safe_stops: n("safe_stop"),
+        started: Math.floor(Date.parse(rec.createdAt) / 1000),
+        parent: rec.manifest.resume?.parent ?? "",
+        detail: { register_tx: rec.chain.registerTx, close_tx: rec.chain.closeTx, anchors: rec.chain.anchors.length, manifest_root: rec.manifestRoot, chain_id: rec.manifest.chain_id },
+      })
+      .catch(() => {});
+  }
+
   // ----------------------------------------------------------------- verify
   async chainView(missionId: string) {
     if (!this.registry) return null;
@@ -473,6 +532,7 @@ export class Missions {
         registry: this.cfg.chain.registry,
         missionId,
         fetchRoot: (r) => this.storage.download(r),
+        fallback: this.arkiv ? (r) => mirroredBlob(this.arkiv!.reader, r) : null,
         servingRpc: this.cfg.zg.servingRpc,
       });
       return verifyMission({ ...inp, replay: rec?.replay ?? null });

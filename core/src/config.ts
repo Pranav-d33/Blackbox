@@ -70,6 +70,23 @@ function parseEndpoints(raw: string, fallback: Endpoint[]): Endpoint[] {
   });
 }
 
+/** Arkiv (Rabdi testnet): queryable findings, the fleet board and a mirror of 0G Storage. ARKIV=none turns it off. */
+function arkivConfig() {
+  if (env("ARKIV", "none") !== "rabdi") return null;
+  const key = env("ARKIV_PRIVATE_KEY", env("OPERATOR_PRIVATE_KEY"));
+  if (!key) throw new Error("ARKIV=rabdi needs ARKIV_PRIVATE_KEY (or OPERATOR_PRIVATE_KEY) funded with tGLM from https://hub.arkiv.network/faucet");
+  return {
+    network: "rabdi" as const,
+    chainId: 7794095,
+    accessKey: env("ARKIV_ACCESS_KEY"), // optional: without it the public endpoint is heavily rate limited
+    key,
+    ownerKey: env("ARKIV_OWNER_PRIVATE_KEY", key), // the site owner's wallet: owns the asset register
+    retentionDays: int("ARKIV_RETENTION_DAYS", 90),
+    batchMs: int("ARKIV_BATCH_MS", 1500),
+    mirror: env("ARKIV_MIRROR", "true") === "true",
+  };
+}
+
 export function loadConfig() {
   const chainName = env("CHAIN", "galileo");
   const chainEnabled = chainName !== "none";
@@ -133,6 +150,7 @@ export function loadConfig() {
       holdBelowPermille: int("DECISION_HOLD_BELOW", 600),
       requestTimeoutMs: int("ZG_REQUEST_TIMEOUT_MS", 15000),
     },
+    arkiv: arkivConfig(),
     policy: {
       leaseMs: int("LEASE_MS", zgMode === "mock" ? 6000 : 12000),
       nonceHexLen: int("NONCE_HEX_LEN", 64),

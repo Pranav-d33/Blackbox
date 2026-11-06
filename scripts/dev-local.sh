@@ -11,9 +11,6 @@ RPC=http://127.0.0.1:8545
 # anvil default accounts #0 (operator/deployer) and #1 (robot) - public test keys
 K0=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 K1=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
-# #2 writes ENS records: on one anvil its nonces must not collide with the operator's 0G Chain relays
-K2=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
-A2=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
 
 # a core, robot or mock 0G left running would keep the port and the new one would die silently
 for port in 8787 8801 8790; do
@@ -35,7 +32,6 @@ fi
 
 echo "› deploying contracts to anvil"
 (cd "$ROOT/contracts" && DEPLOYER_PRIVATE_KEY=$K0 "$FOUNDRY/forge" script script/Deploy.s.sol --rpc-url $RPC --broadcast --silent >"$LOGS/deploy.log" 2>&1)
-(cd "$ROOT/contracts" && DEPLOYER_PRIVATE_KEY=$K0 ENS_OWNER=$A2 "$FOUNDRY/forge" script script/DeployDevEns.s.sol --rpc-url $RPC --broadcast --silent >"$LOGS/deploy-ens.log" 2>&1)
 REG=$(node -e "console.log(require('$ROOT/contracts/deployments/31337.json').blackboxRegistry)")
 ROB=$(node -e "console.log(require('$ROOT/contracts/deployments/31337.json').robotRegistry)")
 
@@ -51,10 +47,6 @@ STORAGE=local
 ZG_MODE=mock
 # mock signers are not on 0G's InferenceServing, so the robot cannot check them there
 ROBOT_TEE_SIGNERS_FROM=off
-# ENS: a dev stand-in for ENSv2 on the same anvil (contracts/src/dev/DevEnsV2.sol), not real ENS
-ENS=local
-ENS_PARENT=blackbox.eth
-ENS_PRIVATE_KEY=$K2
 LEASE_MS=${LEASE_MS:-6000}
 SIM_SPEED=${SIM_SPEED:-1.5}
 EOF
@@ -62,8 +54,6 @@ export BLACKBOX_ENV=.env.local
 echo "› registering robot on SimpleRobotRegistry"
 ROBOT_ID=$(cd "$ROOT/core" && npx tsx scripts/setup-robot.ts | sed -n 's/^ROBOT_ID=//p')
 echo "ROBOT_ID=$ROBOT_ID" >>"$ROOT/.env.local"
-echo "› naming the fleet on the dev ENS (blackbox.eth)"
-(cd "$ROOT/core" && npx tsx scripts/setup-ens.ts >"$LOGS/setup-ens.log" 2>&1) || { echo "setup-ens failed, see .dev-logs/setup-ens.log"; exit 1; }
 
 echo "› starting mock 0G, core, robot (logs in .dev-logs/)"
 (cd "$ROOT/core" && npx tsx src/mock0g/server.ts >"$LOGS/mock0g.log" 2>&1) & pids+=($!)
@@ -75,6 +65,5 @@ echo
 echo "  Operator console  http://127.0.0.1:8787"
 echo "  Public verifier   http://127.0.0.1:8787/verify.html"
 echo "  BlackboxRegistry  $REG (anvil)"
-echo "  ENS (dev)         drone.blackbox.eth, r2m14.solar.blackbox.eth, x12y03.bridge.blackbox.eth"
 echo "  Ctrl-C stops everything."
 wait

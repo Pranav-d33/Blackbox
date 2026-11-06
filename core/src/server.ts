@@ -10,6 +10,7 @@ import { extname, join, normalize } from "node:path";
 import { CORE_ROOT, loadConfig } from "./config";
 import { RegistryClient } from "./chain/registry";
 import { Missions } from "./mission";
+import { ArkivWriter } from "./arkiv/write";
 import { RobotClient } from "./robotClient";
 import { listProfiles, loadProfile, simSection } from "./profile";
 import { makeStorage } from "./storage";
@@ -36,7 +37,8 @@ const registry = cfg.chain.enabled ? new RegistryClient(cfg.chain) : null;
 const robot = new RobotClient(cfg.robotUrl);
 const router = new RouterClient(cfg.zg, { down: false });
 const decider = new ZgDecider(cfg, router, new ServiceDirectory(cfg.zg));
-const missions = new Missions(cfg, decider, storage, registry, robot);
+const arkiv = cfg.arkiv ? new ArkivWriter(cfg.arkiv) : null;
+const missions = new Missions(cfg, decider, storage, registry, robot, arkiv);
 
 const WEB = join(CORE_ROOT, "web");
 const MIME: Record<string, string> = {
@@ -69,6 +71,7 @@ function publicConfig() {
       endpoints: cfg.zg.endpoints.map((e) => e.name),
       decisionModel: cfg.zg.decisionModel || null,
     },
+    arkiv: arkiv ? { network: "rabdi", chainId: 7794095, writer: arkiv.address, accessKey: cfg.arkiv!.accessKey, retentionDays: cfg.arkiv!.retentionDays, explorer: "https://rabdi.explorer.arkiv.network", stats: { ...arkiv.stats, gas: String(arkiv.stats.gas), fee: String(arkiv.stats.fee) } } : null,
     policy: cfg.policy,
     publicVerifierUrl: cfg.publicVerifierUrl || null,
   };
@@ -178,6 +181,7 @@ server.listen(cfg.port, cfg.host, () => {
   console.log(`[core] Blackbox core on ${publicBase}`);
   console.log(`[core]   0G Compute : ${c.zg.mode === "mock" ? "MOCK (dev only, not 0G)" : "Router"} ${cfg.zg.endpoints.map((e) => `${e.name}=${e.url}`).join(", ")} model=${c.zg.model} trust=${c.zg.trustMode}`);
   console.log(`[core]   Storage    : ${storage.label}`);
+  console.log(`[core]   Arkiv      : ${arkiv ? `rabdi (7794095) writer ${arkiv.address}, ${cfg.arkiv!.retentionDays}-day retention, mirror ${cfg.arkiv!.mirror ? "on" : "off"}${cfg.arkiv!.accessKey ? "" : ", public endpoint (rate limited)"}` : "off (ARKIV=rabdi to turn on)"}`);
   console.log(`[core]   Chain      : ${c.chain ? `${c.chain.network} (${c.chain.chainId}) registry ${c.chain.registry || "UNSET"}` : "disabled (CHAIN=none)"}`);
   console.log(`[core]   Robot      : ${cfg.robotUrl}`);
 });

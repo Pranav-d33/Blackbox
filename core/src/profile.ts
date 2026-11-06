@@ -35,6 +35,17 @@ export interface Profile {
     prompt: string;
   };
   ui: { labels: Record<string, { name: string; color: string }>; outcomes?: Record<string, string>; skin: string };
+  /** The site owner's asset register (maker, model, batch per row or span), published to Arkiv. */
+  register?: { by: "row" | "span"; note?: string; groups: RegisterGroup[] };
+}
+
+export interface RegisterGroup {
+  match: string; // "r2" (a row) or "x08-x15" (a range of deck columns)
+  maker: string;
+  model: string;
+  batch: string;
+  installed: number;
+  warranty_until: number;
 }
 
 export const SCENARIO_DIR = process.env.BLACKBOX_SCENARIOS ?? join(REPO_ROOT, "scenarios");
@@ -89,4 +100,29 @@ export function simSection(p: Profile, backend: string) {
 /** What goes into the manifest's `policy`: the vocabulary the robot's interlock enforces. */
 export function vocabulary(p: Profile) {
   return { labels: p.decision.labels, actions: p.decision.actions, severity_max: p.decision.severity_max };
+}
+
+/** Every asset label on the site, by the robot's own rule (world.py / solar_world.py asset_at). */
+export function allAssets(p: Profile): string[] {
+  const [W, H] = p.sim.deck_mm as [number, number];
+  const w = p.world as any;
+  if (w.kind === "solar-farm") {
+    const mw = w.module_mm?.[0] ?? 1000;
+    const n = Math.max(1, Math.floor((W - 2 * (w.margin_mm ?? 1000)) / mw));
+    return Array.from({ length: w.rows ?? 4 }, (_, r) => Array.from({ length: n }, (_, m) => `r${r + 1}m${String(m + 1).padStart(2, "0")}`)).flat();
+  }
+  const out: string[] = [];
+  for (let x = 0; x < W / 1000; x++) for (let y = 0; y < H / 1000; y++) out.push(`x${String(x).padStart(2, "0")}y${String(y).padStart(2, "0")}`);
+  return out;
+}
+
+/** The register entry an asset belongs to: its row (r2m13 -> r2) or its span (x12y03 -> x08-x15). */
+export function registerOf(p: Profile, asset: string): RegisterGroup | null {
+  for (const g of p.register?.groups ?? []) {
+    const range = /^x(\d+)-x(\d+)$/.exec(g.match);
+    const x = /^x(\d+)y\d+$/.exec(asset);
+    if (range && x && Number(x[1]) >= Number(range[1]) && Number(x[1]) <= Number(range[2])) return g;
+    if (!range && new RegExp(`^${g.match}m\\d+$`).test(asset)) return g;
+  }
+  return null;
 }
