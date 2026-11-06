@@ -12,7 +12,16 @@
       { "kind": "decoy", "name": "Decoy", "truth": "benign", "variants": 2 }
     ]
   },
-  "assets": { "zone": "bridge", "unit": "1 m² deck square", "label": "x{x}y{y}", "example": "x12y03" },
+  "assets": { "unit": "1 m² deck square", "label": "x{x}y{y}", "example": "x12y03" },
+  "register": {
+    "note": "The bridge owner's asset register, published to Arkiv by npm run arkiv:register. Contractors are fictional.",
+    "by": "span",
+    "groups": [
+      { "match": "x00-x07", "maker": "Deccan Civil Works", "model": "span 1, M40 deck slab", "batch": "pour 2019-03", "installed": 2019, "warranty_until": 2029 },
+      { "match": "x08-x15", "maker": "Deccan Civil Works", "model": "span 2, M40 deck slab", "batch": "pour 2019-04", "installed": 2019, "warranty_until": 2029 },
+      { "match": "x16-x23", "maker": "Konkan Infra", "model": "span 3, M45 deck slab (rebuilt)", "batch": "pour 2024-11", "installed": 2024, "warranty_until": 2034 }
+    ]
+  },
   "sim": {
     "deck_mm": [24000, 8000],
     "home_mm": [-2000, 4000],

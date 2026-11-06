@@ -17,7 +17,17 @@
     "module_mm": [1000, 2000],
     "margin_mm": 1000
   },
-  "assets": { "zone": "solar", "unit": "PV module", "label": "r{row}m{module}", "example": "r2m14" },
+  "assets": { "unit": "PV module", "label": "r{row}m{module}", "example": "r2m14" },
+  "register": {
+    "note": "The site owner's asset register, published to Arkiv by npm run arkiv:register. Makers are fictional.",
+    "by": "row",
+    "groups": [
+      { "match": "r1", "maker": "Helion PV", "model": "HX-450", "batch": "2023-A", "installed": 2023, "warranty_until": 2048 },
+      { "match": "r2", "maker": "Helion PV", "model": "HX-450", "batch": "2024-B", "installed": 2024, "warranty_until": 2049 },
+      { "match": "r3", "maker": "Suncrest", "model": "SC-440", "batch": "2024-Q3", "installed": 2024, "warranty_until": 2049 },
+      { "match": "r4", "maker": "Northlight", "model": "NL-455 bifacial", "batch": "2025-Q1", "installed": 2025, "warranty_until": 2055 }
+    ]
+  },
   "sim": {
     "deck_mm": [36000, 16000],
     "home_mm": [-2500, 8000],

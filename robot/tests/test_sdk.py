@@ -91,7 +91,7 @@ class WorldRegistryTest(unittest.TestCase):
 
 @unittest.skipUnless("mujoco" in available_backends(), "mujoco not installed")
 class AssetNameTest(unittest.TestCase):
-    """Each inspected asset has a stable ENS label: a PV module per row, a 1 m square on the deck."""
+    """Each inspected asset has a stable label: a PV module per row, a 1 m square on the deck."""
 
     def world(self, name):
         p = profile(name)

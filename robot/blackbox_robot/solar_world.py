@@ -52,7 +52,7 @@ class SolarWorld(World):
         return out
 
     def asset_at(self, x_mm: int, y_mm: int) -> Optional[str]:
-        """The ENS label of the PV module under a point: row and module, both from 1 (r2m14 = row 2, module 14)."""
+        """The label of the PV module under a point: row and module, both from 1 (r2m14 = row 2, module 14)."""
         mw = self.geometry["module_mm"][0]
         for r, (x0, y0, x1, y1, _n) in enumerate(self.rows_mm()):
             if x0 <= x_mm < x1 and y0 <= y_mm < y1:
