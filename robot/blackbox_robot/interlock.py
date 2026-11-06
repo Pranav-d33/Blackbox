@@ -149,6 +149,13 @@ def verify_bundle(bundle: dict, policy: dict, nonce: str) -> dict:
         return res
     checks["nonce_ok"] = True
 
+    if policy.get("attestation") == "none":
+        # explicit unsealed fallback: the manifest (and so the log and verifier) says no TEE signature is checked
+        res["binding"] = "none"
+        res["accepted"] = True
+        res["reason"] = "accepted (unsealed: no TEE signature)"
+        return res
+
     tee = bundle.get("tee") or {}
     text, sig = tee.get("text"), tee.get("signature")
     if not isinstance(text, str) or not isinstance(sig, str) or not sig:

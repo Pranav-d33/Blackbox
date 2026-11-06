@@ -30,6 +30,8 @@ export interface Bundle {
 }
 
 export interface Policy {
+  /** "tee" (default): the answer must carry an allowlisted TEE signature. "none": unsealed fallback, parse + nonce only. */
+  attestation?: "tee" | "none";
   tee_signers: string[];
   tee_binding?: string;
   nonce_hex_len?: number;
@@ -148,6 +150,7 @@ export function verifyBundle(b: Pick<Bundle, "raw_response" | "tee">, policy: Po
   const want = expectedEcho(nonce, policy.nonce_hex_len ?? 64);
   if (r.answer.nonce !== want)
     return { ...r, reason: `nonce mismatch: answer echoed ${r.answer.nonce.slice(0, 18)}... expected ${want.slice(0, 18)}...` };
+  if (policy.attestation === "none") return { ...r, accepted: true, binding: "none", reason: "accepted (unsealed: no TEE signature)" };
   const { text, signature } = b.tee ?? {};
   if (typeof text !== "string" || typeof signature !== "string" || !signature)
     return { ...r, reason: "unsigned decision rejected: no TEE signature" };

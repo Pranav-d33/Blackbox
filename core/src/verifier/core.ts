@@ -206,7 +206,9 @@ export function verifyMission(inp: VerifyInputs): Report {
     const signers: string[] = (manifest.policy?.tee_signers ?? []).map((a: string) => a.toLowerCase());
     const model = String(manifest.policy?.vision_model ?? "").toLowerCase();
     const robotCheck = g?.body?.tee_signer_check?.mode ? ` The robot checked them itself before takeoff (${g.body.tee_signer_check.mode}).` : "";
-    if (manifest.compute?.mode === "mock") {
+    if (manifest.policy?.attestation === "none") {
+      add({ id: "tee-registry", title: "TEE signers are acknowledged on 0G's InferenceServing", status: "warn", detail: `UNSEALED: model ${model} has no TEE provider, so there is no signer to check. The answer is not enclave-attested.` });
+    } else if (manifest.compute?.mode === "mock") {
       add({ id: "tee-registry", title: "TEE signers are acknowledged on 0G's InferenceServing", status: "warn", detail: "mock 0G: these signers are local test keys, not 0G TEE signers" });
     } else if (!inp.services) {
       add({ id: "tee-registry", title: "TEE signers are acknowledged on 0G's InferenceServing", status: "skip", detail: inp.servicesError ? `could not read InferenceServing: ${inp.servicesError}` : "InferenceServing not read" });
@@ -324,8 +326,14 @@ export function verifyMission(inp: VerifyInputs): Report {
   const per = (id: string, title: string, f: { seq: number; why: string } | null, ok: string) =>
     add({ id, title, status: f ? "fail" : proofs ? "pass" : "skip", detail: f ? `Entry #${f.seq}: ${f.why}` : proofs ? ok : "no 0G decisions in this log", seq: f?.seq });
   const proofRows = rows.filter((r) => PROOF_KINDS.has(r.kind));
-  per("tee-signer", "Each 0G answer is signed by an allowlisted TEE signer", fails.tee, `${proofs} answer(s), signer(s) ${[...new Set(proofRows.map((r) => r.signer).filter(Boolean))].map(short).join(", ")}`);
-  per("tee-binding", "Each TEE signature covers the exact response the robot acted on", fails.binding, `binding: ${[...new Set(proofRows.map((r) => r.binding).filter(Boolean))].join(", ")}`);
+  if (policy.attestation === "none") {
+    const why = "UNSEALED: this mission ran a model with no TEE provider. The answer is parsed and nonce-checked, but not enclave-signed.";
+    add({ id: "tee-signer", title: "Each 0G answer is signed by an allowlisted TEE signer", status: proofs ? "warn" : "skip", detail: why });
+    add({ id: "tee-binding", title: "Each TEE signature covers the exact response the robot acted on", status: proofs ? "warn" : "skip", detail: why });
+  } else {
+    per("tee-signer", "Each 0G answer is signed by an allowlisted TEE signer", fails.tee, `${proofs} answer(s), signer(s) ${[...new Set(proofRows.map((r) => r.signer).filter(Boolean))].map(short).join(", ")}`);
+    per("tee-binding", "Each TEE signature covers the exact response the robot acted on", fails.binding, `binding: ${[...new Set(proofRows.map((r) => r.binding).filter(Boolean))].join(", ")}`);
+  }
   per("nonce", "Each answer echoes its nonce = keccak256(mission, obs_hash, checkpoint)", fails.nonce, "fresh for this request");
   per("action", "The robot did exactly what 0G (or a human, after a hold) decided", fails.action, "actions match signed answers");
   per("request-ids", "Every decision carries x_0g_trace.request_id and the chat id", fails.ids, "present on every decision");

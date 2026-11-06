@@ -62,7 +62,7 @@ export class ZgDecider {
       temperature: 0,
       max_tokens: 300,
       response_format: { type: "json_object" },
-      verify_tee: true,
+      verify_tee: this.cfg.zg.attestation === "tee",
       messages: [
         { role: "system", content: prompt },
         {
@@ -131,6 +131,7 @@ export class ZgDecider {
       raw_response: r.rawResponse,
       tee: {},
     };
+    if (this.cfg.zg.attestation === "none") return bundle;
     if (!trace.provider) {
       bundle.tee_error = "response carries no x_0g_trace.provider";
       return bundle;
@@ -188,6 +189,7 @@ export class ZgDecider {
   }
 
   async allowlist(): Promise<{ signers: string[]; providers: AllowlistEntry[] }> {
+    if (this.cfg.zg.attestation === "none") return { signers: [], providers: [] };
     const found = await this.router.providers(this.cfg.zg.visionModel);
     const providers: AllowlistEntry[] = [];
     for (const p of found) {

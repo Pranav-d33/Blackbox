@@ -29,12 +29,12 @@ const decider = new ZgDecider(cfg, router, new ServiceDirectory(cfg.zg));
 console.log(`0G Compute: ${cfg.zg.endpoints.map((e) => `${e.name}=${e.url}`).join(", ")}  model ${cfg.zg.visionModel}  trust ${cfg.zg.trustMode}\n`);
 const allow = await decider.allowlist();
 for (const p of allow.providers) console.log(`provider ${p.provider}  ${p.verifiability}  signer ${p.signer}  ${p.url}  [${p.endpoint}]`);
-if (!allow.signers.length) throw new Error("no acknowledged TEE signer found for the model");
+if (cfg.zg.attestation === "tee" && !allow.signers.length) throw new Error("no acknowledged TEE signer found for the model");
 const profile = loadProfile(opt("scenario") ?? "bridge-deck");
 const { labels, actions } = profile.decision;
 const [defect, benign] = labels;
 const task = { prompt: profile.decision.prompt, title: profile.title };
-const policy = { tee_signers: allow.signers, tee_binding: "auto", nonce_hex_len: cfg.policy.nonceHexLen, ...vocabulary(profile) };
+const policy = { attestation: cfg.zg.attestation, tee_signers: allow.signers, tee_binding: "auto", nonce_hex_len: cfg.policy.nonceHexLen, ...vocabulary(profile) };
 console.log(`scenario ${profile.id}: labels ${labels.join("|")}, actions ${actions.join("|")}\n`);
 
 const dir = opt("images") ?? join(REPO_ROOT, "robot", "assets", profile.id === "bridge-deck" ? "probe" : `probe-${profile.id.split("-")[0]}`);

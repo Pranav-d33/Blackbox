@@ -119,6 +119,8 @@ export function loadConfig() {
       apiKey: env("ZG_API_KEY", zgMode === "mock" ? "sk-mock" : ""),
       visionModel: env("ZG_VISION_MODEL", "0gm-1.0-35b-a3b"),
       trustMode: env("ZG_TRUST_MODE", "private"),
+      // "none" = unsealed fallback for a model with no TEE provider. The manifest says so and the verifier labels it.
+      attestation: (env("ZG_ATTESTATION", "tee") === "none" ? "none" : "tee") as "tee" | "none",
       extraBody,
       servingRpc: env("ZG_SERVING_RPC", "https://evmrpc.0g.ai"),
       // 0G Compute InferenceServing on mainnet (from @0gfoundation/0g-compute-ts-sdk constants)
