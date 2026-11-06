@@ -277,7 +277,7 @@ curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network -H 'content-type: appli
   -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"arkiv_query\",\"params\":[\"arkiv.schema = str('blackbox.finding') AND site = str('solar-farm')\"]}"
 ```
 
-Wallets that wrote entities: inspector `TODO after the first funded run`, site owner `TODO`. Explorer: https://rabdi.explorer.arkiv.network. Why Arkiv, measured costs, friction and plans: [arkiv/](arkiv/).
+Wallets that wrote entities: inspector (findings, mirror, missions) [`0xe0a865190ef3e4a4fD2850D5A879B5C224873286`](https://rabdi.explorer.arkiv.network/address/0xe0a865190ef3e4a4fD2850D5A879B5C224873286), site owner (asset register, 136 modules + 192 deck squares) [`0x6DD5505E1FcC2CBA5aA57D7Ae60881B12643128C`](https://rabdi.explorer.arkiv.network/address/0x6DD5505E1FcC2CBA5aA57D7Ae60881B12643128C). Measured against 0G Storage on the same entries: [arkiv/benchmark.md](arkiv/benchmark.md) (Arkiv batch write 7 s vs 76 s, read 0.36 s vs 2.8 s; 0G Storage is permanent, Arkiv expires). Explorer: https://rabdi.explorer.arkiv.network. Why Arkiv, measured costs, friction and plans: [arkiv/](arkiv/).
 
 ---
 
@@ -501,7 +501,7 @@ Our nonce is `keccak256(missionId, obs_hash, checkpoint)`. That is the PRD's `ke
 | zerobot `RobotRegistry` (read) | 0G Galileo (16602) | [`0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb`](https://chainscan-galileo.0g.ai/address/0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb) |
 | 0G Compute `InferenceServing` (read) | 0G mainnet (16661) | [`0x47340d900bdFec2BD393c626E12ea0656F938d84`](https://chainscan.0g.ai/address/0x47340d900bdFec2BD393c626E12ea0656F938d84) |
 | `BlackboxRegistry` | 0G mainnet (16661) | `TODO after the hackathon` |
-| Arkiv (Rabdi testnet, 7794095) | entities `blackbox.finding/asset/blob/mission` | `TODO: writer addresses after the first funded run` |
+| Arkiv (Rabdi testnet, 7794095) | entities `blackbox.finding/asset/blob/mission` | writers `0xe0a865190ef3e4a4fD2850D5A879B5C224873286` (inspector), `0x6DD5505E1FcC2CBA5aA57D7Ae60881B12643128C` (site owner) |
 
 Sample mission, flown live on Galileo with the **unsealed** fallback model `qwen3-vl-plus` (the sealed `0gm-1.0-35b-a3b` provider was unhealthy that day, so the verifier shows `WARN` on the signer and binding checks). Mission `0x9342ca73…1e31a`, 2 defects placed (one crack, one decoy), replay matched trajectory `0x358a0184…d60e`.
 

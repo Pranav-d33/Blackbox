@@ -129,7 +129,7 @@ export class ArkivWriter {
       started: u64(BigInt(m.started)), parent: m.parent, detail: stringToBytes(JSON.stringify(m.detail)),
     };
     const key = this.missionKeys.get(m.mission);
-    if (key) return this.add("patches", { schema: Mission, entityKey: key, values });
+    if (key) return this.add("patches", { schema: Mission, entityKey: key, set: values });
     const [k] = await this.add("creates", { schema: Mission, values, ...this.exp() });
     if (k) this.missionKeys.set(m.mission, k);
     return [k];
