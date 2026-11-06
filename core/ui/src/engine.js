@@ -1,5 +1,8 @@
 import { readMissionOnChain } from "./chain.js";
-import { arkivPublic, assetHistory, siteSummary } from "../../src/arkiv/read";
+// the Arkiv client (viem + SDK) is only needed for History and Analytics, so it loads on first use instead of with the console
+const arkivRead = () => import("../../src/arkiv/read");
+// a background tab does not need 150 ms polling: back off hard, snap back when it is visible again
+const every = (ms) => (document.hidden ? Math.max(ms * 8, 4000) : ms);
 // Console engine: the mission state, polling, demo beats and the 3D scene.
 // A port of the old console.js with the DOM rendering taken out; React subscribes and renders.
 import { Scene3D } from "../../web/scene3d.js";
@@ -524,7 +527,7 @@ class Engine {
       S.robotOffline = true;
     }
     this.emit();
-    setTimeout(() => this.pollRobot(), 150);
+    setTimeout(() => this.pollRobot(), every(150));
   }
 
   async pollStatus() {
@@ -543,7 +546,7 @@ class Engine {
       S.coreOffline = true;
     }
     this.emit();
-    setTimeout(() => this.pollStatus(), 800);
+    setTimeout(() => this.pollStatus(), every(800));
   }
 
   /** Read the mission from the 0G chain RPC itself every few seconds, so the console shows what the chain says, not what this server says. */
@@ -557,7 +560,7 @@ class Engine {
       }
       this.emit();
     }
-    setTimeout(() => this.pollChain(), 3000);
+    setTimeout(() => this.pollChain(), every(3000));
   }
 
   async boot() {
@@ -745,7 +748,8 @@ class Engine {
 
   // ------------------------------------------------------------------ Arkiv (read in the browser)
   arkiv = () => this.S.cfg?.arkiv ?? null;
-  arkivClient() {
+  async arkivClient() {
+    const { arkivPublic } = await arkivRead();
     return (this._ak ??= arkivPublic(this.arkiv()?.accessKey ?? ""));
   }
   defectLabels() {
@@ -756,13 +760,15 @@ class Engine {
   history = this.guard(async (asset) => {
     const site = this.profile()?.id;
     this.openModal({ type: "history", title: `${asset} · history`, loading: true });
-    const h = await assetHistory(this.arkivClient(), site, asset);
+    const { assetHistory } = await arkivRead();
+    const h = await assetHistory(await this.arkivClient(), site, asset);
     if (this.S.modal?.type === "history") this.openModal({ type: "history", title: `${asset} · history`, asset, ...h });
   });
   analytics = this.guard(async () => {
     const p = this.profile();
     this.openModal({ type: "analytics", title: `${p.title.replace(/ survey$/, "")} · analytics`, loading: true });
-    const a = await siteSummary(this.arkivClient(), p.id, this.defectLabels());
+    const { siteSummary } = await arkivRead();
+    const a = await siteSummary(await this.arkivClient(), p.id, this.defectLabels());
     if (this.S.modal?.type === "analytics") this.openModal({ type: "analytics", title: `${p.title.replace(/ survey$/, "")} · analytics`, ...a });
   });
 
