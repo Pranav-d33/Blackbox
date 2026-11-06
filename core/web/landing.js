@@ -33,8 +33,15 @@ const net = m.chain.chain_id === 16661 ? "mainnet" : "galileo";
 const verifyUrl = `/verify.html?${new URLSearchParams({ mission: m.mission_id, network: net, registry: m.chain.registry })}`;
 for (const id of ["hero-verify", "m-verify", "final-verify"]) $(id).href = verifyUrl;
 
-const labelOf = (l) => m.profile.ui.labels[l] ?? { name: l ?? "safe stop", color: "#f87171" };
-const labelOfH = (l) => H.profile.ui.labels[l] ?? { name: l ?? "safe stop", color: "#f87171" };
+// the page is black and violet only: defects bright violet, benign marks muted, safe stops pale
+const tone = (p, l) => {
+  const d = p.decision ?? {};
+  const name = p.ui.labels[l]?.name ?? l ?? "safe stop";
+  const color = !l ? "#ddd6fe" : d.label_actions?.[l] === d.actions?.[0] && l !== "unsure" ? "#a78bfa" : l === "unsure" ? "#c4b5fd" : "#6d6487";
+  return { name, color };
+};
+const labelOf = (l) => tone(m.profile, l);
+const labelOfH = (l) => tone(H.profile, l);
 const sealed = m.attestation !== "none";
 
 // ---- the decisions table and the on-chain proof
