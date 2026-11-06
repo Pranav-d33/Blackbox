@@ -1,0 +1,23 @@
+# Render blueprint. Every `sync: false` value is a secret you paste in the dashboard; none live in git.
+services:
+  - type: web
+    name: blackbox
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/config
+    disk: { name: blackbox-data, mountPath: /data, sizeGB: 1 }
+    envVars:
+      - { key: PUBLIC_MODE, value: "1" }
+      - { key: CHAIN, value: galileo }
+      - { key: STORAGE, value: 0g }
+      - { key: ZG_MODE, value: router }
+      - { key: ROBOT_TEE_SIGNERS_FROM, value: chain }
+      - { key: ADMIN_TOKEN, sync: false }
+      - { key: ZG_API_KEY, sync: false }
+      - { key: OPERATOR_PRIVATE_KEY, sync: false }
+      - { key: ROBOT_PRIVATE_KEY, sync: false }
+      - { key: BLACKBOX_REGISTRY, sync: false }
+      - { key: ROBOT_ID, sync: false }
+      - { key: ARKIV, sync: false }
+      - { key: ARKIV_PRIVATE_KEY, sync: false }
+      - { key: PUBLIC_VERIFIER_URL, sync: false }
