@@ -54,7 +54,7 @@ function splitWords(el) {
     });
   walk(el);
   el.querySelectorAll("em").forEach((em) => {
-    em.insertAdjacentHTML("beforeend", `<svg class="ul" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="${UNDERLINE}"/></svg>`);
+    em.insertAdjacentHTML("beforeend", `<svg class="ul" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="${UNDERLINE}"/></svg>`);
     em.style.setProperty("--ud", `${n * 38 + 420}ms`);
   });
   el.setAttribute("aria-label", el.textContent.trim());
