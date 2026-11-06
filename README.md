@@ -18,20 +18,22 @@ Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJo
 
 1. [What the judges see (demo beats)](#what-the-judges-see)
 2. [Qualification map](#qualification-map)
-3. [Architecture](#architecture)
-4. [SDK: mission profiles and the Robot interface](#sdk-mission-profiles-and-the-robot-interface)
-5. [Project structure](#project-structure)
-6. [0G technology used](#0g-technology-used) · [Arkiv](#arkiv-queryable-findings-asset-register-backup)
-7. [Quick start: offline, no keys](#quick-start-offline-no-keys)
-8. [Run on 0G testnet (Galileo)](#run-on-0g-testnet-galileo)
-9. [Manual values checklist](#manual-values-checklist)
-10. [Going to mainnet](#going-to-mainnet)
-11. [Not yet verified against live 0G](#not-yet-verified-against-live-0g)
-12. [Testing](#testing)
-13. [Claims we make (and don't)](#claims-we-make-and-dont)
-14. [Submission checklist](#submission-checklist)
-15. [Deployment addresses](#deployment-addresses)
-16. [Credits](#credits)
+3. [Why web3, why 0G, why Arkiv](#why-web3-why-0g-why-arkiv)
+4. [Workflows: vision, text, voice](#workflows-vision-text-voice)
+5. [Architecture](#architecture)
+6. [SDK: mission profiles and the Robot interface](#sdk-mission-profiles-and-the-robot-interface)
+7. [Project structure](#project-structure)
+8. [0G technology used](#0g-technology-used) · [Arkiv](#arkiv-queryable-findings-asset-register-backup)
+9. [Quick start: offline, no keys](#quick-start-offline-no-keys)
+10. [Run on 0G testnet (Galileo)](#run-on-0g-testnet-galileo)
+11. [Manual values checklist](#manual-values-checklist)
+12. [Going to mainnet](#going-to-mainnet)
+13. [Not yet verified against live 0G](#not-yet-verified-against-live-0g)
+14. [Testing](#testing)
+15. [Claims we make (and don't)](#claims-we-make-and-dont)
+16. [Submission checklist](#submission-checklist)
+17. [Deployment addresses](#deployment-addresses)
+18. [Credits](#credits)
 
 ---
 
@@ -64,6 +66,55 @@ The operator console is a full-screen 3D view of the mission: the scenario's wor
 | Safe stop if 0G is unreachable, never a faked decision | A lease watchdog in the robot adapter (3× median latency, capped at 12 s). Refused answers never extend the lease. The entry reads "0G unreachable, no decision made" | `robot/blackbox_robot/adapter.py` (`_watchdog`) |
 | Not a chatbot / no pre-recorded motion / not just logs | No chat UI, and the model only sees frames and returns strict JSON. Motion is recomputed physics. The robot **refuses to act** without 0G's signature | `robot/blackbox_robot/interlock.py` |
 | Contract addresses | `BlackboxRegistry` on Galileo (16602), plus zerobot's `RobotRegistry` it reads | [Deployment addresses](#deployment-addresses) |
+
+---
+
+## Why web3, why 0G, why Arkiv
+
+**Why web3.** The owner, the insurer, the panel maker and the contractor don't trust each other, and the party running the drone has the most reason to edit the record. A robot-signed hash chain proves a file wasn't edited. It can't prove which model decided, that the answer was made for this checkpoint, or that the robot did only what it was told. A public chain gives all four parties a timestamped commitment none of them can quietly rewrite, checkable from a phone with no account.
+
+**Why 0G.** Compute, storage and chain in one network, all three inside the control loop: the sealed model decides, 0G Storage holds the signed log, 0G Chain anchors it. No 0G, no decision.
+
+**What it costs.** About 1 panel in 100 is defective on a real survey (2,481 of 232,934 modules, [Remote Sensing 2023](https://www.mdpi.com/2072-4292/15/7/1914)). Blackbox asks 0G only about crops the on-board detector flags (assumed 3%, measured 1.5% in our sim), so sealed inference costs about **$0.007 per MW**, under $1 for 100 MW, against $300 to $500 per MW for a human drone survey. Workings and assumptions: [docs/pitch-numbers-and-workflows.md](docs/pitch-numbers-and-workflows.md).
+
+**Why Arkiv as well.** 0G makes the record provable, not askable: storage returns a file by root and nothing else. Arkiv makes each finding queryable by panel, maker and batch, owned by the wallet that wrote it, expiring after the working period. It is never trusted for the verdict. Full narrative: [docs/narrative-0g-arkiv.md](docs/narrative-0g-arkiv.md).
+
+---
+
+## Workflows: vision, text, voice
+
+Every input ends the same way: the sealed model picks one action from the mission profile, the interlock checks it, and the entry goes into the same hash-chained log. Page: `/workflows.html`.
+
+**1. Vision (built).** The current loop for `solar-farm` and `bridge-deck`.
+
+```mermaid
+flowchart LR
+    A[Detector flags a mark] --> B[Drone holds, crop + nonce]
+    B --> C[Sealed 0G model in TEE]
+    C --> D{Confidence below hold?}
+    D -- yes --> H[Ask the crew: button, text or voice]
+    D -- no --> E{Interlock: signer, signature, nonce, action allowed}
+    H --> E
+    E -- fail --> R[Refuse, log, ask again or safe-stop]
+    E -- ok --> F[Descend or continue]
+    F --> G[Signed entry on 0G Storage, anchor on 0G Chain, finding on Arkiv]
+```
+
+**2. Text (proposal).** The crew answers a hold with a typed note; a sealed text model (0GM-1.0) maps it to one allowed action.
+
+```mermaid
+flowchart LR
+    A[Drone holds at r3m14] --> B["Crew types: 'looks cracked, send to repair'"]
+    B --> C[Hash the note]
+    C --> D[Sealed text model: note + allowed actions + this checkpoint]
+    D --> E{Interlock}
+    E -- "'fly to the highway'" --> R[Refused, logged, keep holding, timeout = safe-stop]
+    E -- descend --> F[POST /api/robot/human: human entry with note hash + signed answer]
+```
+
+**3. Voice (proposal).** Same as text with speech at each end: speech-to-text (`whisper-large-v3` on 0G, or on-device) in, text-to-speech of the signed finding out. Only the transcript hash is logged. Mishearing is bounded by the interlock: the worst outcome is the other allowed action. Detail: [docs/voice-workflow.md](docs/voice-workflow.md).
+
+Built today: the hold path (`robot/blackbox_robot/adapter.py` await-human, `POST /api/robot/human`). Not built: the text-model step, the note/transcript hash field, speech in and out.
 
 ---
 
