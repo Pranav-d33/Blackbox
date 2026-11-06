@@ -12,6 +12,7 @@
       { "kind": "decoy", "name": "Decoy", "truth": "benign", "variants": 2 }
     ]
   },
+  "assets": { "zone": "bridge", "unit": "1 m² deck square", "label": "x{x}y{y}", "example": "x12y03" },
   "sim": {
     "deck_mm": [24000, 8000],
     "home_mm": [-2000, 4000],
@@ -36,6 +37,11 @@
       "crack": { "name": "Crack", "color": "#ff8a3d" },
       "decoy": { "name": "Decoy", "color": "#a1a1a6" },
       "unsure": { "name": "Unsure", "color": "#ffd60a" }
+    },
+    "outcomes": {
+      "crack": "Send a structural engineer",
+      "decoy": "No action, not damage",
+      "unsure": "Needs a human look"
     },
     "skin": "concrete"
   }

@@ -148,6 +148,12 @@ class World:
         img.save(buf, format="PNG", optimize=False, compress_level=6)
         return buf.getvalue(), pix_hash
 
+    def asset_at(self, x_mm: int, y_mm: int) -> Optional[str]:
+        """The ENS label of the inspected asset under a point: one label per 1 m deck square, x then y in metres."""
+        if not (0 <= x_mm < self.deck_w_mm and 0 <= y_mm < self.deck_h_mm):
+            return None
+        return f"x{x_mm // 1000:02d}y{y_mm // 1000:02d}"
+
     def block_of(self, x_mm: int, y_mm: int) -> Tuple[int, int]:
         return (x_mm * PX_PER_M // 1000) // BLOCK_PX, (y_mm * PX_PER_M // 1000) // BLOCK_PX
 

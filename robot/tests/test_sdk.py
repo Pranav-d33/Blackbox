@@ -90,6 +90,40 @@ class WorldRegistryTest(unittest.TestCase):
 
 
 @unittest.skipUnless("mujoco" in available_backends(), "mujoco not installed")
+class AssetNameTest(unittest.TestCase):
+    """Each inspected asset has a stable ENS label: a PV module per row, a 1 m square on the deck."""
+
+    def world(self, name):
+        p = profile(name)
+        return make_world(dict(p["sim"], world=p["world"]), 7)
+
+    def test_solar_module_labels(self):
+        w = self.world("solar-farm")
+        x0, y0, _x1, _y1, _n = w.rows_mm()[1]
+        self.assertEqual(w.asset_at(x0 + 10, y0 + 10), "r2m01")
+        self.assertEqual(w.asset_at(x0 + 13 * 1000 + 500, y0 + 900), "r2m14")
+        self.assertIsNone(w.asset_at(x0 + 10, y0 - 500))  # ground between rows is not a module
+
+    def test_deck_square_labels(self):
+        w = self.world("bridge-deck")
+        self.assertEqual(w.asset_at(12500, 3200), "x12y03")
+        self.assertEqual(w.asset_at(0, 0), "x00y00")
+        self.assertIsNone(w.asset_at(24000, 100))
+
+    def test_checkpoint_carries_asset(self):
+        p = profile("bridge-deck")
+        sim = MissionSim(MID, 3, dict(p["sim"], world=p["world"], backend="native"))
+        sim.place("crack", 6500, 4000, 0)
+        sim.start()
+        ev = None
+        for _ in range(20000):
+            ev = sim.step()
+            if ev and ev.get("type") == "checkpoint":
+                break
+        self.assertEqual(ev["type"], "checkpoint")
+        self.assertEqual(ev["asset"], sim.world.asset_at(*ev["target_mm"]))
+
+
 class MuJoCoDroneTest(unittest.TestCase):
     def fly(self):
         p = profile("solar-farm")

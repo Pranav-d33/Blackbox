@@ -17,6 +17,7 @@
     "module_mm": [1000, 2000],
     "margin_mm": 1000
   },
+  "assets": { "zone": "solar", "unit": "PV module", "label": "r{row}m{module}", "example": "r2m14" },
   "sim": {
     "deck_mm": [36000, 16000],
     "home_mm": [-2500, 8000],
@@ -41,6 +42,11 @@
       "cracked_cell": { "name": "Cracked cell", "color": "#ff8a3d" },
       "soiling": { "name": "Soiling", "color": "#b5b0a6" },
       "unsure": { "name": "Unsure", "color": "#ffd60a" }
+    },
+    "outcomes": {
+      "cracked_cell": "Send the repair crew",
+      "soiling": "Add to the cleaning round",
+      "unsure": "Needs a human look"
     },
     "skin": "solar"
   }

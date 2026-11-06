@@ -51,6 +51,14 @@ class SolarWorld(World):
             out.append((x0, y0, x0 + n * mw, y0 + g["row_depth_mm"], n))
         return out
 
+    def asset_at(self, x_mm: int, y_mm: int) -> Optional[str]:
+        """The ENS label of the PV module under a point: row and module, both from 1 (r2m14 = row 2, module 14)."""
+        mw = self.geometry["module_mm"][0]
+        for r, (x0, y0, x1, y1, _n) in enumerate(self.rows_mm()):
+            if x0 <= x_mm < x1 and y0 <= y_mm < y1:
+                return f"r{r + 1}m{(x_mm - x0) // mw + 1:02d}"
+        return None
+
     def meta(self) -> dict:
         return {"rows_mm": [list(r) for r in self.rows_mm()], "module_mm": list(self.geometry["module_mm"])}
 

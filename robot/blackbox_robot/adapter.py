@@ -246,6 +246,7 @@ class Adapter:
             self.crops[k] = ev["png"]
             cp = {k2: ev[k2] for k2 in ("k", "step", "nonce", "obs_hash", "pix_hash", "pose_mm", "target_mm",
                                         "detector_score")}
+            cp["asset"] = ev.get("asset")
             cp.update(status="waiting", deadline=time.monotonic() + lease / 1000.0, lease_ms=lease,
                       asks=0, refused=0, last_error=None, started=time.time())
             self.cp = cp
@@ -278,6 +279,7 @@ class Adapter:
             "pix_hash": cp["pix_hash"],
             "pose_mm": cp["pose_mm"],
             "target_mm": cp["target_mm"],
+            "asset": cp["asset"],
             "detector_score": cp["detector_score"],
             "crop_png_b64": base64.b64encode(png).decode(),
         }
@@ -328,7 +330,7 @@ class Adapter:
 
     def _safe_stop_cp(self, cp: dict, reason: str) -> None:
         self._append("safe_stop", {
-            "checkpoint": cp["k"], "step": cp["step"], "reason": reason, "lease_ms": cp["lease_ms"],
+            "checkpoint": cp["k"], "step": cp["step"], "asset": cp["asset"], "reason": reason, "lease_ms": cp["lease_ms"],
             "asks": cp["asks"], "refused": cp["refused"], "last_error": cp["last_error"],
             "nonce": cp["nonce"], "obs_hash": cp["obs_hash"], "pix_hash": cp["pix_hash"],
         })
@@ -366,13 +368,13 @@ class Adapter:
             if not res["accepted"]:
                 cp["refused"] += 1
                 self._append("rejected", {
-                    "checkpoint": k, "step": cp["step"], "source": source, "reason": res["reason"],
+                    "checkpoint": k, "step": cp["step"], "asset": cp["asset"], "source": source, "reason": res["reason"],
                     "attempted_answer": res["answer"], "signer": res["signer"], "nonce": cp["nonce"], "zg": zg,
                 })
                 self._event("refuse", f"checkpoint {k} ({source}): {res['reason']}")
                 return res
             body = {
-                "checkpoint": k, "step": cp["step"], "pose_mm": cp["pose_mm"], "target_mm": cp["target_mm"],
+                "checkpoint": k, "step": cp["step"], "asset": cp["asset"], "pose_mm": cp["pose_mm"], "target_mm": cp["target_mm"],
                 "detector_score": cp["detector_score"], "pix_hash": cp["pix_hash"], "obs_hash": cp["obs_hash"],
                 "nonce": cp["nonce"], "answer": res["answer"], "source": source, "zg": zg,
                 "interlock": {"parsed": True, "nonce_ok": True, "signer": res["signer"],
@@ -405,7 +407,7 @@ class Adapter:
             allowed = vocabulary(self.policy)[1]
             if action not in allowed:
                 raise ValueError(f"action must be one of {list(allowed)}")
-            self._append("human", {"checkpoint": cp["k"], "step": cp["step"], "action": action,
+            self._append("human", {"checkpoint": cp["k"], "step": cp["step"], "asset": cp["asset"], "action": action,
                                    "by": str(req.get("by", "operator console"))[:64]})
             cp["status"] = "resolved"
             self.sim.resolve(action)

@@ -222,6 +222,7 @@ class MissionSim:
             "step": self.step_idx,
             "t_ms": self.t_ms,
             "target_mm": [cx, cy],
+            "asset": self.world.asset_at(cx, cy),
             "pose_mm": [int(round(v * 1000)) for v in pos],
             "detector_score": score,
             "blocks": len(cluster),
