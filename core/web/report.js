@@ -5,8 +5,8 @@ const ICON = { pass: "✔", fail: "✘", warn: "!", skip: "–" };
 
 export function renderReport(r, links = {}) {
   const verdict = r.ok
-    ? `<div class="verdict ok">VERIFIED · ${esc(short(r.missionId, 12))}</div>`
-    : `<div class="verdict bad">TAMPERING DETECTED</div><div class="refusal" style="margin-bottom:12px">${esc(r.firstFailure)}</div>`;
+    ? `<div class="verdict ok">Verified. Every check passed.</div>`
+    : `<div class="verdict bad">Tampering detected.</div><div class="refusal" style="margin-bottom:12px">${esc(r.firstFailure)}</div>`;
   const checks = r.checks
     .map((c) => `<div class="check ${c.status}"><div class="i">${ICON[c.status]}</div><div><div>${esc(c.title)}</div><div class="d">${esc(c.detail)}</div></div></div>`)
     .join("");

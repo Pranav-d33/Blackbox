@@ -1,44 +1,52 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="auto">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <title>Blackbox Verifier</title>
   <link rel="stylesheet" href="/vendor/fonts/fonts.css" />
-  <link rel="stylesheet" href="style.css" />
-  <style>
-    .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .form label { display: flex; flex-direction: column; gap: 6px; font: 600 13px/18px var(--sans); font-stretch: 105%; color: var(--muted); }
-    .form input, .form select { font: 13px/18px var(--mono); background: var(--panel-2); color: var(--text); border: 2px solid transparent; border-radius: 20px; padding: 12px 16px; outline: none; transition: border-color var(--dur-standard) var(--ease-standard); }
-    .form input:focus, .form select:focus { border-color: var(--action); background: var(--bg); }
-    @media (max-width: 600px) { .wrap { padding: 10px; } .verdict { font-size: 18px; } }
-  </style>
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/verify.css" />
 </head>
 <body>
-  <header class="top">
-    <div class="brand"><b>Blackbox</b><span>Public verifier. No account, no trust in the operator.</span></div>
-  </header>
-  <div class="wrap stack">
-    <section class="card">
-      <h2>Mission</h2>
-      <div class="form">
-        <label>Mission id <input id="mission" placeholder="0x…" /></label>
-        <label>Network
-          <select id="network"><option value="galileo">0G Galileo testnet (16602)</option><option value="mainnet">0G mainnet (16661)</option><option value="local">local anvil</option></select>
+  <nav class="vnav material">
+    <div class="vwrap vnav-inner">
+      <a class="vtitle" href="/">Blackbox</a>
+      <span class="t-footnote c-2">Verifier</span>
+    </div>
+  </nav>
+
+  <main class="vwrap">
+    <header class="vhead">
+      <h1 class="t-headline">Verify a mission.</h1>
+      <p class="t-intro c-2">No account. No trust in the operator. Your browser reads 0G Chain and 0G Storage and re-checks every hash, signature, nonce and anchor itself.</p>
+    </header>
+
+    <section class="vform">
+      <p class="group-title">Mission</p>
+      <div class="group">
+        <label class="cell field"><span>Mission id</span><input id="mission" placeholder="0x…" autocomplete="off" spellcheck="false" /></label>
+        <label class="cell field"><span>Network</span>
+          <select id="network"><option value="galileo">0G Galileo testnet (16602)</option><option value="mainnet">0G mainnet (16661)</option><option value="local">Local anvil</option></select>
         </label>
-        <label>BlackboxRegistry <input id="registry" placeholder="0x…" /></label>
-        <label>Storage source <input id="api" placeholder="0G indexer gateway (default) or a core URL" /></label>
+        <label class="cell field"><span>Registry</span><input id="registry" placeholder="BlackboxRegistry 0x…" autocomplete="off" spellcheck="false" /></label>
+        <label class="cell field"><span>Storage</span><input id="api" placeholder="0G indexer gateway (default)" autocomplete="off" spellcheck="false" /></label>
       </div>
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="primary" id="go">Verify from 0G Chain + 0G Storage</button>
-        <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:12px">or check a local copy of the log
-          <input type="file" id="file" accept=".json,.jsonl" /></label>
+      <p class="group-foot">The mission is read from BlackboxRegistry on 0G Chain. The manifest and every log entry come from 0G Storage by root hash. TEE signers are checked on 0G's InferenceServing.</p>
+
+      <div class="vactions">
+        <button class="pill" id="go">Verify on 0G</button>
+        <label class="more filelink">Check a local copy of the log<input type="file" id="file" accept=".json,.jsonl" /></label>
       </div>
-      <p class="muted" style="font-size:12px;margin-bottom:0">This page reads the mission from BlackboxRegistry on 0G Chain, downloads the manifest and every log entry from 0G Storage by root hash, and recomputes every hash, robot signature, TEE signature, nonce and anchor in your browser.</p>
     </section>
-    <section class="card" id="out" hidden></section>
-  </div>
+
+    <section class="vout" id="out" hidden aria-live="polite"></section>
+  </main>
+
+  <footer class="vfoot vwrap t-footnote c-3">Tamper-evident, not tamper-proof. A green result shows the robot acted only on answers signed by an allowlisted 0G TEE signer, each produced for its request. It does not prove what the camera saw.</footer>
+
   <script src="verifier.bundle.js"></script>
   <script type="module" src="verify.js"></script>
 </body>

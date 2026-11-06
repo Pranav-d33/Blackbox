@@ -1,0 +1,76 @@
+/* Public verifier: phone first, follows the system appearance. */
+
+body { background: var(--bg-alt); }
+.vwrap { width: min(760px, calc(100% - 32px)); margin: 0 auto; }
+.muted { color: var(--label-2); }
+.mono { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0; }
+.sp { flex: 1; }
+
+.vnav { position: sticky; top: 0; z-index: 10; height: 48px; border-bottom: 0.5px solid var(--sep-soft); }
+.vnav-inner { height: 100%; display: flex; align-items: center; gap: 10px; }
+.vtitle { color: var(--label); font-family: var(--font-display); font-size: 21px; line-height: 1; font-weight: 600; letter-spacing: 0.011em; }
+.vtitle:hover { text-decoration: none; }
+
+.vhead { padding: 72px 0 40px; }
+.vhead .t-intro { margin-top: 16px; max-width: 640px; }
+
+.group-title { margin-top: 4px; }
+.field { display: grid !important; grid-template-columns: 110px 1fr; align-items: center; gap: 12px; }
+.field > span { font-size: 17px; letter-spacing: -0.022em; }
+.field input, .field select { width: 100%; min-width: 0; border: 0; outline: none; background: transparent; color: var(--label-2); font-family: var(--font-mono); font-size: 14px; letter-spacing: 0; text-align: right; appearance: none; -webkit-appearance: none; }
+.field select { font-family: var(--font-text); font-size: 17px; letter-spacing: -0.022em; cursor: pointer; direction: rtl; }
+.field input::placeholder { color: var(--label-3); }
+.field input:focus { color: var(--label); }
+.group > .cell.field:focus-within { background: color-mix(in srgb, var(--link) 7%, var(--tile)); }
+
+.vactions { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; margin: 28px 0 0; }
+.filelink { position: relative; color: var(--link); cursor: pointer; }
+.filelink input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* ------------------------------------------------------------ the report */
+.vout { margin: 56px 0 24px; animation: vin 0.6s var(--ease-out) both; }
+@keyframes vin { from { opacity: 0; transform: translateY(16px); } }
+.vout > h2 { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: -0.006em; color: var(--label-2); text-transform: uppercase; }
+.vout > h2 a { text-transform: none; font-weight: 400; }
+
+.verdict { position: relative; padding: 32px 28px 28px 92px; border-radius: var(--r-lg); background: var(--tile); font-family: var(--font-display); font-size: 28px; line-height: 1.14286; font-weight: 600; letter-spacing: 0.007em; color: var(--red); margin-bottom: 16px; }
+.verdict::before { content: "!"; position: absolute; left: 28px; top: 26px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--red); color: #fff; font-size: 26px; font-weight: 700; animation: pop 0.55s var(--ease-sheet) both 0.1s; }
+.verdict.ok { color: var(--label); }
+.verdict.ok::before { content: ""; background: var(--green); }
+.verdict.ok::after { content: ""; position: absolute; left: 44px; top: 36px; width: 10px; height: 19px; border: solid #fff; border-width: 0 3.5px 3.5px 0; transform: rotate(45deg) scale(0); animation: tick 0.4s var(--ease-out) 0.45s forwards; }
+@keyframes pop { from { transform: scale(0.4); opacity: 0; } }
+@keyframes tick { to { transform: rotate(45deg) scale(1); } }
+.refusal { margin: -4px 0 16px; padding: 14px 18px; border-radius: var(--r-md); background: color-mix(in srgb, var(--red) 10%, var(--tile)); color: var(--red); font-size: 15px; line-height: 1.45; letter-spacing: -0.01em; }
+.vout > .muted.mono { margin: 0 4px 16px; word-break: break-all; }
+
+.checks { border-radius: var(--r-md); background: var(--tile); overflow: hidden; }
+.check { display: grid; grid-template-columns: 26px 1fr; gap: 14px; padding: 13px 16px; position: relative; font-size: 15px; line-height: 1.4; letter-spacing: -0.01em; animation: row 0.45s var(--ease-out) both; }
+.check + .check::before { content: ""; position: absolute; top: 0; left: 56px; right: 0; height: 0.5px; background: var(--sep); }
+.check .i { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; background: var(--label-3); }
+.check.pass .i { background: var(--green); }
+.check.fail .i { background: var(--red); }
+.check.warn .i { background: var(--orange); }
+.check .d { margin-top: 2px; color: var(--label-2); font-size: 13px; line-height: 1.38462; letter-spacing: -0.006em; word-break: break-word; }
+@keyframes row { from { opacity: 0; transform: translateX(-8px); } }
+.check:nth-child(2) { animation-delay: 0.05s; } .check:nth-child(3) { animation-delay: 0.1s; } .check:nth-child(4) { animation-delay: 0.15s; }
+.check:nth-child(5) { animation-delay: 0.2s; } .check:nth-child(6) { animation-delay: 0.25s; } .check:nth-child(7) { animation-delay: 0.3s; }
+.check:nth-child(8) { animation-delay: 0.35s; } .check:nth-child(9) { animation-delay: 0.4s; } .check:nth-child(n+10) { animation-delay: 0.45s; }
+
+.vout h3 { margin: 36px 4px 10px !important; font-size: 13px !important; font-weight: 600; letter-spacing: -0.006em; color: var(--label-2); text-transform: uppercase; }
+.vout > div[style*="overflow"] { border-radius: var(--r-md); background: var(--tile); }
+table.ledger { width: 100%; border-collapse: collapse; font-size: 12px; letter-spacing: -0.01em; }
+table.ledger th { padding: 10px 12px; text-align: left; color: var(--label-2); font-weight: 600; white-space: nowrap; border-bottom: 0.5px solid var(--sep); }
+table.ledger td { padding: 9px 12px; border-bottom: 0.5px solid var(--sep-soft); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0; white-space: nowrap; }
+.k-decision { color: var(--green); }
+.k-rejected, .k-safe_stop { color: var(--red); }
+
+.vfoot { padding: 40px 0 56px; }
+
+@media (max-width: 560px) {
+  .vhead { padding: 44px 0 28px; }
+  .field { grid-template-columns: 1fr; gap: 2px; }
+  .field input, .field select { text-align: left; direction: ltr; }
+  .verdict { padding: 86px 22px 22px; font-size: 24px; }
+  .verdict::before { left: 22px; top: 24px; }
+  .verdict.ok::after { left: 38px; top: 34px; }
+}
