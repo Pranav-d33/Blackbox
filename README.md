@@ -4,6 +4,8 @@
 
 **It is a recorder SDK, not a one-off demo.** What the robot inspects, which labels 0G may answer and which actions it may choose live in a *mission profile* (`scenarios/*.json`) that goes into the manifest on 0G Storage. The same code runs a **solar farm O&M survey** and a **bridge-deck crack survey**, flown by a **Skydio X2 quadrotor in MuJoCo** and shown in a 3D operator console.
 
+**Every asset and agent has an ENS name (ENSv2).** Each PV module (`r2m13.solar.<parent>`) and each 1 m² square of the bridge deck (`x12y03.bridge.<parent>`) gets an ENS record when the drone inspects it, pointing at the robot-signed decision. The drone (`drone.<parent>`) and the 0G TEE signer (`0g-tee.<parent>`) are named too. The verifier takes an ENS name, resolves it through the ENSv2 Universal Resolver, and checks that ENS agrees with the signed log. See [ENS](#ens-names-for-assets-and-agents).
+
 Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJoCo drone), plus an optional real rover twin.
 
 **Why 0G, and why a chain:** [docs/why-0g.md](docs/why-0g.md). **Video and booth script:** [docs/demo-script.md](docs/demo-script.md).
@@ -19,7 +21,7 @@ Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJo
 3. [Architecture](#architecture)
 4. [SDK: mission profiles and the Robot interface](#sdk-mission-profiles-and-the-robot-interface)
 5. [Project structure](#project-structure)
-6. [0G technology used](#0g-technology-used)
+6. [0G technology used](#0g-technology-used) · [ENS names for assets and agents](#ens-names-for-assets-and-agents)
 7. [Quick start: offline, no keys](#quick-start-offline-no-keys)
 8. [Run on 0G testnet (Galileo)](#run-on-0g-testnet-galileo)
 9. [Manual values checklist](#manual-values-checklist)
@@ -37,7 +39,7 @@ Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJo
 
 `http://127.0.0.1:8787` opens the **launch page**: a keynote-style product page (Launch Showcase design system) whose hero replays the last mission on the machine in 3D, with live numbers from that mission and a receipt that verifies it. **Try the live demo** opens the operator console at `/console.html`.
 
-The operator console is a 3D view of the mission: the scenario's world, the MuJoCo drone, its flown path and one pin per checkpoint showing what 0G decided. The five beats sit in its left column, and a live card walks through each checkpoint (robot holds → sealed call → 0G answer → interlock → robot acts). Pick the scenario in the top bar.
+The operator console is a full-screen 3D view of the mission: the scenario's world, the MuJoCo drone, its flown path and one pin per checkpoint showing what 0G decided. Hovering the field outlines the asset under the cursor (a PV module, or a 1 m deck square) with its ENS name. The left panel is the whole demo in three steps: **Mark the site → Fly the survey → Prove it**, with a live card for each checkpoint (robot holds → sealed call → 0G answer → interlock → robot acts). The right panel lists the findings by ENS name and shows when each is written to ENS. The attacks and the kill switch sit in a bottom bar, **Try to break it**. Pick the scenario in the top bar. The flow per scenario is in [docs/demo-script.md](docs/demo-script.md).
 
 | Beat | Judge does | What it shows | Console control |
 |---|---|---|---|
@@ -178,7 +180,7 @@ class MyRobot(Robot):
 ├── .env.example                 every setting; values you must fill are marked  <-- SET ME
 ├── package.json                 root scripts: setup, dev:local, test, robot, core, verify, probe, replay
 ├── scripts/dev-local.sh         one command: anvil + contracts + mock 0G + core + robot (offline)
-├── scenarios/                   mission profiles: solar-farm.json, bridge-deck.json
+├── scenarios/                   mission profiles: solar-farm.json, bridge-deck.json (incl. ENS asset zone)
 ├── docs/                        why-0g.md (the narrative), demo-script.md (video and booth)
 │
 ├── contracts/                   Foundry, solc 0.8.27, evm cancun
@@ -214,13 +216,15 @@ class MyRobot(Robot):
     ├── src/zg/services.ts       InferenceServing.getService() reader + /v1/proxy/signature fetch
     ├── src/zg/decide.ts         prompt contract, vision call, bundle, R16 decision model
     ├── src/storage/index.ts     0G Storage (MemData + Indexer) and local dev store
+    ├── src/ens/                 ENSv2: names, Universal Resolver reader (browser-safe), Permissioned Resolver writer
     ├── src/chain/               BlackboxRegistry + RobotRegistry ABIs and client
     ├── src/lib/                 canonical/Go JSON, interlock mirror, serial queue
     ├── src/verifier/            isomorphic verifier (core.ts), CLI, browser bundle entry
     ├── src/mock0g/              DEV-ONLY Router + broker emulator (never a fallback)
-    ├── scripts/                 probe-0g.ts (Gate A), setup-robot.ts (zerobot), keys.ts
+    ├── scripts/                 probe-0g.ts (Gate A), setup-robot.ts (zerobot), setup-ens.ts (ENSv2), keys.ts
     ├── test/crosslang.test.ts   Python and TypeScript must agree byte-for-byte
-    └── web/                     3D operator console (index.html, console.js, scene3d.js) + public verifier (verify.html)
+    ├── ui/                      operator console source (React + Tailwind, Vite): `npm run build:console` builds it into web/
+    └── web/                     launch page, built console (console.html), 3D scene (scene3d.js), public verifier (verify.html)
                                  vendor/: three.js, qrcode, the X2 mesh (served locally, works offline)
 ```
 
@@ -237,6 +241,40 @@ class MyRobot(Robot):
 | **0G Storage** | `@0gfoundation/0g-storage-ts-sdk@1.2.13` (`Indexer`, `MemData`, `upload`, `downloadToBlob`) | Turbo indexer `https://indexer-storage-testnet-turbo.0g.ai`. Uploads the manifest, every log entry, every crop and an index per anchor. The browser verifier reads via the indexer's `GET /file?root=` gateway (CORS `*`) | Galileo | `core/src/storage/index.ts` |
 | **0G Chain** | Galileo testnet, chain **16602**, RPC `https://evmrpc-testnet.0g.ai`, explorer `chainscan-galileo.0g.ai` | `BlackboxRegistry`: `registerMission` → `anchor` every 2 decisions → `closeMission(trajectoryHash)`. Robot-signed digests, relayed by the operator wallet | Galileo | `contracts/` |
 | **zerobot** | `RobotRegistry` proxy `0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb` on Galileo | The robot key must be `isOperator(robotId, robot)`. Removing it in zerobot revokes anchoring. `npm run setup:robot` calls `registerRobot` + `addOperator` | Galileo | `core/scripts/setup-robot.ts` |
+
+---
+
+## ENS names for assets and agents
+
+Inspection data is about *things*: a module in row 2, a square of deck 12 m from the abutment. Blackbox gives each of them an ENS name under one parent you own, with ENSv2.
+
+| Name | Resolves to | Written |
+|---|---|---|
+| `drone.<parent>` | ETH address = the robot key that signs every log entry; `blackbox.robot_id` | at takeoff, only if it changed |
+| `0g-tee.<parent>` | ETH address = the 0G TEE signer the robot accepts; `blackbox.model`, `blackbox.tee_signers` | at takeoff, only if it changed |
+| `operator.<parent>` | the wallet that relays to 0G Chain and pays 0G Storage | at takeoff |
+| `registry.<parent>` | BlackboxRegistry, as an ENSIP-11 address for 0G Chain (coin type `0x80000000 \| 16602`) | at takeoff |
+| `r2m13.solar.<parent>` | one PV module (row 2, module 13). `description`, `blackbox.finding` (`cracked_cell/2/descend`), `blackbox.mission`, `blackbox.entry` (`seq:hash` of the robot-signed entry), `blackbox.checked`, `url` (verifier link) | after each decision, human decision or safe stop on it |
+| `x12y03.bridge.<parent>` | one 1 m² deck square (12-13 m along, 3-4 m across), same records | same |
+
+**How it uses ENSv2.** All subnames are records on one [Permissioned Resolver](https://docs.ens.domains/ensv2/permissioned-resolver) set on the parent, written with the DNS-encoded-name setters in one `multicall` per update, and served by wildcard resolution through the **Universal Resolver** (`0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe`). There is no token per panel: thousands of assets cost nothing until inspected, and every never-inspected asset answers from the resolver's default record (*"No inspection recorded on ENS yet"*). The robot computes the asset label from its own camera target (`World.asset_at`) and signs it into the log, so the name is part of the evidence, not something the operator adds later.
+
+**ENS is the address book, not the proof.** The verifier (`core/src/verifier/core.ts`) reads ENS itself and adds two checks:
+
+- *ENS names resolve to the keys that signed this mission*: `drone.<parent>` must be the robot key on every signature, `0g-tee.<parent>` an allowlisted TEE signer (`WARN` if ENS was repointed; the 0G checks never depend on ENS).
+- *ENS asset records point at robot-signed entries*: a record that names this mission must name an entry the robot signed, with the same label, severity and action, or the check **fails**. A record overwritten by a later inspection is fine.
+
+The public verifier accepts an ENS name in place of a mission id: type `r2m13.solar.<parent>`, it reads `blackbox.mission` and verifies that mission from 0G Chain and 0G Storage.
+
+**Setup on Sepolia (MANUAL).** Register a `.eth` name at https://sepolia.app.ens.domains with the ENS key (ENSv2 fees are paid in test USDC there), fund that key with a little Sepolia ETH, then:
+
+```bash
+ENS=sepolia ENS_PARENT=<your-name>.eth npm run setup:ens
+```
+
+It deploys your Permissioned Resolver through ENS's VerifiableFactory, calls `setResolver` on the ETH registry, writes the default record and prints `ENS_RESOLVER=`. Put `ENS`, `ENS_PARENT` and `ENS_RESOLVER` in `.env`. Offline, `npm run dev:local` deploys a dev stand-in with the same ABI (`contracts/src/dev/DevEnsV2.sol`, `resolve(bytes,bytes)` on a Universal Resolver, DNS-encoded setters, default-record fallback) under `blackbox.eth` on anvil. The console labels it *dev ENS*.
+
+The reader was checked against ENS's own ENSv2 readiness names on mainnet (`ur.integration-tests.eth` → `0x2222…2222`, and `test.offchaindemo.eth` through CCIP-Read). **Not yet run against Sepolia with a registered name**: `setup:ens` on Sepolia is written from the ENS docs and needs a first run with a funded key.
 
 ---
 
@@ -361,6 +399,7 @@ npm run replay -- --core http://127.0.0.1:8787 --mission 0x<missionId>
 | `LEASE_MS`, `TEE_BINDING` | `.env` | step 5 (`npm run probe`) | safe-stop lease, interlock |
 | `ZG_ROUTER_ENDPOINTS` 2nd entry | `.env` | **testnet Router URL: not documented; ask at the 0G booth** | R17 failover |
 | `PUBLIC_VERIFIER_URL` | `.env` | step 7 | QR code |
+| `ENS_PARENT`, `ENS_RESOLVER` | `.env` | register a .eth name on sepolia.app.ens.domains, then `npm run setup:ens` | ENS names for assets and agents |
 | `CHAINSCAN_API_KEY` | shell | chainscan account | contract verification |
 | Real crack textures | `BLACKBOX_TEXTURE_DIR/crack/*.png`, `/decoy/*.png` | e.g. a CC-BY concrete-crack dataset (credit it below) | Gate A accuracy on 0GM |
 | Rover pins | `ROVER_*` env (see `robot/blackbox_robot/rover.py`) | your wiring | hardware lane |
@@ -421,9 +460,9 @@ npm test
 
 This runs:
 
-- **contracts**: 10 Foundry tests (register/anchor/close; non-operator signer; replayed digest; stale count; revoked zerobot operator; closed mission).
-- **robot**: 21 unittests. The interlock refuses forged, tampered, unsigned and wrong-nonce answers and answers with extra keys. A full adapter mission covers forgery refusals, a replay match and a tampered entry named. The lease safe-stops with "0G unreachable, no decision made". SDK tests: the profile's vocabulary is enforced both ways, a profile cannot grant actions the robot lacks, the world registry, and a MuJoCo solar survey that is deterministic and flies by tilting.
-- **core**: type-check plus 7 cross-language tests. Python and TypeScript agree byte-for-byte on canonical JSON, Go-style JSON, nonces, interlock verdicts, entry hashes and robot signatures, and the mock classifier separates all 7 probe crops. The mock also judges PV-module crops (cracked cells vs soiling) and answers in whatever vocabulary the profile's prompt declares.
+- **contracts**: 10 Foundry tests (register/anchor/close; non-operator signer; replayed digest; stale count; revoked zerobot operator; closed mission), plus 6 for the dev ENS stand-in (namehash, wildcard subnames, default record, multicall, owner-only writes).
+- **robot**: unittests (28 plus 3 asset-naming tests). The interlock refuses forged, tampered, unsigned and wrong-nonce answers and answers with extra keys. A full adapter mission covers forgery refusals, a replay match and a tampered entry named. The lease safe-stops with "0G unreachable, no decision made". SDK tests: the profile's vocabulary is enforced both ways, a profile cannot grant actions the robot lacks, the world registry, and a MuJoCo solar survey that is deterministic and flies by tilting.
+- **core**: type-check plus 7 cross-language tests. Python and TypeScript agree byte-for-byte on canonical JSON, Go-style JSON, nonces, interlock verdicts, entry hashes and robot signatures, and the mock classifier separates all 7 probe crops. The mock also judges PV-module crops (cracked cells vs soiling) and answers in whatever vocabulary the profile's prompt declares. `test/ens.test.ts`: ENS naming, agent names that resolve to the signing keys, and asset records that agree with (or contradict) the signed log.
 
 End to end (local): `npm run dev:local`, then drive the console. All beats above were run against the local stack while building.
 
@@ -459,6 +498,8 @@ Our nonce is `keccak256(missionId, obs_hash, checkpoint)`. That is the PRD's `ke
 | zerobot `RobotRegistry` (read) | 0G Galileo (16602) | [`0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb`](https://chainscan-galileo.0g.ai/address/0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb) |
 | 0G Compute `InferenceServing` (read) | 0G mainnet (16661) | [`0x47340d900bdFec2BD393c626E12ea0656F938d84`](https://chainscan.0g.ai/address/0x47340d900bdFec2BD393c626E12ea0656F938d84) |
 | `BlackboxRegistry` | 0G mainnet (16661) | `TODO after the hackathon` |
+| ENSv2 Universal Resolver (read) | Sepolia (11155111) | [`0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe`](https://sepolia.etherscan.io/address/0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe) |
+| Blackbox Permissioned Resolver (ENS parent) | Sepolia (11155111) | `TODO: printed by npm run setup:ens` |
 
 Sample mission, flown live on Galileo with the **unsealed** fallback model `qwen3-vl-plus` (the sealed `0gm-1.0-35b-a3b` provider was unhealthy that day, so the verifier shows `WARN` on the signer and binding checks). Mission `0x9342ca73…1e31a`, 2 defects placed (one crack, one decoy), replay matched trajectory `0x358a0184…d60e`.
 

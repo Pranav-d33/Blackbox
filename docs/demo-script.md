@@ -1,25 +1,49 @@
-# Solar farm demo script
+# Demo script
 
-The video runs 2:30 to 2:50 and is recorded in real time (ETHGlobal's rules forbid speeding it up). Open on the launch page at `http://127.0.0.1:8787` (the hero replays a solar mission in 3D), then press **Try the live demo**. Everything after that happens in the operator console (`/console.html`) with the **Solar farm O&M survey** scenario selected. The beats are numbered in the console's left column in the same order.
+The video runs 2:30 to 2:50 and is recorded in real time (ETHGlobal's rules forbid speeding it up). Open on the launch page at `http://127.0.0.1:8787` (the hero replays the last mission in 3D), then press **Try the live demo**. Everything after that happens in the operator console (`/console.html`).
+
+The console has one flow, the same for both scenarios, in its left panel:
+
+1. **Mark the site.** Click the field to place a defect or a benign mark. Hovering shows the asset under the cursor with its ENS name.
+2. **Fly the survey.** The drone holds at each mark, asks 0G's sealed model, and moves only on an answer it verified itself.
+3. **Prove it.** Each inspected asset now has an ENS record that points at the robot-signed decision. **Verify on 0G + ENS** re-checks everything from the chain.
+
+The right panel lists the findings by ENS name. The bottom bar (**Try to break it**) holds the attacks and the kill switch.
+
+## The two flows
+
+| | Solar farm | Bridge deck |
+|---|---|---|
+| Asset | one PV module | one 1 m² deck square |
+| ENS name | `r2m13.solar.<parent>` (row 2, module 13) | `x12y03.bridge.<parent>` (12 m along, 3 m across) |
+| Mark 1 (defect) | **Cracked cell** on a module in row 2 | **Crack** near the middle of the deck |
+| Mark 2 (benign) | **Soiling** on a module in row 3 | **Decoy** (paint stripe or cable) |
+| 0G decides | cracked cell → descend, "Send the repair crew"; soiling → continue, "Add to the cleaning round" | crack → descend, "Send a structural engineer"; decoy → continue, "No action, not damage" |
+| ENS afterwards | `r2m13.solar.<parent>` reads *Cracked cell, severity 2. Send the repair crew.* | `x12y03.bridge.<parent>` reads *Crack, severity 3. Send a structural engineer.* |
+
+The agents get names too: `drone.<parent>` resolves to the robot key that signs every entry, `0g-tee.<parent>` to the 0G TEE signer the robot accepts, `registry.<parent>` to BlackboxRegistry on 0G Chain (ENSIP-11 address for chain 16602). The verifier checks both agent names against the log, and checks every asset record against the robot-signed entry it names.
 
 ## Before recording
 
-1. `npm run dev:local` for a dry run (mock 0G, local chain), or the Galileo setup in the README for the real recording.
-2. For the real recording, set `ZG_MODE=router` and `ZG_API_KEY` (an `sk-` key from pc.0g.ai with a small mainnet deposit) and check the top bar says **0G Compute · 0gm-1.0-35b-a3b · sealed**. The yellow MOCK bar must be gone.
+1. `npm run dev:local` for a dry run (mock 0G, local chain, dev ENS on anvil), or the Galileo + Sepolia setup in the README for the real recording.
+2. For the real recording, set `ZG_MODE=router` and `ZG_API_KEY` and check the top bar shows the sealed model, not **Mock 0G**. For ENS on Sepolia, `npm run setup:ens` must have printed `ENS_RESOLVER` and the top bar must show your parent name with `sepolia`.
 3. Run `npm run probe` once and note the median latency. The lease is 3x that, capped at 12 s.
 4. Open the public verifier on the phone once so the QR beat loads fast.
 
-## Beats
+## Beats (solar farm)
 
 | Time | Beat | On screen | Say |
 |---|---|---|---|
-| 0:00 – 0:12 | Opening | The 3D field, drone on the pad | "When an AI-driven drone misses a cracked module, who can check what it saw and decided, other than the operator's own database?" |
-| 0:12 – 0:45 | 1 · 0G decides the path | Place two **Cracked cell** marks and one **Soiling** patch, press **Start mission**. At each mark the drone holds; the live card walks through: robot holds, sealed call, 0G answer, interlock, robot acts | "The detector flags all three. It never decides. 0G's sealed model calls the crack a cracked cell and the dust soiling. The drone descends only on the crack, and only after checking 0G's TEE signature and its own nonce." |
-| 0:45 – 1:05 | 2 · Did 0G move the robot? | **Replay, 0G forced to "continue"**: two drones, red one flies past every crack | "Same seed, same field. Only 0G's answers differ. With every answer forced to continue, the drone flies straight past the damage. 0G's answer moved the robot." |
-| 1:05 – 1:30 | 3 · Dishonest operator | New mission. Press **Forge "continue"**, then **Tamper answer**. Then **Edit log** after landing | "The operator forges a skip, signed with their own key: refused, not on the allowlist. They flip 0G's real answer but keep its signature: refused, the signature doesn't cover it. They lower a severity in the log: the verifier names the entry." |
-| 1:30 – 1:50 | 4 · Kill switch | **Cut 0G link** mid-survey (or turn off the hotspot) | "No 0G, no decision. The lease runs out, the drone flies home, and the log says 0G unreachable, no decision made. There is no cached answer and no local stand-in." |
-| 1:50 – 2:15 | 5 · Verify on your phone | **QR**, scan it, the verifier goes green: robot signatures, TEE signers, nonces, anchors, manifest, replay | "Anyone can check this mission from a phone, from 0G Chain and 0G Storage, without our server." |
-| 2:15 – 2:35 | Close | **SDK** tab: the profile's labels and actions, the Robot interface | "Nothing here is about solar panels. A mission profile on 0G Storage sets what the model may answer and what the robot may do. Any robot that implements three calls can run under it." |
+| 0:00 – 0:12 | Opening | The 3D farm, drone on the pad. Hover a module: `r2m13.solar.blackbox-demo.eth` | "Every module on this farm has an ENS name. When an AI drone inspects it, who can check what it saw and decided, other than the operator's database?" |
+| 0:12 – 0:45 | 1-2 · Mark and fly | Place a **Cracked cell** and a **Soiling** patch, press **Fly the survey**. At each mark the live card walks through hold, ask 0G, answer, interlock, act | "The detector flags both. It never decides. 0G's sealed model calls one a cracked cell and the other soiling. The drone descends only on the crack, and only after checking 0G's TEE signature and its own nonce." |
+| 0:45 – 1:00 | 3 · Named on ENS | The right panel: `r2m13.solar…` *Send the repair crew · on ENS ✓*. Click the name: the ENS record sheet | "The finding is now on ENS, under the module's own name, pointing at the robot-signed entry. A repair crew can look up the panel, not a hex hash." |
+| 1:00 – 1:15 | Did 0G move the robot? | **Replay without 0G**: a red drone flies past the crack | "Same seed, same field. With every answer forced to continue, the drone flies past the damage. 0G's answer moved the robot." |
+| 1:15 – 1:40 | Try to break it | New mission. **Forge a decision**, then **Flip 0G's answer**. After landing **Edit the log** | "A forged skip, signed with the operator's key: refused. 0G's real answer flipped, signature kept: refused. A severity lowered in the log: the verifier names the entry." |
+| 1:40 – 1:55 | Kill switch | **Cut 0G** mid-survey | "No 0G, no decision. The lease runs out, the drone flies home, and the log says 0G unreachable, no decision made." |
+| 1:55 – 2:20 | Verify on your phone | **Phone QR**, or type `r2m13.solar.blackbox-demo.eth` into the public verifier | "Type the panel's ENS name. The verifier resolves it, then re-checks the mission from 0G Chain and 0G Storage, and checks that ENS agrees with the signed log. No trust in our server, and none in ENS either." |
+| 2:20 – 2:35 | Close | Switch to **Bridge deck**, hover a square: `x12y03.bridge…` | "Nothing here is about solar panels. A mission profile sets what the model may answer, what the robot may do and how assets are named. Same SDK, a bridge deck in one JSON file." |
+
+For a bridge-deck run, swap the marks for **Crack** and **Decoy** and say "structural engineer" instead of "repair crew".
 
 ## Booth checklist
 
@@ -30,4 +54,4 @@ The video runs 2:30 to 2:50 and is recorded in real time (ETHGlobal's rules forb
 
 ## Claims to keep
 
-Say "the robot only acts on answers signed by an allowlisted 0G TEE signer", "each answer echoes the robot's nonce, so it was produced for this request" and "tamper-evident". Don't say "0G controls the robot", "tamper-proof" or "proves what the camera saw". With the mock running, say "mock 0G" out loud.
+Say "the robot only acts on answers signed by an allowlisted 0G TEE signer", "each answer echoes the robot's nonce, so it was produced for this request", "tamper-evident" and "ENS is the address book, the chain is the proof". Don't say "0G controls the robot", "tamper-proof", "proves what the camera saw" or "ENS proves the decision". With the mock running, say "mock 0G" out loud; with `ENS=local`, say "dev ENS".
