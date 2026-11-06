@@ -26,7 +26,7 @@ Key design fact: the model is only called on crops the on-board detector flags, 
 
 Assumptions (change these, the table follows):
 - **ASSUMPTION** 1 MW is about 1,800 modules (550 W each). Older 330 W plants are about 3,000 per MW.
-- **ASSUMPTION** the detector flags 3% of modules (real defects at 1.06% plus soiling and false positives, about 3x).
+- **ASSUMPTION** the detector flags 3% of modules (real defects at 1.06% plus soiling and false positives, about 3x). **Measured in our sim:** 8 completed MuJoCo solar-farm runs flagged 16 crops over 136 modules each, about **1.5%** (`robot/data` logs). Marks are planted by the demo operator, so this is a demo figure, not a natural rate. At 1.5% every cost below roughly halves; 3% is the conservative case.
 - **ASSUMPTION** one call is about 1,400 input tokens (crop plus the profile prompt, which is about 350 tokens in `scenarios/solar-farm.json`) and about 40 output tokens (the one-line JSON).
 - **Real 0G Router prices** (model pages, read 2026-11-07):
   - [`qwen2.5-vl-72b-instruct`](https://pc.0g.ai/models/qwen2.5-vl-72b-instruct): **$0.045 in / $0.195 out per M tokens**, text+image input, 128k context. No image-specific price listed. The page states no TEE/verifiability info.
@@ -68,5 +68,5 @@ Honest framing for the pitch: the SDK today constrains a model to a fixed vocabu
 
 ## 4. Open questions for you
 1. Which model will the pitch cite (Qwen2.5-VL-72B for vision, or 0GM-1.0 for sealed)?
-2. Keep 3% flag rate, or do you have a measured rate from the MuJoCo solar run?
-3. Do you want workflow 4 built before the demo, or kept as a roadmap slide?
+2. Flag rate: keep 3% (conservative) or quote the measured 1.5% from the sim?
+3. Voice workflow is a flow diagram only: see docs/voice-workflow.md.
