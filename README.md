@@ -460,11 +460,14 @@ Our nonce is `keccak256(missionId, obs_hash, checkpoint)`. That is the PRD's `ke
 | 0G Compute `InferenceServing` (read) | 0G mainnet (16661) | [`0x47340d900bdFec2BD393c626E12ea0656F938d84`](https://chainscan.0g.ai/address/0x47340d900bdFec2BD393c626E12ea0656F938d84) |
 | `BlackboxRegistry` | 0G mainnet (16661) | `TODO after the hackathon` |
 
-Sample decisions (fill these in after the first testnet mission):
+Sample mission, flown live on Galileo with the **unsealed** fallback model `qwen3-vl-plus` (the sealed `0gm-1.0-35b-a3b` provider was unhealthy that day, so the verifier shows `WARN` on the signer and binding checks). Mission `0x9342ca73…1e31a`, 2 defects placed (one crack, one decoy), replay matched trajectory `0x358a0184…d60e`.
 
-| request_id | entry root (0G Storage) | storagescan |
-|---|---|---|
-| `TODO` | `TODO` | `TODO` |
+| Entry | 0G answer | request_id | entry root (0G Storage) | storagescan |
+|---|---|---|---|---|
+| #1 | crack, severity 2 → descend | `13bc0519-616a-49eb-8dc2-e66169b366bd` | `0x005f87c6…cdda` | [tx](https://storagescan-galileo.0g.ai/tx/0x5b2763a1566afc2f747334618bbfecf0f8d80988e945238efdbeabbb8acc61f3) |
+| #2 | decoy, severity 0 → continue | `5ee39450-b51d-4310-9f91-ce01537066f2` | `0xe7f10b68…5e7f` | [tx](https://storagescan-galileo.0g.ai/tx/0x9435c4875ded28c38c1efacf7c2fb67a33bdf0ddab0f58065c9ea1cd3ccc1170) |
+
+On 0G Chain (Galileo): [`registerMission`](https://chainscan-galileo.0g.ai/tx/0x7a22b8423a34a4057146a25dae5d67b7396eb587fc544245d217bb1ed917af79), [anchor at 3 entries](https://chainscan-galileo.0g.ai/tx/0x05a1ee38bb04e6af54bb97a91a134d3489fce0d1517ef9feef46166427ca4c6e), [anchor and close at 4 entries](https://chainscan-galileo.0g.ai/tx/0x54dae5821bce772e01852038348effb9966ebd3f9dafce326867ab968a675ff4).
 
 ---
 
