@@ -9,8 +9,7 @@ Blackbox makes a robot's decisions checkable by strangers. That only works if th
 | `obs_hash`, nonce, answer, TEE signature, request id | 0G Storage, plain | anyone | this *is* the proof; without it nothing can be verified |
 | Pose, target position, asset label | 0G Storage, plain | anyone | needed to replay the flight and to bind a decision to an asset |
 | Mission root, anchors, close, trajectory hash | 0G Chain | anyone | the commitment nobody can quietly rewrite |
-| Asset findings on ENS | Ethereum (ENSv2) | anyone | `ENS_RECORDS=full`: readable finding for crews; `ENS_RECORDS=pointer`: only the mission and entry hash, no finding in plain text |
-| Robot, operator, TEE signer names | Ethereum (ENSv2) | anyone | identities are meant to be public |
+| Findings, asset register, 0G Storage mirror | Arkiv (Rabdi) | anyone | the queryable working copy: labels, severities, assets, maker and batch; expires after `ARKIV_RETENTION_DAYS` (default 90). Camera crops are never mirrored |
 | Robot private key | the robot only | nobody else | it signs every entry; the core cannot sign for it |
 | Crop master key (`CROP_KEY`, or `core/data/crop.key`) | the operator's core | the operator | never uploaded; per-mission keys are derived with HKDF-SHA256 |
 
@@ -24,6 +23,6 @@ returns `{ key, key_id }` for that mission only. `key_id` is also in the manifes
 
 ## What stays visible
 
-Being publicly verifiable means some things are public by design: that a mission happened, when, which robot flew it, how many decisions it made, the labels and severities 0G answered, and which assets they were about. If even that is too much for a site, run with `ENS=none` and give the mission id only to the parties who need it. The chain still proves the record was not changed, but nobody can find the mission without being told.
+Being publicly verifiable means some things are public by design: that a mission happened, when, which robot flew it, how many decisions it made, the labels and severities 0G answered, and which assets they were about. If even that is too much for a site, run with `ARKIV=none` and give the mission id only to the parties who need it. The chain still proves the record was not changed, but nobody can find the mission without being told.
 
 Not in scope today: encrypting the log entries themselves (the verifier would then need the key too), and zero-knowledge proofs over the log. Both fit the same manifest field when needed.

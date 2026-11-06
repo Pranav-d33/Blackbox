@@ -4,7 +4,7 @@
 
 ## One line
 
-A flight recorder for AI inspection robots: the drone moves only on decisions signed by 0G's sealed model, every decision is filed on 0G under the ENS name of the thing it inspected, and anyone can check the record without trusting the operator.
+A flight recorder for AI inspection robots: the drone moves only on decisions signed by 0G's sealed model, every decision is filed on 0G and made searchable on Arkiv, and anyone can check the record without trusting the operator.
 
 ## The problem
 
@@ -18,8 +18,8 @@ Make the record something nobody in the deal can quietly rewrite, and make it re
 
 1. **0G decides.** At every checkpoint the drone holds and sends its camera crop to 0G's own vision model running sealed in a TEE. It moves only if the answer is signed by an allowlisted 0G TEE signer and echoes its own nonce. Anything else is refused and logged.
 2. **0G proves.** Every decision is robot-signed, hash-chained and stored on 0G Storage. The chain head is anchored on 0G Chain every two decisions. The flight replays from its seed to the same trajectory hash.
-3. **ENS names it.** Every module on the farm and every square metre of the bridge has an ENS name. After the flight, `r2m13.solar.<site>.eth` says *Cracked cell, severity 2. Send the repair crew*, and points at the signed entry that says so. The drone and the 0G signer have names too.
-4. **Anyone checks it.** Scan a QR code or type a panel's name. The public verifier resolves it through ENS, then re-checks everything from 0G Chain and 0G Storage in the browser. ENS is the address book, the chain is the proof, and the verifier checks they agree.
+3. **Arkiv makes it searchable.** Every decision is also a row on Arkiv: query a module's history, the open defects, or cracks by maker and batch from the owner's asset register. The owner's wallet owns the register; the inspector's wallet owns the findings.
+4. **Anyone checks it.** Scan a QR code: the public verifier re-checks everything from 0G Chain and 0G Storage in the browser. If 0G Storage can't serve a blob, it reads the Arkiv mirror and runs the same checks against 0G Chain. Arkiv makes it searchable; 0G decides whether it's true.
 
 ## The demo, in three steps
 
@@ -33,12 +33,12 @@ Robots in the field lose connectivity. Blackbox never fakes a decision to keep g
 
 ## Privacy
 
-Public verifiability without publishing the weak points of critical infrastructure. The camera crop is seen only inside 0G's enclave, and it is stored on 0G encrypted with a per-mission key the operator hands to an auditor. What stays public is what proves the decision: hashes, answers, signatures, anchors. ENS can carry the readable finding or only a pointer. Full table: [privacy.md](privacy.md).
+Public verifiability without publishing the weak points of critical infrastructure. The camera crop is seen only inside 0G's enclave, and it is stored on 0G encrypted with a per-mission key the operator hands to an auditor. What stays public is what proves the decision: hashes, answers, signatures, anchors. Findings on Arkiv carry labels and assets, never crops, and expire after the working period. Full table: [privacy.md](privacy.md).
 
-## Why 0G, why ENS, why a chain
+## Why 0G, why Arkiv, why a chain
 
 - **0G** gives the three things the loop needs in one network: sealed inference with a signature the robot can check before it moves, storage for evidence, and a chain for commitments. All three are inside the control loop, not bolted on for logging. [why-0g.md](why-0g.md)
-- **ENS (v2)** gives every asset and agent a name a crew, an owner or an insurer can type. Subnames are records on one Permissioned Resolver under wildcard resolution, so ten thousand panels cost nothing until they are inspected, and resolution goes through the Universal Resolver like any ENS app.
+- **Arkiv** turns the record into something people can question: indexed attributes for per-asset history and analytics, wallet ownership so the owner's register and the inspector's findings stay separate, and expiration so the working set stays bounded while 0G keeps the proof forever. [arkiv/why-arkiv.md](../arkiv/why-arkiv.md)
 - **A chain**, because the parties don't trust each other and the one running the robot has the most reason to edit the record. Flight recorders spread by mandate, and the EU AI Act's record-keeping duty for high-risk AI (Article 12) points the same way.
 
 ## Who pays
@@ -47,8 +47,8 @@ Whoever requires it: an asset owner writing it into an O&M contract, an insurer 
 
 ## It is an SDK
 
-Nothing is about solar panels. A mission profile (`scenarios/*.json`) sets the world, the labels 0G may answer, the actions the robot may take, and how assets are named on ENS. Any robot that implements a small `Robot` interface (`step`, `resolve`, `emergency_stop`) runs under the same recorder.
+Nothing is about solar panels. A mission profile (`scenarios/*.json`) sets the world, the labels 0G may answer, the actions the robot may take, and the asset register. Any robot that implements a small `Robot` interface (`step`, `resolve`, `emergency_stop`) runs under the same recorder.
 
 ## What we claim, and what we don't
 
-We say the robot only acts on answers signed by an allowlisted 0G TEE signer, each answer was produced for its request, the record is tamper-evident, and ENS agrees with the signed log or the verifier says so. We don't say 0G controls the robot, the record is tamper-proof, it proves what the camera saw, or ENS proves anything on its own.
+We say the robot only acts on answers signed by an allowlisted 0G TEE signer, each answer was produced for its request, the record is tamper-evident, and anything read from Arkiv is re-checked against 0G Chain. We don't say 0G controls the robot, the record is tamper-proof, it proves what the camera saw, or Arkiv proves anything on its own.

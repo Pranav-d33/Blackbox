@@ -4,7 +4,7 @@
 
 **It is a recorder SDK, not a one-off demo.** What the robot inspects, which labels 0G may answer and which actions it may choose live in a *mission profile* (`scenarios/*.json`) that goes into the manifest on 0G Storage. The same code runs a **solar farm O&M survey** and a **bridge-deck crack survey**, flown by a **Skydio X2 quadrotor in MuJoCo** and shown in a 3D operator console.
 
-**Every asset and agent has an ENS name (ENSv2).** Each PV module (`r2m13.solar.<parent>`) and each 1 m² square of the bridge deck (`x12y03.bridge.<parent>`) gets an ENS record when the drone inspects it, pointing at the robot-signed decision. The drone (`drone.<parent>`) and the 0G TEE signer (`0g-tee.<parent>`) are named too. The verifier takes an ENS name, resolves it through the ENSv2 Universal Resolver, and checks that ENS agrees with the signed log. See [ENS](#ens-names-for-assets-and-agents).
+**Every finding is queryable on Arkiv.** 0G holds the proof; [Arkiv](https://arkiv.network) holds the working data. Each decision becomes an Arkiv entity you can query by panel (`r2m13`), deck square (`x12y03`), label, severity, mission, and the panel's **maker, model and batch** from the site owner's asset register. Every blob uploaded to 0G Storage is mirrored on Arkiv by its root, so the verifier can fall back to it, still checking every hash against 0G Chain. See [Arkiv](#arkiv-queryable-findings-asset-register-backup).
 
 Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJoCo drone), plus an optional real rover twin.
 
@@ -21,7 +21,7 @@ Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJo
 3. [Architecture](#architecture)
 4. [SDK: mission profiles and the Robot interface](#sdk-mission-profiles-and-the-robot-interface)
 5. [Project structure](#project-structure)
-6. [0G technology used](#0g-technology-used) · [ENS names for assets and agents](#ens-names-for-assets-and-agents)
+6. [0G technology used](#0g-technology-used) · [Arkiv](#arkiv-queryable-findings-asset-register-backup)
 7. [Quick start: offline, no keys](#quick-start-offline-no-keys)
 8. [Run on 0G testnet (Galileo)](#run-on-0g-testnet-galileo)
 9. [Manual values checklist](#manual-values-checklist)
@@ -39,7 +39,7 @@ Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJo
 
 `http://127.0.0.1:8787` opens the **launch page**: a keynote-style product page (Launch Showcase design system) whose hero replays the last mission on the machine in 3D, with live numbers from that mission and a receipt that verifies it. **Try the live demo** opens the operator console at `/console.html`.
 
-The operator console is a full-screen 3D view of the mission: the scenario's world, the MuJoCo drone, its flown path and one pin per checkpoint showing what 0G decided. Hovering the field outlines the asset under the cursor (a PV module, or a 1 m deck square) with its ENS name. The left panel is the whole demo in three steps: **Mark the site → Fly the survey → Prove it**, with a live card for each checkpoint (robot holds → sealed call → 0G answer → interlock → robot acts). The right panel lists the findings by ENS name and shows when each is written to ENS. The attacks and the kill switch sit in a bottom bar, **Try to break it**. Pick the scenario in the top bar. The flow per scenario is in [docs/demo-script.md](docs/demo-script.md).
+The operator console is a full-screen 3D view of the mission: the scenario's world, the MuJoCo drone, its flown path and one pin per checkpoint showing what 0G decided. Hovering the field outlines the asset under the cursor (a PV module, or a 1 m deck square) with its label (`r2m13` = row 2, module 13; `x12y03` = the 1 m² deck square at 12 m, 3 m). The left panel is the whole demo in three steps: **Mark the site → Fly the survey → Prove it**, with a live card for each checkpoint (robot holds → sealed call → 0G answer → interlock → robot acts). The right panel lists the findings by asset; with Arkiv on, **History** shows every inspection of that asset and **Analytics** shows the site across missions, both queried live from Arkiv. The attacks and the kill switch sit in a bottom bar, **Try to break it**. Pick the scenario in the top bar. The flow per scenario is in [docs/demo-script.md](docs/demo-script.md).
 
 | Beat | Judge does | What it shows | Console control |
 |---|---|---|---|
@@ -181,7 +181,7 @@ class MyRobot(Robot):
 ├── .env.example                 every setting; values you must fill are marked  <-- SET ME
 ├── package.json                 root scripts: setup, dev:local, test, robot, core, verify, probe, replay
 ├── scripts/dev-local.sh         one command: anvil + contracts + mock 0G + core + robot (offline)
-├── scenarios/                   mission profiles: solar-farm.json, bridge-deck.json (incl. ENS asset zone)
+├── scenarios/                   mission profiles: solar-farm.json, bridge-deck.json (incl. the asset register)
 ├── docs/                        why-0g.md (the narrative), demo-script.md (video and booth)
 │
 ├── contracts/                   Foundry, solc 0.8.27, evm cancun
@@ -217,12 +217,12 @@ class MyRobot(Robot):
     ├── src/zg/services.ts       InferenceServing.getService() reader + /v1/proxy/signature fetch
     ├── src/zg/decide.ts         prompt contract, vision call, bundle, R16 decision model
     ├── src/storage/index.ts     0G Storage (MemData + Indexer) and local dev store
-    ├── src/ens/                 ENSv2: names, Universal Resolver reader (browser-safe), Permissioned Resolver writer
+    ├── src/arkiv/               Arkiv: entity schemas, batched writer, browser-safe reads (history, analytics, mirror)
     ├── src/chain/               BlackboxRegistry + RobotRegistry ABIs and client
     ├── src/lib/                 canonical/Go JSON, interlock mirror, serial queue
     ├── src/verifier/            isomorphic verifier (core.ts), CLI, browser bundle entry
     ├── src/mock0g/              DEV-ONLY Router + broker emulator (never a fallback)
-    ├── scripts/                 probe-0g.ts (Gate A), setup-robot.ts (zerobot), setup-ens.ts (ENSv2), keys.ts
+    ├── scripts/                 probe-0g.ts (Gate A), setup-robot.ts (zerobot), arkiv-register.ts, arkiv-bench.ts, keys.ts
     ├── test/crosslang.test.ts   Python and TypeScript must agree byte-for-byte
     ├── ui/                      operator console source (React + Tailwind, Vite): `npm run build:console` builds it into web/
     └── web/                     launch page, built console (console.html), 3D scene (scene3d.js), public verifier (verify.html)
@@ -245,55 +245,39 @@ class MyRobot(Robot):
 
 ---
 
-## ENS names for assets and agents
+## Arkiv: queryable findings, asset register, backup
 
-Inspection data is about *things*: a module in row 2, a square of deck 12 m from the abutment. Blackbox gives each of them an ENS name under one parent you own, with ENSv2.
+0G Storage returns a file by its root and nothing else. Nobody at a solar farm asks for a root: they ask for module r2m13's history, which modules are still cracked, or whether cracked cells cluster in one maker's batch (a warranty claim). Blackbox writes four Arkiv entity types (Rabdi testnet, chain `7794095`); full schema in [arkiv/schema.md](arkiv/schema.md):
 
-| Name | Resolves to | Written |
+| Entity | Written by | Used for |
 |---|---|---|
-| `drone.<parent>` | ETH address = the robot key that signs every log entry; `blackbox.robot_id` | at takeoff, only if it changed |
-| `0g-tee.<parent>` | ETH address = the 0G TEE signer the robot accepts; `blackbox.model`, `blackbox.tee_signers` | at takeoff, only if it changed |
-| `operator.<parent>` | the wallet that relays to 0G Chain and pays 0G Storage | at takeoff |
-| `registry.<parent>` | BlackboxRegistry, as an ENSIP-11 address for 0G Chain (coin type `0x80000000 \| 16602`) | at takeoff |
-| `r2m13.solar.<parent>` | one PV module (row 2, module 13). `description`, `blackbox.finding` (`cracked_cell/2/descend`), `blackbox.mission`, `blackbox.entry` (`seq:hash` of the robot-signed entry), `blackbox.checked`, `url` (verifier link) | after each decision, human decision or safe stop on it |
-| `x12y03.bridge.<parent>` | one 1 m² deck square (12-13 m along, 3-4 m across), same records | same |
+| `blackbox.finding` | the inspector, per decision | per-asset history, analytics; carries maker/model/batch, the entry hash and the 0G Storage root |
+| `blackbox.asset` | the **site owner's** wallet (`npm run arkiv:register`) | the register: maker, model, batch, warranty for 136 modules or 192 deck squares (fictional makers) |
+| `blackbox.blob` | the inspector, per 0G upload | the backup: every manifest, entry and index by its 0G root |
+| `blackbox.mission` | the inspector, at takeoff and close | the fleet board |
 
-**How it uses ENSv2.** All subnames are records on one [Permissioned Resolver](https://docs.ens.domains/ensv2/permissioned-resolver) set on the parent, written with the DNS-encoded-name setters in one `multicall` per update, and served by wildcard resolution through the **Universal Resolver** (`0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe`). There is no token per panel: thousands of assets cost nothing until inspected, and every never-inspected asset answers from the resolver's default record (*"No inspection recorded on ENS yet"*). The robot computes the asset label from its own camera target (`World.asset_at`) and signs it into the log, so the name is part of the evidence, not something the operator adds later.
+**Arkiv is never trusted for the verdict.** When 0G Storage cannot serve a root, the verifier (CLI, core and browser) reads the Arkiv mirror and runs every hash check on those bytes against the anchors on 0G Chain; the report says how many blobs came from the mirror. Arkiv entities expire (90 days by default, Rabdi max ~91): the working set stays bounded, the proof on 0G stays forever.
 
-**ENS is the address book, not the proof.** The verifier (`core/src/verifier/core.ts`) reads ENS itself and adds two checks:
-
-- *ENS names resolve to the keys that signed this mission*: `drone.<parent>` must be the robot key on every signature, `0g-tee.<parent>` an allowlisted TEE signer (`WARN` if ENS was repointed; the 0G checks never depend on ENS).
-- *ENS asset records point at robot-signed entries*: a record that names this mission must name an entry the robot signed, with the same label, severity and action, or the check **fails**. A record overwritten by a later inspection is fine.
-
-The public verifier accepts an ENS name in place of a mission id: type `r2m13.solar.<parent>`, it reads `blackbox.mission` and verifies that mission from 0G Chain and 0G Storage.
-
-**ENSv2 pieces used on Sepolia** (all set up by `npm run setup:ens`):
-
-| ENSv2 feature | How Blackbox uses it |
-|---|---|
-| **ETH Registrar** (commit-reveal, ERC-20 fees) | registers `<name>.eth`, paid in the Sepolia MockUSDC the registrar accepts. No real ETH: Sepolia ETH pays gas only |
-| **Permissioned Registry** (a UserRegistry per name, via VerifiableFactory) | the parent's own subregistry. `drone.<parent>` is an ERC-1155 name token **owned by the robot key**; `operator.` is a token owned by the core's writer; `0g-tee.`, `registry.`, `solar.`, `bridge.` are reserved entries routed to the resolver. `setParent` makes the canonical name verifiable |
-| **Permissioned Resolver** | one per parent. Agent records (addresses, ENSIP-11 address of BlackboxRegistry on 0G Chain) and, under wildcard resolution, one record set per inspected asset, plus the default record for every asset never inspected |
-| **Enhanced Access Control** | the name owner keeps every role. The core's key gets only `ROLE_SET_TEXT`, scoped with `grantSetterRoles` to the six asset text keys: it can file findings, and is refused if it tries to repoint `drone.` or change an agent's role |
-| **Universal Resolver V2** | every read, in the core, the CLI verifier and the browser verifier |
-
-The verifier also reads the Permissioned Registry: `drone.<parent>` must be a name token held by the robot key that signed the log.
-
-**Setup on Sepolia.** Pick a name, put your wallet's key in `.env` (it needs ~0.01 Sepolia ETH, nothing else), and run:
+**Setup.** Fund the inspector wallet (your `OPERATOR_PRIVATE_KEY` address by default) at https://hub.arkiv.network/faucet, then in `.env`:
 
 ```bash
-ENS=sepolia
-ENS_PARENT=blackbox-demo.eth
-ENS_OWNER_PRIVATE_KEY=0x...     # your wallet; becomes the owner of the name
+ARKIV=rabdi
+ARKIV_ACCESS_KEY=...   # optional, free at hub.arkiv.network/access-keys; the public endpoint is rate limited
 ```
 
 ```bash
-npm run setup:ens
+npm run arkiv:register      # publishes the asset register from a site-owner wallet (made and funded for you if unset)
+npm run arkiv:bench         # 0G Storage vs Arkiv on the same log entries -> arkiv/benchmark.md
 ```
 
-It mints the test USDC, deploys the resolver and the UserRegistry, registers the name (commit, a 65 s wait, register), issues the subnames, writes the agent records, grants the core's key its text roles and sends it 0.01 Sepolia ETH for gas. Copy the printed `ENS_RESOLVER=` into `.env` and restart the core. Rerun it whenever a key or the 0G TEE signer changes; it is idempotent. Do not use a public test key as the owner or robot: on Sepolia many have EIP-7702 code, which rejects the ERC-1155 name token. Offline, `npm run dev:local` deploys a dev stand-in with the same ABI (`contracts/src/dev/DevEnsV2.sol`, `resolve(bytes,bytes)` on a Universal Resolver, DNS-encoded setters, default-record fallback) under `blackbox.eth` on anvil. The console labels it *dev ENS*.
+**Run a query yourself** (no key, no SDK):
 
-The reader was checked against ENS's own ENSv2 readiness names on mainnet (`ur.integration-tests.eth` → `0x2222…2222`, and `test.offchaindemo.eth` through CCIP-Read). `setup:ens` was run end to end against the real ENSv2 contracts on an anvil fork of Sepolia (registration, subname tokens, records, EAC refusals, Universal Resolver reads, the verifier's registry check, and an idempotent rerun). The first run on live Sepolia is yours.
+```bash
+curl -s https://rpc.rabdi.db-chain.testnet.arkiv.network -H 'content-type: application/json' \
+  -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"arkiv_query\",\"params\":[\"arkiv.schema = str('blackbox.finding') AND site = str('solar-farm')\"]}"
+```
+
+Wallets that wrote entities: inspector `TODO after the first funded run`, site owner `TODO`. Explorer: https://rabdi.explorer.arkiv.network. Why Arkiv, measured costs, friction and plans: [arkiv/](arkiv/).
 
 ---
 
@@ -418,7 +402,7 @@ npm run replay -- --core http://127.0.0.1:8787 --mission 0x<missionId>
 | `LEASE_MS`, `TEE_BINDING` | `.env` | step 5 (`npm run probe`) | safe-stop lease, interlock |
 | `ZG_ROUTER_ENDPOINTS` 2nd entry | `.env` | **testnet Router URL: not documented; ask at the 0G booth** | R17 failover |
 | `PUBLIC_VERIFIER_URL` | `.env` | step 7 | QR code |
-| `ENS_PARENT`, `ENS_RESOLVER` | `.env` | register a .eth name on sepolia.app.ens.domains, then `npm run setup:ens` | ENS names for assets and agents |
+| `ARKIV=rabdi`, tGLM on the inspector wallet | `.env` | https://hub.arkiv.network/faucet, then `npm run arkiv:register` | queryable findings, analytics, the 0G Storage mirror |
 | `CHAINSCAN_API_KEY` | shell | chainscan account | contract verification |
 | Real crack textures | `BLACKBOX_TEXTURE_DIR/crack/*.png`, `/decoy/*.png` | e.g. a CC-BY concrete-crack dataset (credit it below) | Gate A accuracy on 0GM |
 | Rover pins | `ROVER_*` env (see `robot/blackbox_robot/rover.py`) | your wiring | hardware lane |
@@ -479,9 +463,9 @@ npm test
 
 This runs:
 
-- **contracts**: 10 Foundry tests (register/anchor/close; non-operator signer; replayed digest; stale count; revoked zerobot operator; closed mission), plus 6 for the dev ENS stand-in (namehash, wildcard subnames, default record, multicall, owner-only writes).
+- **contracts**: 10 Foundry tests (register/anchor/close; non-operator signer; replayed digest; stale count; revoked zerobot operator; closed mission).
 - **robot**: unittests (28 plus 3 asset-naming tests). The interlock refuses forged, tampered, unsigned and wrong-nonce answers and answers with extra keys. A full adapter mission covers forgery refusals, a replay match and a tampered entry named. The lease safe-stops with "0G unreachable, no decision made". SDK tests: the profile's vocabulary is enforced both ways, a profile cannot grant actions the robot lacks, the world registry, and a MuJoCo solar survey that is deterministic and flies by tilting.
-- **core**: type-check plus 7 cross-language tests. Python and TypeScript agree byte-for-byte on canonical JSON, Go-style JSON, nonces, interlock verdicts, entry hashes and robot signatures, and the mock classifier separates all 7 probe crops. The mock also judges PV-module crops (cracked cells vs soiling) and answers in whatever vocabulary the profile's prompt declares. `test/ens.test.ts`: ENS naming, agent names that resolve to the signing keys, and asset records that agree with (or contradict) the signed log.
+- **core**: type-check plus 7 cross-language tests. Python and TypeScript agree byte-for-byte on canonical JSON, Go-style JSON, nonces, interlock verdicts, entry hashes and robot signatures, and the mock classifier separates all 7 probe crops. The mock also judges PV-module crops (cracked cells vs soiling) and answers in whatever vocabulary the profile's prompt declares. `test/arkiv.test.ts`: every asset label maps to one register entry, and blobs served by the Arkiv mirror are reported, never hidden. `test/privacy.test.ts`: crops round-trip under the mission key and fail under any other.
 
 End to end (local): `npm run dev:local`, then drive the console. All beats above were run against the local stack while building.
 
@@ -517,8 +501,7 @@ Our nonce is `keccak256(missionId, obs_hash, checkpoint)`. That is the PRD's `ke
 | zerobot `RobotRegistry` (read) | 0G Galileo (16602) | [`0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb`](https://chainscan-galileo.0g.ai/address/0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb) |
 | 0G Compute `InferenceServing` (read) | 0G mainnet (16661) | [`0x47340d900bdFec2BD393c626E12ea0656F938d84`](https://chainscan.0g.ai/address/0x47340d900bdFec2BD393c626E12ea0656F938d84) |
 | `BlackboxRegistry` | 0G mainnet (16661) | `TODO after the hackathon` |
-| ENSv2 Universal Resolver (read) | Sepolia (11155111) | [`0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe`](https://sepolia.etherscan.io/address/0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe) |
-| Blackbox Permissioned Resolver (ENS parent) | Sepolia (11155111) | `TODO: printed by npm run setup:ens` |
+| Arkiv (Rabdi testnet, 7794095) | entities `blackbox.finding/asset/blob/mission` | `TODO: writer addresses after the first funded run` |
 
 Sample mission, flown live on Galileo with the **unsealed** fallback model `qwen3-vl-plus` (the sealed `0gm-1.0-35b-a3b` provider was unhealthy that day, so the verifier shows `WARN` on the signer and binding checks). Mission `0x9342ca73…1e31a`, 2 defects placed (one crack, one decoy), replay matched trajectory `0x358a0184…d60e`.
 

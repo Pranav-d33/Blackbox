@@ -22,11 +22,11 @@ That is the whole problem. **The party being checked is the party holding the ev
 2. Module 13: *cracked cell, send the repair crew.* The drone moves in for a closer look. Row 3: *just dirt, leave it for cleaning.* The drone moves on.
 3. The drone refuses to act on any answer that is not stamped by that box. It has no "I'll just guess" mode. If it cannot reach the box, it flies home and writes down "no decision made".
 4. Every decision is written into a log that cannot be edited without everyone seeing it, and a copy of its fingerprint is pinned somewhere public.
-5. Module 13 now has a name: `r2m13.solar.blackbox-demo.eth`. Looking up that name shows the finding, in words, and where the proof is.
+5. The decision is also saved as a row in Arkiv, a database anyone can search: module `r2m13`, cracked cell, severity 2, made by Helion PV, batch 2024-B, with a pointer to the proof.
 
 **Months later**, a string of panels underperforms. The report said row 2 was clean.
 
-- **The owner** types `r2m13.solar.blackbox-demo.eth`. It says *Cracked cell, severity 2*. No phone call, no asking the contractor.
+- **The owner** opens module r2m13's history. It says *Cracked cell, severity 2*. No phone call, no asking the contractor.
 - **The insurer** scans a QR code. The checker confirms the record is untouched, the answer came from the sealed box, and the drone acted on it. No account, no login.
 - **The contractor** shows the same page to prove it flagged the crack and the owner never ordered the repair.
 - **The module maker** can see when the crack was first recorded.
@@ -61,15 +61,15 @@ Our users do not trust each other: an owner, a contractor, an insurer, a regulat
 | | What it does in the story | Why it matters here |
 |---|---|---|
 | **0G** | Everything the decision needs, in one place: the sealed AI that gives the stamped answer, the storage that keeps the evidence, the chain that pins the fingerprints | The AI is inside the loop, not bolted on. The drone cannot move without 0G's answer, and if 0G is gone it stops. |
-| **ENS** | Gives every panel, every bridge square and every robot a name a human can type | Without names the record is a pile of hashes that only engineers can read. With them, a repair crew, a farmer or an insurer can find the right finding in seconds. |
+| **Arkiv** | A searchable database next to 0G: every decision is a row you can filter by panel, maker, batch or severity | Without it the record is a pile of files that only engineers can open. With it, an owner, a maker or an insurer gets an answer in one query, and it still points back at the proof on 0G. |
 
-Short version: **0G decides and proves. ENS names it so people can find it. The chain makes it permanent.**
+Short version: **0G decides and proves. Arkiv makes it searchable. The chain makes it permanent.**
 
 ## It is not just solar panels
 
 The same recorder runs a bridge deck in the demo. A new job is a short settings file (what the AI may answer, what the robot may do, how things are named), not a new product. That means the same idea fits:
 
-- **Bridges:** `x12y03.bridge.blackbox-demo.eth` is one square metre of deck. A structural engineer looks up a square and sees its history.
+- **Bridges:** `x12y03` is one square metre of deck. A structural engineer pulls up a square and sees its history across surveys.
 - **Pipelines, power lines, wind turbines:** a weld, a span, a blade, each with its own name and its own checkable history.
 - **Any robot where an AI call has consequences.**
 
@@ -89,5 +89,5 @@ We have seen this before. Aircraft carry flight recorders, not because airlines 
 ## What we are honest about
 
 - It records and proves decisions. It does not make the AI right, and it does not prove what the camera saw.
-- ENS is a directory, not the proof: if a name says one thing and the record says another, the checker reports it.
-- Today the demo runs offline on a mock of 0G and a local ENS, and says so on screen. Live 0G and Sepolia ENS runs are the next step.
+- Arkiv is the searchable copy, not the proof: the checker always goes back to the signed record on 0G.
+- Today the demo runs offline on a mock of 0G, and says so on screen. Arkiv runs on its public testnet. Live 0G runs are the next step.
