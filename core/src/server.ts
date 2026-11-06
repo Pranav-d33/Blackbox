@@ -17,6 +17,18 @@ import { ZgDecider } from "./zg/decide";
 import { RouterClient } from "./zg/router";
 import { ServiceDirectory } from "./zg/services";
 
+// The 0G Storage SDK can emit a late socket reset on a connection after its upload already finished.
+// Node would kill the whole core for it, so transient network errors are logged and survived; real bugs still exit.
+const TRANSIENT = /ECONNRESET|ETIMEDOUT|EPIPE|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|socket hang up|other side closed/i;
+for (const evt of ["uncaughtException", "unhandledRejection"] as const) {
+  process.on(evt, (e: any) => {
+    const msg = `${e?.code ?? ""} ${e?.message ?? e}`;
+    if (TRANSIENT.test(msg)) return void console.warn(`[core] survived ${evt}: ${msg.trim().slice(0, 160)}`);
+    console.error(`[core] fatal ${evt}:`, e);
+    process.exit(1);
+  });
+}
+
 const cfg = loadConfig();
 const publicBase = `http://${cfg.host}:${cfg.port}`;
 const storage = makeStorage(cfg, publicBase);
@@ -53,6 +65,7 @@ function publicConfig() {
       mode: cfg.zg.mode,
       model: cfg.zg.visionModel,
       trustMode: cfg.zg.trustMode,
+      attestation: cfg.zg.attestation,
       endpoints: cfg.zg.endpoints.map((e) => e.name),
       decisionModel: cfg.zg.decisionModel || null,
     },
@@ -105,7 +118,7 @@ const routes: [string, RegExp, Handler][] = [
     }),
   ],
   ["GET", /^\/api\/robot\/state$/, async (_q, _m, u) => robot.state(Number(u.searchParams.get("since") ?? 0))],
-  ["POST", /^\/api\/mission\/start$/, async (q) => ({ mission: missions.summary(await missions.start(await body(q))) })],
+  ["POST", /^\/api\/mission\/start$/, async (q) => ({ mission: missions.summary(await missions.start({ ...(await body(q)), background: true })) })],
   ["POST", /^\/api\/world\/place$/, async (q) => robot.place(await body(q))],
   ["POST", /^\/api\/robot\/estop$/, async () => robot.estop()],
   ["POST", /^\/api\/robot\/human$/, async (q) => robot.human(await body(q))],

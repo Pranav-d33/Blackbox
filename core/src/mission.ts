@@ -39,6 +39,8 @@ export interface MissionRecord {
   id: string;
   createdAt: string;
   status: "preparing" | "flying" | "ended" | "closed" | "error";
+  /** What start() is doing right now, for the console while the 0G Storage and Chain writes finish. */
+  stage?: string;
   robot: string;
   robotId: string;
   seed: number;
@@ -114,7 +116,7 @@ export class Missions {
   }
 
   // ------------------------------------------------------------------ start
-  async start(opts: { defects?: any[]; seed?: number; scenario?: string }): Promise<MissionRecord> {
+  async start(opts: { defects?: any[]; seed?: number; scenario?: string; background?: boolean }): Promise<MissionRecord> {
     if (this.current && (this.current.status === "preparing" || this.current.status === "flying"))
       throw new Error("a mission is already in progress");
     const health = await this.robot.health().catch(() => {
@@ -129,7 +131,8 @@ export class Missions {
         throw new Error(`robot ${robot} is not a zerobot operator of ${robotId.slice(0, 10)} (run: npm run setup:robot)`);
     }
     const allow = await this.decider.allowlist();
-    if (!allow.signers.length)
+    const unsealed = this.cfg.zg.attestation === "none";
+    if (!unsealed && !allow.signers.length)
       throw new Error(`no TEE signers found for ${this.cfg.zg.visionModel}: refusing to fly without an allowlist`);
 
     const profile = loadProfile(opts.scenario ?? this.cfg.sim.scenario);
@@ -157,6 +160,7 @@ export class Missions {
         ...vocabulary(profile),
         vision_model: this.cfg.zg.visionModel,
         trust_mode: this.cfg.zg.trustMode,
+        attestation: this.cfg.zg.attestation,
         tee_signers: allow.signers,
         tee_binding: p.teeBinding,
         nonce_hex_len: p.nonceHexLen,
@@ -171,7 +175,7 @@ export class Missions {
         mode: this.cfg.zg.mode,
         endpoints: this.cfg.zg.endpoints,
         providers: allow.providers.map((a) => ({ provider: a.provider, signer: a.signer, url: a.url, endpoint: a.endpoint, verifiability: a.verifiability })),
-        service_registry: this.cfg.zg.mode === "mock" ? "mock" : `${this.cfg.zg.servingContract}@16661`,
+        service_registry: this.cfg.zg.mode === "mock" ? "mock" : unsealed ? "none (unsealed: not TEE-attested)" : `${this.cfg.zg.servingContract}@16661`,
       },
       storage: { kind: this.storage.kind, network: this.cfg.storage.network.name },
       created_at: new Date().toISOString(),
@@ -201,28 +205,43 @@ export class Missions {
     };
     this.records.set(missionId, rec);
     this.current = rec;
+    const launch = async () => {
     try {
+      rec.stage = "Uploading the manifest to 0G Storage";
       const up = await this.queue.run(() => this.storage.upload(toUtf8Bytes(manifestText)));
       rec.manifestRoot = up.root;
       rec.manifestTx = up.txHash;
+      rec.stage = "Robot is loading the manifest";
       const prep = await this.robot.prepare({ manifest_text: manifestText, manifest_root: up.root, defects: opts.defects ?? [] });
       await this.onEntry(prep.genesis);
       if (this.registry) {
+        rec.stage = "Registering the mission on 0G Chain (BlackboxRegistry)";
         const seedHash = keccak256(AbiCoder.defaultAbiCoder().encode(["uint256"], [seed]));
         rec.chain.registerTx = await this.queue.run(() =>
           this.registry!.registerMission(missionId, robotId, robot, seedHash, up.root, prep.genesis.hash),
         );
+        this.persist(rec);
       }
+      rec.stage = "Taking off";
       await this.robot.go();
       rec.status = "flying";
+      rec.stage = undefined;
       this.persist(rec);
-      console.log(`[core] mission ${missionId.slice(0, 10)} flying (seed ${seed}, ${allow.signers.length} TEE signer(s))`);
-      return rec;
+      console.log(`[core] mission ${missionId.slice(0, 10)} flying (seed ${seed}, ${allow.signers.length} TEE signer(s)) register tx ${rec.chain.registerTx ?? "(no chain)"}`);
     } catch (e) {
       rec.status = "error";
+      rec.stage = undefined;
       this.fail(rec, `start failed: ${(e as Error).message}`);
       throw e;
     }
+    };
+    // The 0G Storage and Chain writes take over a minute. A background start returns the record at once and the console follows rec.stage.
+    if (opts.background) {
+      launch().catch(() => {});
+      return rec;
+    }
+    await launch();
+    return rec;
   }
 
   // ------------------------------------------------------------- checkpoint
@@ -438,6 +457,7 @@ export class Missions {
     return {
       id: rec.id,
       status: rec.status,
+      stage: rec.stage ?? null,
       createdAt: rec.createdAt,
       robot: rec.robot,
       robotId: rec.robotId,
