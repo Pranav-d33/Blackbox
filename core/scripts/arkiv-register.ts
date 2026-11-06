@@ -40,11 +40,11 @@ const owner = createWalletClient({ chain, transport: http(), account: privateKey
 const bal = async (x: Hex) => Number(formatEther(await pub.getBalance({ address: x })));
 console.log(`inspector (core) ${writer.account.address}  ${await bal(writer.account.address)} tGLM`);
 console.log(`site owner       ${owner.account.address}  ${await bal(owner.account.address)} tGLM`);
-if (owner.account.address !== writer.account.address && (await bal(owner.account.address)) < 0.01) {
+if (owner.account.address !== writer.account.address && (await bal(owner.account.address)) < 0.1) {
   if ((await bal(writer.account.address)) < 0.05) throw new Error(`fund ${writer.account.address} at https://hub.arkiv.network/faucet first`);
-  const tx = await writer.sendTransaction({ to: owner.account.address, value: parseEther("0.02") });
+  const tx = await writer.sendTransaction({ to: owner.account.address, value: parseEther("0.3") });
   await pub.waitForTransactionReceipt({ hash: tx });
-  console.log(`funded the owner with 0.02 tGLM  ${tx}`);
+  console.log(`funded the owner with 0.3 tGLM  ${tx}`);
 }
 
 for (const id of ids) {
