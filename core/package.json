@@ -14,6 +14,7 @@
     "probe": "tsx scripts/probe-0g.ts",
     "setup:robot": "tsx scripts/setup-robot.ts",
     "setup:ens": "tsx scripts/setup-ens.ts",
+    "ens:faucet": "tsx scripts/ens-faucet.ts",
     "build:web": "esbuild src/verifier/browser.ts --bundle --format=iife --platform=browser --minify --outfile=web/verifier.bundle.js",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test test/*.test.ts",
