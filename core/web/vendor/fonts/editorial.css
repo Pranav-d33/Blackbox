@@ -1,0 +1,5 @@
+/* Landing + workflows type: Newsreader (display serif), Inter Tight (text), JetBrains Mono (labels). SIL OFL. */
+@font-face { font-family: "Newsreader"; font-style: normal; font-weight: 200 800; font-display: swap; src: url(./Newsreader-var.woff2) format("woff2"); }
+@font-face { font-family: "Newsreader"; font-style: italic; font-weight: 200 800; font-display: swap; src: url(./Newsreader-var-italic.woff2) format("woff2"); }
+@font-face { font-family: "Inter Tight"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(./InterTight-var.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 100 800; font-display: swap; src: url(./JetBrainsMono-var.woff2) format("woff2"); }
