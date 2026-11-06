@@ -19,7 +19,6 @@ core/data/
 robot/data/
 .dev-logs/
 contracts/deployments/31337.json
-contracts/deployments/ens-31337.json
 
 .DS_Store
 
