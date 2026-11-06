@@ -175,6 +175,8 @@ async function boot() {
   const [cfg, status, robot] = await Promise.all([get("/api/config"), get("/api/status"), get("/api/robot/state?since=0")]);
   const m = status?.mission ?? null;
   const mock = cfg?.zg?.mode === "mock";
+  const unsealed = cfg?.zg?.attestation === "none";
+  if (unsealed) $("mockNote").textContent = "This machine is running an unsealed fallback model on 0G's Router: the decisions are real 0G calls, but the answers carry no TEE signature, so they are not enclave-attested.";
   if (mock) $("mockNote").textContent = "This machine is running the development mock of 0G right now, so its answers are signed by a local test key, not a 0G TEE.";
 
   const decisions = (m?.entries ?? []).filter((e) => e.kind === "decision");
