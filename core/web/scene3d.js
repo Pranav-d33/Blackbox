@@ -206,9 +206,41 @@ export class Scene3D {
     this.raycaster = new THREE.Raycaster();
     this.clock = new THREE.Clock();
     this._bindPointer();
-    this._ro = new ResizeObserver(() => this.resize());
+    this._ro = new ResizeObserver(() => {
+      this.resize();
+      this._reframe();
+    });
+    this.controls.addEventListener("start", () => (this.userMoved = true));
     this._ro.observe(el);
     this.resize();
+    this.renderer.setAnimationLoop(() => this._frame());
+  }
+
+  /**
+   * How much of the canvas the side panes cover (px, left and right). The deck is framed, and centred, in the free
+   * window between them. Until the user orbits or zooms themselves, a change re-frames the camera.
+   */
+  setInsets(left, right) {
+    left = Math.max(0, Math.round(left));
+    right = Math.max(0, Math.round(right));
+    if (left === this._pl && right === this._pr) return;
+    this._pl = left;
+    this._pr = right;
+    this.resize();
+    this._reframe();
+  }
+  _reframe() {
+    if (this.userMoved || !this.meta) return;
+    const [W, H] = this.meta.deck_mm.map(mm);
+    this._frameCamera(W, H);
+  }
+
+  /** Stop rendering (nothing is on screen); resume() starts again where the scene left off. */
+  pause() {
+    this.renderer.setAnimationLoop(null);
+  }
+  resume() {
+    this.clock.getDelta(); // do not feed the paused gap into the next frame's motion
     this.renderer.setAnimationLoop(() => this._frame());
   }
 
@@ -435,13 +467,14 @@ export class Scene3D {
     // the home pad sits ~3 m west of the surface: keep it in frame; the side panels cover ~350 px each
     const tx = (W - 3) / 2, ty = H * 0.42;
     const w = this.el.clientWidth || 1200, h = this.el.clientHeight || 800;
-    const cover = (this.insetLeft || this.insetX) && w > 900 ? this.insetLeft + this.insetX : 0;
+    const cover = w <= 900 ? 0 : this._pl !== undefined ? this._pl + this._pr : this.insetLeft + this.insetX;
     const visible = Math.max(0.45, (w - cover) / w);
     const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * (w / h));
     const dist = Math.max((W + 9) * 1.3 / (2 * Math.tan(half) * visible), (H * 1.8) / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2))));
     this.camera.position.set(tx, ty - dist * 0.8, dist * 0.56);
     this.controls.target.set(tx, ty, 0);
     this.controls.update();
+    this.userMoved = false;
   }
 
   setHome(home_mm) {
@@ -632,7 +665,9 @@ export class Scene3D {
     const w = this.el.clientWidth || 1, h = this.el.clientHeight || 1;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    if (this.insetLeft && w > 900) this.camera.setViewOffset(w, h, -this.insetLeft / 2, 0, w, h);
+    // shift the picture so the deck sits in the middle of the free window between the panes, not of the whole canvas
+    const l = this._pl ?? this.insetLeft, r = this._pr ?? 0;
+    if ((l || r) && w > 900) this.camera.setViewOffset(w, h, -(l - r) / 2, 0, w, h);
     else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
     for (const l of [this.trail, this.plan, this.ghostTrail, this.hoverLine]) l.material.resolution.set(w, h);

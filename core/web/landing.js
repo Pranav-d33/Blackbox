@@ -21,13 +21,20 @@ fetch("/api/config")
     }),
   );
 
-const m = await (await fetch("/demo/mission.json")).json();
+const [m, hero] = await Promise.all([
+  fetch("/demo/mission.json").then((r) => r.json()),
+  // the hero shows a solar plant; the table and Verify buttons below stay on the mission that verifies end to end from 0G Storage
+  fetch("/demo/hero.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+]);
+const H = hero ?? m;
+const heroTexture = hero ? "/demo/hero-texture.jpg" : "/demo/texture.jpg";
 const ex = EXPLORER[m.chain.chain_id];
 const net = m.chain.chain_id === 16661 ? "mainnet" : "galileo";
 const verifyUrl = `/verify.html?${new URLSearchParams({ mission: m.mission_id, network: net, registry: m.chain.registry })}`;
 for (const id of ["hero-verify", "m-verify", "final-verify"]) $(id).href = verifyUrl;
 
 const labelOf = (l) => m.profile.ui.labels[l] ?? { name: l ?? "safe stop", color: "#f87171" };
+const labelOfH = (l) => H.profile.ui.labels[l] ?? { name: l ?? "safe stop", color: "#f87171" };
 const sealed = m.attestation !== "none";
 
 // ---- the decisions table and the on-chain proof
@@ -49,10 +56,10 @@ $("m-proof").innerHTML =
   (ex ? `<a href="${ex}/address/${m.chain.registry}" target="_blank" rel="noreferrer">BlackboxRegistry<span>${m.chain.registry}</span></a>` : "");
 
 // ---- hero card
-$("hc-title").textContent = `${m.profile.title.replace(/ survey$/, "")} · ${short(m.mission_id, 10)}`;
-$("hc-link").href = ex ? `${ex}/tx/${m.chain.close_tx ?? m.chain.register_tx}` : verifyUrl;
-$("hc-rows").innerHTML = m.checkpoints
-  .map((c) => `<div data-k="${c.k}"><span class="dot" style="background:${labelOf(c.label).color}"></span><code>${c.asset}</code>${labelOf(c.label).name}<em>${c.outcome}</em></div>`)
+$("hc-title").textContent = `${H.profile.title.replace(/ survey$/, "")} · ${short(H.mission_id, 10)}`;
+$("hc-link").href = ex ? `${ex}/tx/${H.chain.close_tx ?? H.chain.register_tx}` : verifyUrl;
+$("hc-rows").innerHTML = H.checkpoints
+  .map((c) => `<div data-k="${c.k}"><span class="dot" style="background:${labelOfH(c.label).color}"></span><code>${c.asset}</code>${labelOfH(c.label).name}<em>${c.outcome}</em></div>`)
   .join("");
 
 // ---- 3D replay of the real flight
@@ -61,30 +68,48 @@ s3.controls.enableZoom = false;
 s3.controls.enableRotate = false;
 s3.controls.autoRotate = !reduced;
 s3.controls.autoRotateSpeed = 0.25;
-s3.setWorld(m.world, "/demo/texture.jpg");
-const pts = m.samples.map((s) => [s[1] / 1000, s[2] / 1000, s[3] / 1000]);
+s3.setWorld(H.world, heroTexture);
+const pts = H.samples.map((s) => [s[1] / 1000, s[2] / 1000, s[3] / 1000]);
 // when the replay reaches each checkpoint: the sample closest to its target while the drone is low
-const at = m.checkpoints.map((c) => {
+const at = H.checkpoints.map((c) => {
   let best = 0, d = Infinity;
-  m.samples.forEach((s, i) => {
+  H.samples.forEach((s, i) => {
     const dd = Math.hypot(s[1] - c.target_mm[0], s[2] - c.target_mm[1]);
     if (dd < d) [best, d] = [i, dd];
   });
   return best;
 });
-const sim = (i) => ({ pose_mm: m.samples[i].slice(1, 4), home_mm: m.home_mm, waypoints_mm: m.waypoints_mm, phase: "SURVEY", crop_mm: 1000, attitude: null });
+const sim = (i) => ({ pose_mm: H.samples[i].slice(1, 4), home_mm: H.home_mm, waypoints_mm: H.waypoints_mm, phase: "SURVEY", crop_mm: 1000, attitude: null });
 let i = reduced ? pts.length - 1 : 0;
+// the hero is the only thing animating: stop rendering and replaying while it is scrolled away or the tab is hidden
+let onScreen = true, parked = false;
+const wake = () => {
+  const go = onScreen && !document.hidden;
+  if (go && parked) {
+    parked = false;
+    s3.resume();
+    tick();
+  }
+};
+new IntersectionObserver(([e]) => ((onScreen = e.isIntersecting), wake()), { threshold: 0 }).observe($("scene"));
+document.addEventListener("visibilitychange", wake);
+
 function tick() {
-  const seen = m.checkpoints.filter((_, j) => at[j] <= i);
+  if (!onScreen || document.hidden) {
+    parked = true;
+    s3.pause();
+    return;
+  }
+  const seen = H.checkpoints.filter((_, j) => at[j] <= i);
   s3.update(sim(i), pts.slice(0, i + 1));
   s3.setMarkers(
     seen.map((c) => {
-      const l = labelOf(c.label);
+      const l = labelOfH(c.label);
       return { k: c.k, x_mm: c.target_mm[0], y_mm: c.target_mm[1], state: c.outcome, color: l.color, title: `${c.asset} · ${l.name}`, sub: `0G → ${c.outcome}` };
     }),
   );
   document.querySelectorAll("#hc-rows div").forEach((el) => el.classList.toggle("on", seen.some((c) => String(c.k) === el.dataset.k)));
-  $("hc-status").textContent = i >= pts.length - 1 ? `Landed · ${m.checkpoints.length} decisions by 0G` : `Replaying a real mission · ${seen.length}/${m.checkpoints.length} decisions`;
+  $("hc-status").textContent = i >= pts.length - 1 ? `Landed · ${H.checkpoints.length} decisions by 0G` : `Replaying a real mission · ${seen.length}/${H.checkpoints.length} decisions`;
   if (reduced) return;
   i = i >= pts.length - 1 ? 0 : i + 1;
   if (i === 0) s3.resetPose();
