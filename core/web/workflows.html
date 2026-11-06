@@ -55,29 +55,29 @@
 
   <section class="band" id="text">
     <div class="wrap">
-      <p class="eyebrow">Workflow 2 · Text · <span class="tag">Proposal</span></p>
+      <p class="eyebrow">Workflow 2 · Text · <span class="tag">Built</span></p>
       <h2>The crew types, 0G maps it to an action.</h2>
       <ol class="steps">
         <li><i>1</i><b>Drone holds.</b><span>r3m14 is ambiguous. The console asks: descend or continue?</span></li>
-        <li><i>2</i><b>Crew types a note.</b><span><q>r3m14 looks like a cracked cell, send it to repair.</q> The note is hashed.</span></li>
-        <li><i>3</i><b>Sealed text model.</b><span>0GM-1.0 in a TEE gets the note, the allowed actions and this checkpoint only. Returns <code>{"action":"descend"}</code>, signed.</span></li>
-        <li><i>4</i><b>Interlock.</b><span><q>Fly to the highway</q> is not in the vocabulary: refused and logged. The drone keeps holding.</span></li>
-        <li><i>5</i><b>Logged as a human entry.</b><span>Note hash + signed answer + action, in the same chain as the vision decisions.</span></li>
+        <li><i>2</i><b>Crew types what they see.</b><span><q>Glass is shattered from hail, send the repair crew.</q> Or <q>just bird droppings, move on.</q></span></li>
+        <li><i>3</i><b>Sealed text model.</b><span>0GM-1.0 in a TEE gets the words, the profile's labels and actions, and a nonce derived from this checkpoint <em>and these exact words</em>. Returns <code>cracked_cell · 3 · descend</code>, signed.</span></li>
+        <li><i>4</i><b>Interlock on the robot.</b><span>Same checks as a vision answer. <q>Fly to the highway</q> maps to nothing allowed: refused, logged, still holding. A signed answer to different words, or the earlier vision answer, fails the nonce.</span></li>
+        <li><i>5</i><b>Logged, and checkable.</b><span>The words, their hash, 0G's signed answer and the action go into the same chain. The public verifier re-checks it.</span></li>
       </ol>
-      <p class="note">Builds on the existing hold path (<code>adapter.py</code> await-human, <code>POST /api/robot/human</code>). New: the text-model step and the note-hash field.</p>
+      <p class="note">Try it: in the console press <b>Ask the crew</b>; at the next checkpoint the drone holds and a reply box appears in Findings. Code: <code>POST /api/robot/instruct</code>, <code>Adapter.instruct</code>. Real use: a crew walking the rows sees what a 20 cm crop can't (hail damage on the back sheet, a bird nest), and their call becomes evidence instead of a radio message.</p>
     </div>
   </section>
 
   <section class="band alt" id="voice">
     <div class="wrap">
-      <p class="eyebrow">Workflow 3 · Voice · <span class="tag">Proposal</span></p>
+      <p class="eyebrow">Workflow 3 · Voice · <span class="tag">Built</span></p>
       <h2>Gloves on, screen off.</h2>
       <ol class="steps">
         <li><i>1</i><b>Drone speaks.</b><span><q>r3m14 unsure. Descend or continue?</q></span></li>
         <li><i>2</i><b>Crew chief answers.</b><span><q>Drone, go down and look at r3m14.</q></span></li>
-        <li><i>3</i><b>Speech to text.</b><span>Whisper on 0G (<code>whisper-large-v3</code>) or on the operator's device. Only the transcript hash is logged.</span></li>
+        <li><i>3</i><b>Speech to text.</b><span>The browser's speech recognition fills the same box and sends it. Next step: <code>whisper-large-v3</code> on 0G so the transcription is on 0G too.</span></li>
         <li><i>4</i><b>Same as text.</b><span>Sealed text model maps it to one allowed action; the interlock checks it.</span></li>
-        <li><i>5</i><b>Drone reports back.</b><span><q>r3m14: cracked cell, severity 2, repair crew.</q> Read from the signed result.</span></li>
+        <li><i>5</i><b>Logged as voice.</b><span>Same entry as text, marked <code>crew voice</code>, with the transcript the robot acted on.</span></li>
       </ol>
       <p class="note">Voice adds one failure mode, mishearing. The interlock bounds it: the worst a misheard command can do is pick the other allowed action, and silence means safe-stop.</p>
     </div>
@@ -106,7 +106,7 @@
     </div>
   </section>
 
-  <footer class="foot wrap">Workflows 2 and 3 are proposals on top of the built human-hold path; they are labelled as such. Built at ETHGlobal Mumbai 2026.</footer>
+  <footer class="foot wrap">Voice uses the browser's speech recognition (Chrome sends audio to its own service); the transcript, not the audio, is what 0G and the log see. Built at ETHGlobal Mumbai 2026.</footer>
   <script type="module" src="/landing-motion.js"></script>
 </body>
 </html>
