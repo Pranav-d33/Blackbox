@@ -20,7 +20,7 @@ export default function Findings() {
     <aside className="panel pointer-events-auto flex max-h-full w-[340px] flex-col overflow-hidden rounded-3xl">
       <div className="flex items-baseline justify-between px-5 pt-5 pb-3">
         <h2 className="font-display text-[15px] font-semibold tracking-[-0.015em]">Findings</h2>
-        <span className="text-[12px] text-white/40">{rows.length ? `${rows.length} ${rows.length === 1 ? engine.unitName() : `${engine.unitName()}s`}` : "none yet"}</span>
+        <span className="text-[12px] text-white/40">{rows.length ? `${rows.length} checked` : "none yet"}</span>
       </div>
       <div className="scroll-soft min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         {!rows.length ? (
