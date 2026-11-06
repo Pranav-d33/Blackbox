@@ -129,3 +129,58 @@ h2 { margin: 0; font-size: clamp(32px, 4.6vw, 54px); line-height: 1.04; letter-s
 .s3-hover { display: none; }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .pulse { animation: none; } }
+
+/* ---- motion ------------------------------------------------------------------------------- */
+:root { --ease: cubic-bezier(0.23, 1, 0.32, 1); --pop: cubic-bezier(0.34, 1.56, 0.64, 1); }
+.band { scroll-margin-top: 56px; }
+
+/* hero: the copy builds in line by line, the card drops in after it, the 3D scene fades up underneath */
+@keyframes up { from { opacity: 0; transform: translateY(var(--dy, 16px)); } }
+@keyframes fade { from { opacity: 0; } }
+.scene { animation: fade 1400ms ease backwards; }
+.hero-copy > * { animation: up 760ms var(--ease) backwards; }
+.hero-copy > :nth-child(1) { animation-delay: 80ms; }
+.hero-copy > :nth-child(2) { animation-delay: 170ms; }
+.hero-copy > :nth-child(3) { animation-delay: 270ms; }
+.hero-copy > :nth-child(4) { animation-delay: 370ms; }
+.hero-card { --dy: -12px; animation: up 820ms var(--ease) 520ms backwards; }
+
+/* nav: hairline + progress once you move, active section underlined */
+.nav { transition: background-color 300ms ease, box-shadow 300ms ease; }
+.nav.scrolled { background: rgb(7 8 11 / 0.9); box-shadow: 0 1px 0 var(--line); }
+.progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, var(--zg), var(--asset)); pointer-events: none; }
+.nav-links a { position: relative; transition: color 200ms ease; }
+.nav-links a::after { content: ""; position: absolute; left: 0; right: 0; bottom: -7px; height: 1px; background: var(--t1); transform: scaleX(0); transform-origin: left; transition: transform 320ms var(--ease); }
+.nav-links a[aria-current] { color: var(--t1); }
+.nav-links a[aria-current]::after { transform: scaleX(1); }
+
+/* scroll reveal (only when landing-motion.js added .js and motion is allowed) */
+.js .rv {
+  opacity: 0; transform: translateY(18px);
+  transition: opacity 700ms var(--ease) calc(var(--i, 0) * 70ms), transform 700ms var(--ease) calc(var(--i, 0) * 70ms),
+    translate 260ms var(--ease), background-color 200ms ease, box-shadow 260ms ease;
+}
+.js .rv.in { opacity: 1; transform: none; }
+.js .steps li.in i { animation: pop 520ms var(--pop) calc(var(--i, 0) * 70ms + 240ms) backwards; }
+@keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+.js .attack.in code { animation: slide-in 600ms var(--ease) calc(var(--i, 0) * 70ms + 350ms) backwards; }
+@keyframes slide-in { from { opacity: 0; transform: translateX(-8px); } }
+
+/* micro-interactions (pointer devices only) */
+.btn { transition: background-color 150ms, transform 160ms var(--ease), translate 220ms var(--ease), box-shadow 260ms ease; }
+.decisions tbody tr { transition: background-color 150ms ease; }
+.proof a { transition: background-color 150ms ease, translate 220ms var(--ease); }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { translate: 0 -1px; }
+  .btn.solid:hover { box-shadow: 0 8px 28px rgb(167 139 250 / 0.38); }
+  .card:hover, .layer:hover, .attack:hover, .steps li:hover { translate: 0 -3px; background-color: rgb(255 255 255 / 0.055); }
+  .decisions tbody tr:hover { background: rgb(255 255 255 / 0.04); }
+  .proof a:hover { translate: 0 -2px; }
+}
+
+/* keyboard focus is visible everywhere, mouse clicks leave no ring */
+a:focus-visible, button:focus-visible { outline: 2px solid var(--zg); outline-offset: 3px; border-radius: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}

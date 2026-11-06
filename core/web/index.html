@@ -7,7 +7,9 @@
   <title>Blackbox · a flight recorder for AI robots</title>
   <meta name="description" content="Inspection drones that move only on decisions signed by 0G's sealed AI, with a record anyone can verify." />
   <link rel="stylesheet" href="/vendor/fonts/fonts.css" />
-  <link rel="stylesheet" href="/landing.css" />
+  <script>document.documentElement.classList.add("js")</script>
+<meta name="live-console" content="https://blackbox-production-2091.up.railway.app" />
+<link rel="stylesheet" href="/landing.css" />
   <script type="importmap">
     { "imports": { "three": "/vendor/three/three.module.min.js", "three/addons/": "/vendor/three/addons/" } }
   </script>
@@ -27,7 +29,7 @@
       </div>
       <div class="nav-cta">
         <a class="btn ghost" href="/verify.html">Verify</a>
-        <a class="btn solid live-only" href="/console.html" hidden>Open console</a>
+        <a class="btn solid" data-console href="/console.html">Open console</a>
       </div>
     </div>
   </nav>
@@ -40,7 +42,8 @@
       <h1>0G decides.<br /><span>Blackbox proves it.</span></h1>
       <p class="lede">A flight recorder for AI inspection robots. The drone moves only on decisions signed by 0G's sealed AI, and anyone can check the record. No trust in the operator.</p>
       <div class="hero-cta">
-        <a class="btn solid lg" href="#mission">See a real mission</a>
+        <a class="btn solid lg" data-console href="/console.html">Open the live console</a>
+        <a class="btn ghost lg" href="#mission">See a real mission</a>
         <a class="btn ghost lg" href="/verify.html" id="hero-verify">Verify it yourself</a>
       </div>
     </div>
@@ -152,7 +155,8 @@
       <h2>See it decide.</h2>
       <p class="sub">Verify the real mission above from your phone, or run the whole stack yourself.</p>
       <div class="hero-cta">
-        <a class="btn solid lg" href="/verify.html" id="final-verify">Open the verifier</a>
+        <a class="btn solid lg" data-console href="/console.html">Open the live console</a>
+        <a class="btn ghost lg" href="/verify.html" id="final-verify">Open the verifier</a>
         <a class="btn ghost lg" href="https://github.com/Pranav-d33/Blackbox" target="_blank" rel="noreferrer">Source on GitHub</a>
       </div>
     </div>
@@ -160,6 +164,7 @@
 
   <footer class="foot wrap">Tamper-evident, not tamper-proof. The robot acts only on answers signed by an allowlisted 0G TEE signer, each produced for its request. It does not prove what the camera saw. Built at ETHGlobal Mumbai 2026.</footer>
 
-  <script type="module" src="/landing.js"></script>
+  <script type="module" src="/landing-motion.js"></script>
+<script type="module" src="/landing.js"></script>
 </body>
 </html>

@@ -7,11 +7,19 @@ const short = (h, n = 8) => (h ? `${h.slice(0, n)}…${h.slice(-4)}` : "–");
 const EXPLORER = { 16602: "https://chainscan-galileo.0g.ai", 16661: "https://chainscan.0g.ai" };
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// a running core next to this page means the live console is available
+// The console needs a live core. Next to one (same origin) it opens in place; on a static host (e.g. Vercel) it
+// opens the backend named by <meta name="live-console">; with neither, the buttons are hidden instead of dead.
+const LIVE = document.querySelector('meta[name="live-console"]')?.content?.replace(/\/$/, "");
 fetch("/api/config")
-  .then((r) => (r.ok ? r.json() : null))
-  .then((c) => c && document.querySelectorAll(".live-only").forEach((el) => (el.hidden = false)))
-  .catch(() => {});
+  .then((r) => r.ok)
+  .catch(() => false)
+  .then((local) =>
+    document.querySelectorAll("[data-console]").forEach((a) => {
+      if (local) a.href = "/console.html";
+      else if (LIVE) Object.assign(a, { href: `${LIVE}/console.html`, target: "_blank", rel: "noopener" });
+      else a.hidden = true;
+    }),
+  );
 
 const m = await (await fetch("/demo/mission.json")).json();
 const ex = EXPLORER[m.chain.chain_id];
