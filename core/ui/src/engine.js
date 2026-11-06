@@ -234,7 +234,7 @@ class Engine {
         let tone = "wait", status = "Verifying";
         if (d) [tone, status] = ["ok", d.action_applied];
         else if (c.stop) [tone, status] = ["bad", "Safe stop"];
-        else if (c.human) [tone, status] = ["ok", `Human · ${c.human.action}`];
+        else if (c.human) [tone, status] = ["ok", c.human.crew ? `Crew ${c.human.crew.via} · ${c.human.action}` : `Human · ${c.human.action}`];
         else if (c.hold) [tone, status] = ["hold", "Asking a human"];
         else if (c.refusals.length) [tone, status] = ["bad", "Refused"];
         const x = d ?? c.hold;
@@ -648,6 +648,10 @@ class Engine {
     this.S.done.attack = true;
     this.toast('Armed. At the next checkpoint the operator sends a forged "continue" signed with their own key.');
   });
+  askCrew = this.guard(async () => {
+    await api("/api/demo/ask-crew", {});
+    this.toast("Armed. At the next checkpoint the drone holds and asks the crew: type or speak your answer in Findings.");
+  });
   tamperAnswer = this.guard(async () => {
     await api("/api/demo/tamper-answer", {});
     this.S.done.attack = true;
@@ -703,6 +707,13 @@ class Engine {
     this.openModal({ type: "qr", title: "Verify on your phone", url, svg, local: ["127.0.0.1", "localhost"].includes(location.hostname) });
   });
   human = this.guard((k, action) => api("/api/robot/human", { checkpoint: k, action }));
+  /** The crew answers a held checkpoint in words; 0G maps them to an action and the robot verifies it. */
+  instruct = this.guard(async (k, note, via = "text") => {
+    this.toast(`Asking 0G what the crew meant…`, 4000);
+    const r = await api("/api/robot/instruct", { checkpoint: k, note, via });
+    if (r.accepted) this.toast(`0G: ${r.answer.label} → ${r.answer.action} (TEE-checked by the robot)`, 6000);
+    else this.toast(`Refused, still holding: ${r.reason}`, 9000);
+  });
   split = this.guard(async () => {
     if (!this.S.robot?.sim) throw new Error("Fly a mission first.");
     const cf = await api("/api/counterfactual", { force: "continue" });

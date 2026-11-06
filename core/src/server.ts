@@ -137,12 +137,14 @@ const routes: [string, RegExp, Handler][] = [
   ["POST", /^\/api\/world\/place$/, async (q) => robot.place(await body(q))],
   ["POST", /^\/api\/robot\/estop$/, async () => robot.estop()],
   ["POST", /^\/api\/robot\/human$/, async (q) => robot.human(await body(q))],
+  ["POST", /^\/api\/robot\/instruct$/, async (q) => missions.onInstruct(await body(q))],
   ["POST", /^\/api\/counterfactual$/, async (q) => robot.counterfactual((await body(q)).force ?? "continue")],
   // robot-facing
   ["POST", /^\/api\/checkpoint$/, async (q) => missions.onCheckpoint(await body(q))],
   ["POST", /^\/api\/entries$/, async (q) => missions.onEntry((await body(q)).entry)],
   // demo controls
   ["POST", /^\/api\/demo\/link$/, async (q) => ((router.link.down = !!(await body(q)).down), { linkDown: router.link.down })],
+  ["POST", /^\/api\/demo\/ask-crew$/, async () => ((missions.demo.crewArmed = true), missions.demo)],
   ["POST", /^\/api\/demo\/forge$/, async () => ((missions.demo.forgeArmed = true), missions.demo)],
   ["POST", /^\/api\/demo\/tamper-answer$/, async () => ((missions.demo.tamperArmed = true), missions.demo)],
   ["POST", /^\/api\/missions\/(0x[0-9a-fA-F]{64})\/tamper-log$/, async (q, m) => missions.tamperedReport(m[1], (await body(q)).seq)],

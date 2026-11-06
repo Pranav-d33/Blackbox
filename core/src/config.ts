@@ -148,6 +148,8 @@ export function loadConfig() {
       extraSigners: env("TEE_SIGNER_ALLOWLIST").split(",").map((s) => s.trim()).filter(Boolean),
       decisionModel: env("ZG_DECISION_MODEL"),
       holdBelowPermille: int("DECISION_HOLD_BELOW", 600),
+      // hold and ask the crew when the vision model itself answers "unsure" (off by default: no crew, no answer, safe-stop)
+      holdOnUnsure: env("HOLD_ON_UNSURE") === "1",
       requestTimeoutMs: int("ZG_REQUEST_TIMEOUT_MS", 15000),
     },
     arkiv: arkivConfig(),

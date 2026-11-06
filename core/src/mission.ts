@@ -27,7 +27,7 @@ const MANIFEST_VERSION = 1;
 
 export interface Attempt {
   at: number;
-  kind: "0g" | "forged" | "tampered" | "error";
+  kind: "0g" | "forged" | "tampered" | "error" | "crew";
   endpoint?: string;
   request_id?: string | null;
   chat_id?: string | null;
@@ -71,7 +71,7 @@ export interface MissionRecord {
 export class Missions {
   current: MissionRecord | null = null;
   records = new Map<string, MissionRecord>();
-  demo = { forgeArmed: false, tamperArmed: false };
+  demo = { forgeArmed: false, tamperArmed: false, crewArmed: false };
   /** 0G Storage uploads. They drain in the background: chain writes use roots computed locally. */
   readonly queue = new SerialQueue();
   /** 0G Chain writes. Its own queue when Storage pays from another key, else the same one (one nonce). */
@@ -269,6 +269,33 @@ export class Missions {
   }
 
   // ------------------------------------------------------------- checkpoint
+  /**
+   * The crew answers a held checkpoint in words (typed, or transcribed from speech). 0G's sealed model maps the words
+   * to one allowed action; the robot verifies that answer exactly like a vision decision before it moves.
+   */
+  async onInstruct(req: { checkpoint: number; note: string; via?: string }) {
+    const rec = this.current;
+    if (!rec || rec.status !== "flying") throw new Error("no mission is flying");
+    const note = String(req.note ?? "").trim().slice(0, 280);
+    if (!note) throw new Error("say or type what you see");
+    const hold = rec.entries.filter((e) => e?.kind === "hold" && e.body?.checkpoint === req.checkpoint).at(-1)?.body;
+    if (!hold) throw new Error("no checkpoint is waiting for a human");
+    const via = req.via === "voice" ? "voice" : "text";
+    const policy = this.policyOf(rec);
+    const cpv = (rec.checkpoints[req.checkpoint] ??= { k: req.checkpoint, status: "held", attempts: [] });
+    const { bundle, precheck } = await this.decider.instruct(
+      { mission_id: rec.id, checkpoint: req.checkpoint, nonce: hold.nonce, asset: hold.asset ?? null, vision: hold.answer ?? null, note, via },
+      policy,
+      taskOf(rec.manifest.profile),
+    );
+    const at: Attempt = { at: Date.now(), kind: "crew", request_id: bundle.request_id, chat_id: bundle.chat_id, latency_ms: bundle.latency_ms, answer: precheck.answer, precheck: precheck.reason };
+    cpv.attempts.push(at);
+    const r = await this.robot.instruct({ checkpoint: req.checkpoint, note, via, bundle });
+    at.robot_result = r.accepted ? "accepted" : `refused: ${r.reason}`;
+    this.persist(rec);
+    return { accepted: !!r.accepted, reason: r.reason, answer: precheck.answer, request_id: bundle.request_id };
+  }
+
   async onCheckpoint(req: CheckpointRequest): Promise<{ ok: boolean; bundle?: Bundle; error?: string }> {
     const rec = this.records.get(req.mission_id);
     if (!rec) return { ok: false, error: "unknown mission" };
@@ -312,6 +339,13 @@ export class Missions {
         precheck: precheck.reason,
       };
       cpv.attempts.push(at);
+      if (precheck.accepted && !bundle.decision_model?.hold) {
+        const unsure = this.cfg.zg.holdOnUnsure && precheck.answer?.label === "unsure";
+        if (unsure || this.demo.crewArmed) {
+          if (!unsure) this.demo.crewArmed = false;
+          bundle.decision_model = { hold: true, reason: unsure ? "0G's vision model answered unsure" : "operator asked the crew to confirm (demo)" };
+        }
+      }
       if (this.demo.tamperArmed && precheck.accepted) {
         this.demo.tamperArmed = false;
         const t = tamperBundle(bundle, rec.manifest.profile);

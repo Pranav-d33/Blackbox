@@ -22,6 +22,7 @@ export class RobotClient {
   preview = (sim: unknown) => this.call("POST", "/world/preview", { sim }, 30000);
   decision = (bundle: unknown, source: string) => this.call("POST", "/decision", { bundle, source });
   human = (b: unknown) => this.call("POST", "/human", b);
+  instruct = (b: unknown) => this.call("POST", "/instruct", b, 30000);
   estop = () => this.call("POST", "/estop", {});
   sign = (b: unknown) => this.call("POST", "/sign", b);
   counterfactual = (force = "continue") => this.call("POST", "/counterfactual", { force }, 60000);

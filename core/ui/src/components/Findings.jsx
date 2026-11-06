@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { engine } from "../engine.js";
 import { Button, Dot, AssetId, toneText } from "./ui.jsx";
 
@@ -44,12 +45,15 @@ export default function Findings() {
                   ) : null}
                 </div>
                 {r.askHuman ? (
-                  <div className="mt-2 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    {(m.policy?.actions ?? ["descend", "continue"]).map((a) => (
-                      <Button key={a} size="xs" onClick={() => engine.human(r.k, a)}>
-                        {a}
-                      </Button>
-                    ))}
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <div className="mt-2 flex gap-1.5">
+                      {(m.policy?.actions ?? ["descend", "continue"]).map((a) => (
+                        <Button key={a} size="xs" onClick={() => engine.human(r.k, a)}>
+                          {a}
+                        </Button>
+                      ))}
+                    </div>
+                    <CrewReply k={r.k} />
                   </div>
                 ) : null}
               </div>
@@ -58,5 +62,57 @@ export default function Findings() {
         )}
       </div>
     </aside>
+  );
+}
+
+const Speech = typeof window !== "undefined" ? window.SpeechRecognition || window.webkitSpeechRecognition : null;
+
+/** Answer a held checkpoint in words: typed, or spoken and transcribed by the browser. 0G maps them to an action. */
+function CrewReply({ k }) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [listening, setListening] = useState(false);
+  const rec = useRef(null);
+  const send = async (text, via) => {
+    if (!text.trim() || busy) return;
+    setBusy(true);
+    await engine.instruct(k, text.trim(), via);
+    setBusy(false);
+  };
+  const listen = () => {
+    if (listening) return rec.current?.stop();
+    const r = new Speech();
+    r.lang = navigator.language || "en-US";
+    r.interimResults = true;
+    r.onresult = (e) => {
+      const text = [...e.results].map((x) => x[0].transcript).join(" ");
+      setNote(text);
+      if (e.results[e.results.length - 1].isFinal) send(text, "voice");
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    rec.current = r;
+    setListening(true);
+    r.start();
+  };
+  return (
+    <form className="mt-2 flex gap-1.5" onSubmit={(e) => (e.preventDefault(), send(note, "text"))}>
+      <input
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        maxLength={280}
+        disabled={busy}
+        placeholder="Or tell it: “bird droppings, move on”"
+        className="min-w-0 flex-1 rounded-lg bg-white/5 px-2 py-1 text-[12px] text-white/90 outline-none ring-1 ring-white/10 placeholder:text-white/35 focus:ring-white/30"
+      />
+      {Speech ? (
+        <Button size="xs" type="button" onClick={listen} disabled={busy} title="Speak to the drone">
+          {listening ? "● listening" : "🎙"}
+        </Button>
+      ) : null}
+      <Button size="xs" type="submit" disabled={busy || !note.trim()}>
+        {busy ? "…" : "send"}
+      </Button>
+    </form>
   );
 }

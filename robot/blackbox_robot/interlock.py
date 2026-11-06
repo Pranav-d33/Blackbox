@@ -26,6 +26,11 @@ BINDINGS = ("raw", "go", "content")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
+def crew_nonce(checkpoint_nonce: str, note_sha256: str) -> str:
+    """Nonce for a crew instruction at a held checkpoint. Mirrors crewNonce in core/src/lib/interlock.ts."""
+    return "0x" + sha256_hex(f"{checkpoint_nonce}:{note_sha256}".encode("utf-8"))
+
+
 class AnswerError(ValueError):
     pass
 

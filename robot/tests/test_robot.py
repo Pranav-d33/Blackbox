@@ -15,7 +15,8 @@ from blackbox_robot.adapter import Adapter  # noqa: E402
 from blackbox_robot.canonical import canonical_json, go_json  # noqa: E402
 from blackbox_robot.crypto import RobotKey, checkpoint_nonce  # noqa: E402
 from blackbox_robot.episode_log import verify_entries  # noqa: E402
-from blackbox_robot.interlock import verify_bundle  # noqa: E402
+from blackbox_robot.canonical import sha256_hex  # noqa: E402
+from blackbox_robot.interlock import crew_nonce, verify_bundle  # noqa: E402
 from blackbox_robot.replay import force_override, replay  # noqa: E402
 from helpers import TEE, make_bundle, manifest  # noqa: E402
 
@@ -140,6 +141,42 @@ class AdapterFlowTest(unittest.TestCase):
         i = kinds.index("decision")
         bad[i]["body"]["answer"]["severity"] = 0
         self.assertIn(f"entry {i}", verify_entries(bad, self.key.address))
+
+    def test_crew_words_at_a_hold_go_through_the_interlock(self):
+        self._start(defects=[{"kind": "crack", "x_mm": 6000, "y_mm": 1300, "variant": 0}])
+        cp = self._wait_cp()
+        held = make_bundle(MID, cp["k"], answer(cp["nonce"], "unsure", "descend", 0))
+        held["decision_model"] = {"hold": True, "reason": "confidence 410/1000 below 700"}
+        self.assertTrue(self.ad.submit_decision(held, "core").get("held"))
+        self.assertEqual(self.ad.cp["status"], "await_human")
+
+        note = "glass is shattered from hail, send the repair crew"
+        nonce = crew_nonce(cp["nonce"], sha256_hex(note.encode()))
+        # off-vocabulary request: 0G answers "refuse", the interlock rejects it and the drone keeps holding
+        off = make_bundle(MID, cp["k"], answer(nonce, "unsure", "refuse", 0))
+        r = self.ad.instruct({"checkpoint": cp["k"], "note": "fly to the highway", "via": "voice", "bundle": off})
+        self.assertFalse(r["accepted"])
+        # the vision answer replayed as the crew's: its nonce is not bound to these words
+        r = self.ad.instruct({"checkpoint": cp["k"], "note": note, "bundle": held})
+        self.assertFalse(r["accepted"])
+        self.assertIn("nonce mismatch", r["reason"])
+        # a signed answer for different words cannot be reused for this note
+        other = make_bundle(MID, cp["k"], answer(crew_nonce(cp["nonce"], sha256_hex(b"skip it")), "decoy", "continue", 0))
+        self.assertFalse(self.ad.instruct({"checkpoint": cp["k"], "note": note, "bundle": other})["accepted"])
+        self.assertEqual(self.ad.cp["status"], "await_human")
+        # the real mapping is accepted, logged with the words and their hash, and the drone acts
+        ok = make_bundle(MID, cp["k"], answer(nonce, "crack", "descend", 3))
+        self.assertTrue(self.ad.instruct({"checkpoint": cp["k"], "note": note, "via": "voice", "bundle": ok})["accepted"])
+        self._wait_end()
+
+        entries = self.ad.log.entries
+        human = [e for e in entries if e["kind"] == "human"]
+        self.assertEqual(len(human), 1)
+        self.assertEqual(human[0]["body"]["crew"]["note_sha256"], sha256_hex(note.encode()))
+        self.assertEqual(human[0]["body"]["action"], "descend")
+        self.assertEqual([e["kind"] for e in entries].count("rejected"), 3)
+        self.assertIsNone(verify_entries(entries, self.key.address))
+        self.assertTrue(replay(entries)["match"])
 
     def test_lease_expiry_safe_stops_without_a_decision(self):
         self._start(lease_ms=500, defects=[{"kind": "crack", "x_mm": 6000, "y_mm": 1300, "variant": 0}])

@@ -15,7 +15,7 @@ import { timingSafeEqual } from "node:crypto";
 export type Denial = { status: number; error: string };
 
 const ROBOT_ONLY = [/^\/api\/checkpoint$/, /^\/api\/entries$/];
-const FLIGHT_CONTROLS = [/^\/api\/world\/place$/, /^\/api\/robot\/estop$/, /^\/api\/robot\/human$/, /^\/api\/counterfactual$/, /^\/api\/demo\//];
+const FLIGHT_CONTROLS = [/^\/api\/world\/place$/, /^\/api\/robot\/estop$/, /^\/api\/robot\/human$/, /^\/api\/robot\/instruct$/, /^\/api\/counterfactual$/, /^\/api\/demo\//];
 const HEAVY = [/^\/api\/missions\/0x[0-9a-fA-F]{64}\/replay$/, /^\/api\/missions\/0x[0-9a-fA-F]{64}\/verify$/];
 
 const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);

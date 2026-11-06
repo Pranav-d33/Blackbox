@@ -26,10 +26,10 @@ from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Optional
 
-from .canonical import keccak_hex
+from .canonical import keccak_hex, sha256_hex
 from .crypto import RobotKey, anchor_digest, close_digest
 from .episode_log import EpisodeLog
-from .interlock import split_signed_text, verify_bundle, vocabulary
+from .interlock import crew_nonce, split_signed_text, verify_bundle, vocabulary
 from .mission import CONTROL_EVERY, MissionSim
 from .physics import PHYS_HZ, available_backends
 from .replay import replay
@@ -415,6 +415,46 @@ class Adapter:
             self._event("accept", f"checkpoint {cp['k']}: human chose {action}")
             return {"ok": True}
 
+    def instruct(self, req: dict) -> dict:
+        """A crew member's typed or spoken words at a held checkpoint, mapped by 0G's sealed model to one action.
+
+        Same interlock as a vision decision: the answer must parse into the profile's vocabulary, echo a nonce
+        derived from this checkpoint and the exact words, and carry an allowlisted TEE signature. The robot
+        hashes the words itself. A refusal is logged and the drone keeps holding until the hold times out.
+        """
+        with self.lock:
+            cp = self.cp
+            if cp is None or cp["status"] != "await_human" or req.get("checkpoint") != cp["k"]:
+                raise ValueError("no checkpoint is waiting for a human")
+            note = str(req.get("note") or "").strip()[:280]
+            via = req.get("via") if req.get("via") in ("text", "voice") else "text"
+            if not note:
+                raise ValueError("empty instruction")
+            note_sha = sha256_hex(note.encode("utf-8"))
+            bundle = req.get("bundle") or {}
+            res = verify_bundle(bundle, self.policy, crew_nonce(cp["nonce"], note_sha))
+            zg = self._zg_fields(bundle)
+            crew = {"via": via, "note": note, "note_sha256": note_sha, "by": str(req.get("by", "crew"))[:64]}
+            if not res["accepted"]:
+                reason = res["reason"]
+                if reason.startswith("answer does not parse"):
+                    reason = f"crew instruction does not map to an allowed action ({reason[len('answer does not parse: '):]})"
+                self._append("rejected", {"checkpoint": cp["k"], "step": cp["step"], "asset": cp["asset"],
+                                          "source": f"crew {via}", "reason": reason, "attempted_answer": res["answer"],
+                                          "signer": res["signer"], "crew": crew, "zg": zg})
+                self._event("refuse", f"checkpoint {cp['k']} (crew {via}): {reason}")
+                return dict(res, reason=reason)
+            action = res["answer"]["action"]
+            self._append("human", {"checkpoint": cp["k"], "step": cp["step"], "asset": cp["asset"], "action": action,
+                                   "by": f"crew {via}", "answer": res["answer"], "crew": crew, "zg": zg,
+                                   "interlock": {"parsed": True, "nonce_ok": True, "signer": res["signer"],
+                                                 "signer_allowlisted": bool(res["signer"]), "binding": res["binding"]}})
+            cp["status"] = "resolved"
+            self.sim.resolve(action)
+            self._event("accept", f"checkpoint {cp['k']}: crew said \"{note[:60]}\" -> 0G mapped it to "
+                                  f"{res['answer']['label']} -> {action}")
+            return res
+
     def estop(self) -> dict:
         with self.lock:
             if self.sim is None:
@@ -596,6 +636,7 @@ def make_handler(ad: Adapter):
                 "/world/preview": ad.preview,
                 "/decision": lambda r: ad.submit_decision(r.get("bundle") or r, source=r.get("source", "console")),
                 "/human": ad.human,
+                "/instruct": ad.instruct,
                 "/estop": lambda r: ad.estop(),
                 "/sign": ad.sign,
                 "/counterfactual": ad.counterfactual,

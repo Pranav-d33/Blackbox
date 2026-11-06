@@ -84,3 +84,21 @@ export function toAnswer(v: Verdict, prompt: string): { label: string; severity:
   if (v.truth === "benign") return { label: labels[1] ?? labels[0], severity: 0, action: actions[1] ?? actions[0] };
   return { label: unsure, severity: 0, action: actions[0] };
 }
+
+/**
+ * DEV-ONLY stand-in for the sealed text model reading a crew member's words. Keyword rules, not language
+ * understanding: enough to exercise the crew path offline. Off-vocabulary requests get action "refuse",
+ * which the robot's interlock rejects.
+ */
+export function crewVerdict(note: string, prompt: string): { label: string; severity: number; action: string } {
+  const t = note.toLowerCase();
+  const { labels } = vocabularyFromPrompt(prompt);
+  if (/\b(fly to|go home|land|return|highway|turn off|disable|ignore (?:the|all|previous))\b/.test(t))
+    return { label: labels.includes("unsure") ? "unsure" : labels[0], severity: 0, action: "refuse" };
+  const sev = /\b(whole|entire|module-wide|shattered|burn(?:t|ed)?|fire|smok)/.test(t) ? 3 : /\b(several|multiple|two|three|spreading)\b/.test(t) ? 2 : 1;
+  if (/\b(crack|cracked|broken|shatter|burn|scorch|hotspot|damage|chipped|impact|hail|repair|replace|go down|descend|closer|look at)/.test(t))
+    return toAnswer({ truth: "defect", severity: sev }, prompt);
+  if (/\b(dust|dirt|dirty|sand|bird|dropping|leaf|leaves|soil|mud|pollen|stain|paint|shadow|clean|skip|continue|move on|fine|nothing)/.test(t))
+    return toAnswer({ truth: "benign", severity: 0 }, prompt);
+  return { label: labels.includes("unsure") ? "unsure" : labels[0], severity: 0, action: "refuse" };
+}

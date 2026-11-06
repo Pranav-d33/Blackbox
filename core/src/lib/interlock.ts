@@ -61,6 +61,12 @@ export function checkpointNonce(missionId: string, obsHash: string, k: number): 
   return keccak256(AbiCoder.defaultAbiCoder().encode(["bytes32", "bytes32", "uint256"], [missionId, obsHash, k]));
 }
 
+/**
+ * Nonce for a crew instruction at a held checkpoint: binds 0G's answer to this checkpoint AND these exact words,
+ * so neither the vision answer nor an answer to a different note can be replayed as the crew's decision.
+ */
+export const crewNonce = (checkpointNonce: string, noteSha256: string) => "0x" + sha256Hex(`${checkpointNonce}:${noteSha256}`);
+
 export const expectedEcho = (nonce: string, hexLen = 64) => "0x" + nonce.slice(2, 2 + hexLen);
 
 export function extractContent(raw: string): string {

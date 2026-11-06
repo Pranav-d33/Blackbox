@@ -5,8 +5,8 @@
  */
 import { AbiCoder, Contract, JsonRpcProvider, getBytes, hashMessage, keccak256, recoverAddress } from "ethers";
 import { BLACKBOX_REGISTRY_ABI, ROBOT_REGISTRY_ABI, type ChainAnchor, type ChainMission, toChainAnchors, toChainMission } from "../chain/abi";
-import { type Entry, ZERO_HASH, canonicalJson, entryHash, keccakHex } from "../lib/canonical";
-import { type Policy, checkpointNonce, extractContent, parseAnswer, verifyBundle, vocabulary } from "../lib/interlock";
+import { type Entry, ZERO_HASH, canonicalJson, entryHash, keccakHex, sha256Hex } from "../lib/canonical";
+import { type Policy, checkpointNonce, crewNonce, extractContent, parseAnswer, verifyBundle, vocabulary } from "../lib/interlock";
 import { effectiveSigner } from "../zg/services";
 
 /** 0G Compute's InferenceServing on 0G mainnet: where TEE signers are registered and acknowledged. */
@@ -319,6 +319,20 @@ export function verifyMission(inp: VerifyInputs): Report {
     } else if (e.kind === "human") {
       Object.assign(row, { action: b.action, reason: `human: ${b.by}` });
       if (k !== null && !holds.has(k)) fails.action ??= { seq: i, why: "human decision without a calibrated hold" };
+      if (b.crew) {
+        // crew words mapped by 0G: same checks as a vision decision, with the nonce bound to the exact words
+        const hold = E.slice(0, i).filter((h) => h?.kind === "hold" && h.body?.checkpoint === k).at(-1)?.body;
+        const z = b.zg ?? {};
+        if (sha256Hex(String(b.crew.note ?? "")) !== b.crew.note_sha256) fails.action ??= { seq: i, why: "crew note does not match its hash" };
+        else if (!hold) fails.action ??= { seq: i, why: "crew instruction without a hold" };
+        else {
+          const r = verifyBundle({ raw_response: z.raw_response, tee: z.tee ?? {} }, policy, crewNonce(hold.nonce, b.crew.note_sha256));
+          row.signer = r.signer;
+          row.request_id = z.request_id;
+          if (!r.accepted) fails[r.reason.startsWith("nonce") || r.reason.startsWith("answer does not parse") ? "nonce" : r.reason.includes("does not cover") ? "binding" : "tee"] ??= { seq: i, why: `crew instruction: ${r.reason}` };
+          else if (r.answer!.action !== b.action) fails.action ??= { seq: i, why: `robot applied ${b.action} but 0G mapped the crew's words to ${r.answer!.action}` };
+        }
+      }
       if (k !== null) decided.add(k);
     } else if (e.kind === "rejected") {
       Object.assign(row, { reason: b.reason, label: b.attempted_answer?.label, action: b.attempted_answer?.action, signer: b.signer, request_id: b.zg?.request_id });

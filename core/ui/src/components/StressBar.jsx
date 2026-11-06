@@ -21,6 +21,9 @@ export default function StressBar() {
         Edit the log
       </Button>
       <span className="mx-0.5 h-5 w-px bg-white/10" />
+      <Button disabled={!flying} onClick={engine.askCrew} title={flying ? "The drone holds at the next checkpoint and asks the crew. Type or speak the answer; 0G maps it to an action." : "Available while the drone is flying"}>
+        {demo.crewArmed ? "Crew ask armed…" : "Ask the crew"}
+      </Button>
       <Button variant={demo.linkDown ? "danger" : "destructive"} onClick={engine.toggleLink} title="No signed answer means the lease runs out and the drone flies home. Nothing is faked.">
         {demo.linkDown ? "Restore 0G" : "Cut 0G"}
       </Button>
