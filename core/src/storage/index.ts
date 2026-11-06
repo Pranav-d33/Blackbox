@@ -43,9 +43,16 @@ export class ZgStorage implements Storage {
     const [tree, treeErr] = await file.merkleTree();
     if (treeErr || !tree) throw new Error(`merkle tree: ${treeErr}`);
     // The SDK types target ethers v5 signers; runtime-compatible with v6.
-    const [tx, err] = await this.indexer.upload(file, this.cfg.rpc, this.signer as any, {
-      finalityRequired: this.cfg.waitFinality,
-    } as any);
+    // Storage nodes reset connections now and then. The SDK looks the root up before paying, so a retry never double-charges.
+    let tx: any, err: any;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      [tx, err] = await this.indexer.upload(file, this.cfg.rpc, this.signer as any, {
+        finalityRequired: this.cfg.waitFinality,
+      } as any);
+      if (!err || !/ECONNRESET|ETIMEDOUT|EPIPE|ECONNREFUSED|socket hang up|timeout|fetch failed|EAI_AGAIN/i.test(String(err.message ?? err))) break;
+      console.warn(`[core] 0G Storage upload attempt ${attempt} failed (${String(err.message ?? err).slice(0, 80)})${attempt < 4 ? ", retrying" : ""}`);
+      await new Promise((r) => setTimeout(r, 1500 * attempt));
+    }
     if (err) throw new Error(`0G Storage upload: ${err.message ?? err}`);
     if ("rootHash" in tx) return { root: tx.rootHash, txHash: tx.txHash, size: bytes.length };
     return { root: tx.rootHashes[0], txHash: tx.txHashes[0], size: bytes.length };
