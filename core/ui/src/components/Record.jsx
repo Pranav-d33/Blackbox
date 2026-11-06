@@ -5,59 +5,6 @@ function Empty({ children }) {
   return <p className="px-6 py-16 text-center text-[13px] leading-relaxed text-white/45">{children}</p>;
 }
 
-export function Decisions() {
-  const rows = engine.decisions();
-  if (!rows.length) return <Empty>No checkpoints yet. The drone holds and asks 0G each time its detector flags a mark.</Empty>;
-  return (
-    <div className="px-5">
-      {rows.map((r) => (
-        <div key={r.k}>
-          <Row onClick={() => engine.openCheckpoint(r.k)}>
-            <img src={r.crop} alt="" className="size-11 shrink-0 rounded-[10px] bg-white/10 object-cover" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[15px] font-semibold tracking-[-0.009em]">Checkpoint {r.k}</span>
-                <span className={`flex items-center gap-1.5 text-[13px] font-medium ${toneText(r.tone)}`}>
-                  <Dot tone={r.tone} pulse={r.tone === "wait"} />
-                  {r.status}
-                </span>
-              </div>
-              <div className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-white/55">
-                {r.label ? (
-                  <>
-                    <span className="size-1.5 rounded-full" style={{ background: r.label.color }} />
-                    <span className="text-white/80">{r.label.name}</span>
-                    <span>· severity {r.answer.severity}</span>
-                  </>
-                ) : (
-                  "Waiting for a signed answer"
-                )}
-              </div>
-              {r.requestId ? <div className="mt-1 truncate font-mono text-[11px] text-white/35">{r.requestId}</div> : null}
-            </div>
-          </Row>
-          {r.refusals.slice(-2).map((x, i) => (
-            <p key={i} className="-mt-1 mb-2 ml-14 text-[12px] leading-snug text-bad">
-              Refused · {x.source}: {x.reason}
-            </p>
-          ))}
-          {r.stop ? <p className="-mt-1 mb-2 ml-14 text-[12px] leading-snug text-bad">{r.stop.reason}</p> : null}
-          {r.askHuman ? (
-            <div className="-mt-1 mb-3 ml-14">
-              <p className="text-[12px] text-hold">{r.holdReason}. The robot holds and asks a human.</p>
-              <div className="mt-2 flex gap-2">
-                {(engine.mission()?.policy?.actions ?? ["descend", "continue"]).map((a) => (
-                  <Button key={a} onClick={() => engine.human(r.k, a)}>Approve {a}</Button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function LiveChain() {
   const oc = engine.S.onchain, c = engine.S.cfg?.chain, m = engine.mission();
   if (!c || !m) return null;

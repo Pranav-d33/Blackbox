@@ -1,16 +1,19 @@
 @import "tailwindcss";
 
-/* visionOS-style system: one glass material, white type at three opacities, colour only for status. */
+/* One dark surface over the 3D scene, white type at three opacities, colour only for meaning:
+   violet = 0G, ENS blue = a name, green / red / yellow = verified / refused / waiting. */
 @theme {
-  --font-sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, "IBM Plex Mono", monospace;
+  --font-sans: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 
-  --color-ok: #30d158;
-  --color-bad: #ff453a;
-  --color-wait: #ffd60a;
-  --color-hold: #ff9f0a;
-  --color-tint: #64d2ff;
+  --color-ok: #34d399;
+  --color-bad: #f87171;
+  --color-wait: #fbbf24;
+  --color-hold: #fb923c;
+  --color-tint: #67e8f9;
+  --color-zg: #a78bfa;
+  --color-ens: #5298ff;
 
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
@@ -20,62 +23,66 @@
   html, body, #root { height: 100%; }
   body {
     margin: 0;
-    background: #000;
-    color: rgb(255 255 255 / 0.96);
+    background: #07080b;
+    color: rgb(255 255 255 / 0.94);
     font-family: var(--font-sans);
-    font-size: 15px;
-    line-height: 1.4;
-    letter-spacing: -0.009em;
-    font-optical-sizing: auto;
+    font-size: 14px;
+    line-height: 1.45;
+    letter-spacing: -0.006em;
+    font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
   }
   button { cursor: pointer; font: inherit; color: inherit; }
-  ::selection { background: rgb(100 210 255 / 0.3); }
+  ::selection { background: rgb(167 139 250 / 0.35); }
 }
 
 @layer components {
-  /* the glass window: light frosted material over the scene, with a lit top edge */
-  .glass {
-    background: linear-gradient(180deg, rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.07));
-    -webkit-backdrop-filter: blur(40px) saturate(170%);
-    backdrop-filter: blur(40px) saturate(170%);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.18),
-      inset 0 0 0 1px rgb(255 255 255 / 0.08),
-      0 24px 60px rgb(0 0 0 / 0.45);
+  /* the panel material: dark, lightly frosted, with a hairline edge */
+  .panel {
+    background: rgb(14 15 19 / 0.78);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07), inset 0 1px 0 rgb(255 255 255 / 0.06), 0 20px 50px rgb(0 0 0 / 0.45);
   }
-  .glass-dim {
-    background: rgb(20 20 22 / 0.55);
-    -webkit-backdrop-filter: blur(30px) saturate(160%);
-    backdrop-filter: blur(30px) saturate(160%);
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 12px 40px rgb(0 0 0 / 0.4);
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px;
+    background: rgb(255 255 255 / 0.06); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+    font-size: 12px; font-weight: 500; white-space: nowrap; color: rgb(255 255 255 / 0.7);
   }
-  .hairline { box-shadow: inset 0 -0.5px 0 rgb(255 255 255 / 0.12); }
+  .ens-name { font-family: var(--font-mono); font-size: 12px; color: var(--color-ens); letter-spacing: -0.01em; }
   .scroll-soft { scrollbar-width: none; }
   .scroll-soft::-webkit-scrollbar { display: none; }
 }
 
-/* 3D pins drawn by scene3d.js */
+/* 3D pins and the hover card drawn by scene3d.js */
 .s3-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .s3-tag {
   position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer;
   display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
-  padding: 6px 11px 7px; border: 0; border-radius: 12px;
-  background: rgb(255 255 255 / 0.12);
-  -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 6px 20px rgb(0 0 0 / 0.35);
+  padding: 6px 10px 6px 12px; border: 0; border-radius: 10px;
+  background: rgb(12 13 17 / 0.82);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 8px 24px rgb(0 0 0 / 0.4);
   color: #fff; font-size: 12px; line-height: 1.3; white-space: nowrap;
   transition: transform 150ms ease;
 }
-.s3-tag::before { content: ""; position: absolute; left: 11px; top: 0; width: 18px; height: 2px; border-radius: 2px; background: var(--c); }
+.s3-tag::before { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
 .s3-tag b { font-weight: 600; }
-.s3-tag span { color: rgb(255 255 255 / 0.6); font-size: 11px; }
+.s3-tag span { color: rgb(255 255 255 / 0.55); font-size: 11px; }
 .s3-tag:active { transform: scale(0.96); }
 .s3-tag[data-state="waiting"] { animation: pin-pulse 1.6s ease-in-out infinite; }
-.s3-tag[data-state="pending"] { opacity: 0.85; }
+.s3-tag[data-state="pending"] { opacity: 0.9; }
 @keyframes pin-pulse { 50% { opacity: 0.55; } }
+
+.s3-hover {
+  position: absolute; left: 0; top: 0; pointer-events: none; padding: 7px 11px; border-radius: 10px;
+  background: rgb(12 13 17 / 0.88); box-shadow: inset 0 0 0 1px rgb(82 152 255 / 0.35), 0 10px 30px rgb(0 0 0 / 0.45);
+  font-size: 12px; line-height: 1.35; white-space: nowrap; transition: opacity 120ms ease;
+}
+.s3-hover b { display: block; font-family: var(--font-mono); font-weight: 500; color: var(--color-ens); }
+.s3-hover span { color: rgb(255 255 255 / 0.6); font-size: 11px; }
 
 @keyframes pulse-dot { 50% { opacity: 0.35; } }
 .pulse { animation: pulse-dot 1.2s ease-in-out infinite; }
@@ -84,9 +91,8 @@
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .glass, .glass-dim { background: #1c1c1e; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .panel { background: #111216; -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
-@keyframes toast-in { from { opacity: 0; transform: translateY(-10px) scale(0.97); } }
-
-@keyframes flash-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(-8px) scale(0.98); } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(6px); } }

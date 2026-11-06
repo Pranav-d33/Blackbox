@@ -1,5 +1,78 @@
+import { useState } from "react";
 import { engine, short } from "../engine.js";
-import { Button, Dot, toneText } from "./ui.jsx";
+import { Button, Dot, EnsName, Segmented, toneText } from "./ui.jsx";
+import { Log, OnZeroG, Sdk } from "./Record.jsx";
+
+const ENS_LABELS = {
+  description: "description",
+  "blackbox.finding": "finding (label / severity / action)",
+  "blackbox.mission": "mission",
+  "blackbox.entry": "robot-signed entry (seq : hash)",
+  "blackbox.checked": "written at",
+  url: "verifier link",
+  "blackbox.role": "role",
+  "blackbox.robot_id": "zerobot robot id",
+  "blackbox.model": "0G model",
+  "blackbox.tee_signers": "TEE signers",
+  "blackbox.chain": "chain",
+};
+
+/** An ENS name as ENS itself answers it: resolver, address and text records via the Universal Resolver. */
+function EnsRecord({ m }) {
+  if (m.loading) return <p className="flex items-center gap-3 text-[14px] text-white/60"><span className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />Resolving through the ENSv2 Universal Resolver…</p>;
+  const r = m.record;
+  const e = engine.ens();
+  const texts = Object.entries(r.texts ?? {});
+  const mission = r.texts?.["blackbox.mission"];
+  return (
+    <div>
+      {r.error ? <p className="mb-4 text-[13px] text-bad">{r.error}</p> : null}
+      <dl>
+        {[
+          ["ENS network", e ? `${e.network}${e.network === "local" ? " (dev stand-in on anvil)" : ""}` : "–"],
+          ["Resolver", r.resolver],
+          ["ETH address", r.addr],
+          ...texts.map(([k, v]) => [ENS_LABELS[k] ?? k, v, k]),
+        ]
+          .filter(([, v]) => v)
+          .map(([k, v, key]) => (
+            <div key={k} className="relative flex gap-4 py-2 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/[0.06] last:after:hidden">
+              <dt className="w-52 shrink-0 text-[13px] text-white/45">{k}</dt>
+              <dd className={`min-w-0 flex-1 text-[13px] break-words ${key && key !== "description" ? "font-mono text-[12px]" : ""} text-white/90`}>
+                {key === "url" ? <a className="text-ens hover:underline" href={v} target="_blank" rel="noreferrer">{v}</a> : v}
+              </dd>
+            </div>
+          ))}
+      </dl>
+      <p className="mt-4 text-[12px] leading-relaxed text-white/45">
+        ENS is the address book, not the proof. The verifier re-reads this record and checks that the entry it names is robot-signed, chained and anchored on 0G Chain, with the same finding.
+      </p>
+      <div className="mt-4 flex gap-2">
+        {mission && mission === engine.mission()?.id ? <Button variant="zg" onClick={engine.verify}>Verify this mission</Button> : null}
+        {m.app ? <a href={m.app} target="_blank" rel="noreferrer"><Button>Open in the ENS app ↗</Button></a> : null}
+      </div>
+    </div>
+  );
+}
+
+function RecordSheet({ m }) {
+  const [tab, setTab] = useState(m.tab ?? "chain");
+  return (
+    <div>
+      <Segmented
+        value={tab}
+        onChange={setTab}
+        className="mb-5"
+        options={[
+          { value: "chain", label: "On 0G" },
+          { value: "sdk", label: "Mission profile" },
+          { value: "log", label: "Robot log" },
+        ]}
+      />
+      <div className="-mx-5">{tab === "chain" ? <OnZeroG /> : tab === "sdk" ? <Sdk /> : <Log />}</div>
+    </div>
+  );
+}
 
 const STATUS = { pass: "ok", fail: "bad", warn: "hold", skip: "idle" };
 
@@ -66,14 +139,14 @@ export default function Sheet() {
       onClick={(e) => e.target === e.currentTarget && engine.closeModal()}
     >
       <div
-        className={`flex max-h-[calc(100vh-48px)] w-[min(820px,100%)] flex-col overflow-hidden rounded-[32px] bg-[rgb(36_36_40/0.82)] shadow-[inset_0_1px_0_rgb(255_255_255/0.14),0_40px_100px_rgb(0_0_0/0.6)] backdrop-blur-[40px] transition-[transform,opacity] duration-500 ease-[var(--ease-sheet)] ${
+        className={`flex max-h-[calc(100vh-48px)] w-[min(820px,100%)] flex-col overflow-hidden rounded-[28px] bg-[rgb(16_17_21/0.94)] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08),0_40px_100px_rgb(0_0_0/0.6)] backdrop-blur-[30px] transition-[transform,opacity] duration-500 ease-[var(--ease-sheet)] ${
           open ? "translate-y-0 scale-100 opacity-100" : "translate-y-5 scale-[0.97] opacity-0"
         }`}
       >
         {m ? (
           <>
             <header className="flex items-center gap-3 px-7 pt-6 pb-4">
-              <h2 className="font-display text-[22px] font-semibold tracking-[0.012em]">{m.title}</h2>
+              <h2 className={m.type === "ens" ? "ens-name !text-[17px]" : "font-display text-[20px] font-semibold tracking-[-0.02em]"}>{m.title}</h2>
               <span className="flex-1" />
               {m.link ? (
                 <a className="text-[13px] font-medium text-tint hover:underline" href={m.link} target="_blank" rel="noreferrer">
@@ -111,6 +184,7 @@ export default function Sheet() {
                   <figure>
                     <img src={m.crop} alt="" className="aspect-square w-full rounded-3xl bg-white/10 object-cover" />
                     <figcaption className="mt-2 text-[12px] leading-snug text-white/45">Exactly the crop the robot sent to 0G. Its keccak256 is the obs_hash, and the nonce comes from it.</figcaption>
+                    {m.ensName ? <div className="mt-3"><p className="text-[12px] text-white/45">ENS name of this {engine.unitName()}</p><EnsName name={m.ensName} /></div> : null}
                   </figure>
                   <div className="min-w-0">
                     <dl>
@@ -133,6 +207,9 @@ export default function Sheet() {
                   </div>
                 </div>
               ) : null}
+
+              {m.type === "ens" ? <EnsRecord m={m} /> : null}
+              {m.type === "record" ? <RecordSheet m={m} /> : null}
 
               {m.type === "qr" ? (
                 <div className="flex flex-col items-center gap-4 pb-2">

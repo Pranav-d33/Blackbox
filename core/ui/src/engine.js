@@ -99,6 +99,80 @@ class Engine {
       anchors: this.mission()?.anchors?.length ?? 0,
     };
   }
+  /** World geometry for the scene on screen (mission world, or the scenario preview). */
+  worldMeta() {
+    return (this.inMission() ? this.S.robot?.world : null) ?? this.S.preview?.world ?? null;
+  }
+  /** ENS label of the asset under a point, same rule as the robot (world.py / solar_world.py asset_at). */
+  assetAt(x, y) {
+    const w = this.worldMeta();
+    if (!w) return null;
+    if (w.kind === "solar-farm") {
+      const mw = w.module_mm?.[0] ?? 1000;
+      for (const [r, [x0, y0, x1, y1]] of (w.rows_mm ?? []).entries()) if (x >= x0 && x < x1 && y >= y0 && y < y1) return `r${r + 1}m${String(Math.floor((x - x0) / mw) + 1).padStart(2, "0")}`;
+      return null;
+    }
+    const [W, H] = w.deck_mm;
+    if (x < 0 || y < 0 || x >= W || y >= H) return null;
+    return `x${String(Math.floor(x / 1000)).padStart(2, "0")}y${String(Math.floor(y / 1000)).padStart(2, "0")}`;
+  }
+  /** The asset's rectangle in mm, for the 3D hover outline. */
+  assetRect(label) {
+    const w = this.worldMeta();
+    let m;
+    if ((m = /^r(\d+)m(\d+)$/.exec(label ?? "")) && w?.rows_mm) {
+      const [x0, y0, , y1] = w.rows_mm[Number(m[1]) - 1];
+      const mw = w.module_mm?.[0] ?? 1000;
+      return [x0 + (Number(m[2]) - 1) * mw, y0, x0 + Number(m[2]) * mw, y1];
+    }
+    if ((m = /^x(\d+)y(\d+)$/.exec(label ?? ""))) return [Number(m[1]) * 1000, Number(m[2]) * 1000, Number(m[1]) * 1000 + 1000, Number(m[2]) * 1000 + 1000];
+    return null;
+  }
+  ens = () => this.S.cfg?.ens ?? null;
+  ensName(label) {
+    const e = this.ens(), zone = this.profile()?.assets?.zone;
+    return label && e && zone ? `${label}.${zone}.${e.parent}` : null;
+  }
+  ensApp(name) {
+    const n = this.ens()?.network;
+    return n === "sepolia" ? `https://sepolia.app.ens.domains/${name}` : n === "mainnet" ? `https://app.ens.domains/${name}` : null;
+  }
+  unitName = () => this.profile()?.assets?.unit ?? "asset";
+  /** What the 3D view shows under the cursor: the asset's ENS name and what is known about it. */
+  describe(x, y) {
+    const label = this.assetAt(x, y);
+    if (!label) return null;
+    const f = this.findings().find((r) => r.asset === label);
+    const p = this.S.pending.find((d) => this.assetAt(d.x_mm, d.y_mm) === label);
+    const sub = f?.label ? `${f.label.name} · ${f.outcome}` : p ? `${this.kindInfo(p.kind).name} placed · hidden from 0G` : this.S.kind && !this.flying() ? `Click to place ${this.kindInfo(this.S.kind).name.toLowerCase()}` : this.unitName();
+    return { label, name: this.ensName(label) ?? label, sub, rect: this.assetRect(label), color: f?.label?.color };
+  }
+  removePending(i) {
+    this.S.pending.splice(i, 1);
+    this.renderMarkers();
+    this.emit();
+  }
+  /** Where the demo is: mark the site, fly it, prove it. */
+  step() {
+    if (this.flying() || this.S.starting) return "fly";
+    if (this.S.view === "mission" && this.mission()) return "prove";
+    return "mark";
+  }
+  /** Decisions as findings on named assets, newest first, with their ENS write state. */
+  findings() {
+    const m = this.mission();
+    const ensAssets = m?.ens?.assets ?? {};
+    return this.decisions().map((r) => {
+      const st = r.asset ? ensAssets[r.asset] : null;
+      return {
+        ...r,
+        name: this.ensName(r.asset) ?? r.asset ?? `checkpoint ${r.k}`,
+        outcome: r.stop ? "Safe stop, inspect again" : r.answer ? this.profile()?.ui?.outcomes?.[r.answer.label] ?? r.status : "Waiting for 0G",
+        ens: st ? { status: st.status, tx: st.tx, error: st.error } : null,
+      };
+    });
+  }
+
   placedHint() {
     const n = this.S.pending.length;
     if (this.flying()) return "Click the field to drop more mid-flight.";
@@ -140,6 +214,7 @@ class Engine {
         const x = d ?? c.hold;
         return {
           k: c.k,
+          asset: (d ?? c.hold ?? c.stop ?? c.refusals.at(-1))?.asset ?? null,
           crop: `/api/missions/${m.id}/crop/${c.k}.png`,
           label: a ? this.labelInfo(a.label) : null,
           answer: a ?? null,
@@ -190,6 +265,7 @@ class Engine {
     const verdict = d ? ["ok", "Accepted"] : c.stop ? ["bad", "Safe stop"] : lastRef ? ["bad", `${c.refusals.length} refused`] : ["wait", "Verifying"];
     return {
       k,
+      name: this.ensName(cpState?.asset) ?? cpState?.asset ?? null,
       crop: `/api/missions/${m.id}/crop/${k}.png`,
       steps,
       focus,
@@ -292,7 +368,7 @@ class Engine {
   attach(el) {
     if (this.s3) return;
     this.s3 = new Scene3D(el, {
-      insetLeft: 0,
+      insetX: 640,
       onPlace: this.guard(async (x, y) => {
         const S = this.S;
         if (S.comparing || !S.kind) return;
@@ -310,6 +386,7 @@ class Engine {
         }
       }),
       onMarker: (k) => typeof k === "number" && this.openCheckpoint(k),
+      describe: (x, y) => this.describe(x, y),
     });
     this.boot().catch((e) => this.toast(e.message, 10000));
   }
@@ -365,18 +442,19 @@ class Engine {
       for (const cp of S.robot.sim.checkpoints) {
         const c = cps.get(cp.k);
         const a = c?.decision?.answer ?? c?.hold?.answer;
-        let state = "waiting", color = "#ffd60a", title = `#${cp.k} asking 0G…`, sub = "";
-        if (cp.outcome === "safe_stop") [state, color, title, sub] = ["stopped", "#ff453a", `#${cp.k} safe stop`, "no decision made"];
+        const tag = cp.asset ?? `#${cp.k}`;
+        let state = "waiting", color = "#ffd60a", title = `${tag} · asking 0G…`, sub = "";
+        if (cp.outcome === "safe_stop") [state, color, title, sub] = ["stopped", "#ff453a", `${tag} · safe stop`, "no decision made"];
         else if (a) {
           const li = this.labelInfo(a.label);
-          [state, color, title, sub] = [cp.outcome ?? "waiting", li.color, `#${cp.k} ${li.name}`, `sev ${a.severity} → ${cp.outcome ?? a.action}`];
+          [state, color, title, sub] = [cp.outcome ?? "waiting", li.color, `${cp.asset ?? `#${cp.k}`} · ${li.name}`, `sev ${a.severity} → ${cp.outcome ?? a.action}`];
         } else if (c?.refusals.length) [color, sub] = ["#ff453a", `${c.refusals.length} refused`];
         list.push({ k: cp.k, x_mm: cp.target_mm[0], y_mm: cp.target_mm[1], state, color, title, sub });
       }
     } else {
       S.pending.forEach((d, i) => {
         const ki = this.kindInfo(d.kind);
-        list.push({ k: `p${i}`, x_mm: d.x_mm, y_mm: d.y_mm, state: "pending", color: ki.color, title: ki.name, sub: "placed · truth hidden from 0G" });
+        list.push({ k: `p${i}`, x_mm: d.x_mm, y_mm: d.y_mm, state: "pending", color: ki.color, title: `${this.assetAt(d.x_mm, d.y_mm) ?? ""} · ${ki.name}`.replace(/^ · /, ""), sub: "hidden from 0G" });
       });
     }
     this.s3.setMarkers(list);
@@ -542,6 +620,8 @@ class Engine {
     this.openModal({ type: "loading", title: "Verifying on 0G…", note: "Reading the registry on 0G Chain and every entry from 0G Storage. The links below are the evidence it is checking.", proof });
     const r = await api(`/api/missions/${m.id}/verify?source=${this.S.cfg.chain ? "storage" : "local"}`);
     this.S.done.verify = true;
+    const passed = r.checks.filter((c) => c.status === "pass").length;
+    this.S.lastVerify = { id: m.id, ok: r.ok, summary: r.ok ? `${passed} checks passed against 0G Chain, 0G Storage${r.checks.some((c) => c.id.startsWith("ens") && c.status === "pass") ? " and ENS" : ""}` : r.firstFailure };
     this.flashIt(r.ok ? "ok" : "bad", r.ok ? "Verified" : "Verification failed", r.ok ? `${r.checks.filter((c) => c.status === "pass").length} checks passed against 0G.` : r.firstFailure);
     this.openModal({ type: "report", title: "Verifier", report: r, link: this.verifierUrl(m), proof });
   });
@@ -604,6 +684,7 @@ class Engine {
     const summary = m.entries.find((e) => e.seq === pick.seq);
     const rows = [
       ["Entry", `#${pick.seq} ${pick.kind}`],
+      ["Asset", x.asset],
       ["obs_hash", x.obs_hash],
       ["nonce", x.nonce],
       ["Model", z.model],
@@ -621,8 +702,16 @@ class Engine {
       raw = JSON.parse(z.raw_response).choices[0].message.content;
     } catch {}
     const problems = mine.filter((e) => e.kind === "rejected" || e.kind === "safe_stop").map((e) => (e.kind === "rejected" ? `${e.body.source}: ${e.body.reason}` : e.body.reason));
-    this.openModal({ type: "checkpoint", title: `Checkpoint ${k}`, crop: `/api/missions/${m.id}/crop/${k}.png`, rows, raw, problems });
+    this.openModal({ type: "checkpoint", ensName: this.ensName(x.asset), title: x.asset ? `Checkpoint ${k} · ${x.asset}` : `Checkpoint ${k}`, crop: `/api/missions/${m.id}/crop/${k}.png`, rows, raw, problems });
   });
+
+  ensLookup = this.guard(async (name) => {
+    if (!name) return;
+    this.openModal({ type: "ens", title: name, loading: true });
+    const r = await api(`/api/ens/lookup?name=${encodeURIComponent(name)}`);
+    if (this.S.modal?.title === name) this.openModal({ type: "ens", title: name, record: r, app: this.ensApp(name) });
+  });
+  openRecord = (tab = "chain") => this.openModal({ type: "record", title: "Mission record", tab });
 
   openModal(modal) {
     this.S.modal = modal;
