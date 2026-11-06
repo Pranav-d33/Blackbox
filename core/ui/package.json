@@ -1,0 +1,21 @@
+{
+  "name": "blackbox-console",
+  "private": true,
+  "type": "module",
+  "description": "Operator console (React + Tailwind). Builds to core/web/console.html so the core serves it without a build step at the booth.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.4",
+    "@vitejs/plugin-react": "^5.0.0",
+    "tailwindcss": "^4.3.4",
+    "vite": "^8.3.6"
+  }
+}

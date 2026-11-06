@@ -16,6 +16,7 @@
     "test": "npm run test:contracts && npm run test:robot && npm run test:core",
     "test:contracts": "cd contracts && forge test",
     "test:robot": "cd robot && .venv/bin/python -m unittest discover -s tests",
-    "test:core": "npm --prefix core run typecheck && npm --prefix core test"
+    "test:core": "npm --prefix core run typecheck && npm --prefix core test",
+    "build:console": "npm --prefix core/ui install && npm --prefix core/ui run build"
   }
 }
