@@ -1,7 +1,7 @@
 // Blackbox 3D mission view. Renders whatever world the robot adapter reports
 // (z-up, metres): the scenario's surface, the MuJoCo drone, its flown path,
 // one marker per checkpoint coloured by what 0G decided, and, under the cursor,
-// the asset (PV module or 1 m deck square) with its ENS name.
+// the asset (PV module or 1 m deck square) with its label.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
@@ -20,7 +20,7 @@ const C = {
   ghost: 0xf87171,
   wait: 0xfbbf24,
   stop: 0xf87171,
-  ens: 0x5298ff,
+  asset: 0x5298ff,
 };
 
 const TILT = THREE.MathUtils.degToRad(12);
@@ -189,8 +189,8 @@ export class Scene3D {
     this.beam.rotation.x = -Math.PI / 2;
     this.scene.add(this.beam);
 
-    // hover: the asset under the cursor, outlined in ENS blue
-    this.hoverLine = pathLine(C.ens, 2.2);
+    // hover: the asset under the cursor, outlined in blue
+    this.hoverLine = pathLine(C.asset, 2.2);
     this.hoverLine.material.opacity = 1;
     this.hoverLine.material.depthTest = false;
     this.hoverLine.renderOrder = 11;
@@ -599,7 +599,7 @@ export class Scene3D {
     dom.addEventListener("pointerleave", () => (this._hoverAt = null));
   }
 
-  /** Once per frame at most: outline the asset under the cursor and show its ENS name. */
+  /** Once per frame at most: outline the asset under the cursor and show its label. */
   _hover() {
     const at = this._hoverAt;
     const d = at && this.describe && !this.compare ? (() => {

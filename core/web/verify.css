@@ -75,4 +75,3 @@ table.ledger td { padding: 9px 12px; border-bottom: 0.5px solid var(--sep-soft);
   .verdict.ok::after { left: 38px; top: 34px; }
 }
 
-.ensvia { margin: 0 0 14px; padding: 12px 14px; border-radius: 14px; background: rgb(100 210 255 / 0.1); line-height: 1.5; }
