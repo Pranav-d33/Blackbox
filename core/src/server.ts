@@ -118,6 +118,7 @@ const routes: [string, RegExp, Handler][] = [
     async () => ({
       mission: missions.summary(missions.current),
       demo: { linkDown: router.link.down, ...missions.demo },
+      public: guard.status(),
       queue: missions.queue.pending + (missions.chainQueue === missions.queue ? 0 : missions.chainQueue.pending),
       missions: [...missions.records.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20).map((r) => ({ id: r.id, status: r.status, createdAt: r.createdAt })),
     }),
