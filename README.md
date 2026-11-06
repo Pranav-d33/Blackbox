@@ -385,6 +385,17 @@ Everything is config. Nothing in the code is testnet-specific.
 
 ---
 
+## Unsealed fallback (only when no TEE vision provider is healthy)
+
+`0gm-1.0-35b-a3b` is the only TEE vision model on the Router, and it has one provider. When `GET /v1/providers` reports that provider `is_healthy: false`, a Private key cannot reach any image-capable model. Setting `ZG_ATTESTATION=none` (with a Standard-trust key, `ZG_TRUST_MODE=standard` and another vision model such as `qwen3-vl-plus`) lets the demo still run on 0G's Router, Storage and Chain.
+
+It is explicit everywhere, never a silent downgrade:
+
+- The manifest records `policy.attestation = "none"`, so it is anchored with the mission.
+- The robot still parses and nonce-checks every answer, but prints a warning at takeoff and skips the TEE signature, signer and binding checks.
+- The console badge reads *unsealed, not TEE-attested*, and the verifier shows `WARN` (not `PASS`) on the signer, binding and registry checks, with the reason.
+- The default is `ZG_ATTESTATION=tee`. The sealed claims in this README hold only for `tee` runs.
+
 ## Not yet verified against live 0G
 
 These were researched from the 0G docs and SDK source but **not exercised with a real `sk-` key** while building. The probe (step 5) checks all of them.
@@ -444,7 +455,7 @@ Our nonce is `keccak256(missionId, obs_hash, checkpoint)`. That is the PRD's `ke
 
 | Contract | Network | Address |
 |---|---|---|
-| `BlackboxRegistry` | 0G Galileo (16602) | `TODO after step 3` |
+| `BlackboxRegistry` | 0G Galileo (16602) | [`0x8d2793615Cb9953c451eecc065a23FfAaBA777a3`](https://chainscan-galileo.0g.ai/address/0x8d2793615Cb9953c451eecc065a23FfAaBA777a3) |
 | zerobot `RobotRegistry` (read) | 0G Galileo (16602) | [`0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb`](https://chainscan-galileo.0g.ai/address/0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb) |
 | 0G Compute `InferenceServing` (read) | 0G mainnet (16661) | [`0x47340d900bdFec2BD393c626E12ea0656F938d84`](https://chainscan.0g.ai/address/0x47340d900bdFec2BD393c626E12ea0656F938d84) |
 | `BlackboxRegistry` | 0G mainnet (16661) | `TODO after the hackathon` |
