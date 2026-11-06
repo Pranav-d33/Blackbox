@@ -9,6 +9,7 @@ import { readFileSync, existsSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { CORE_ROOT, loadConfig } from "./config";
 import { PublicGuard } from "./guard";
+import { sendStatic } from "./static";
 import { RegistryClient } from "./chain/registry";
 import { Missions } from "./mission";
 import { ArkivWriter } from "./arkiv/write";
@@ -98,12 +99,11 @@ function sendBytes(res: ServerResponse, bytes: Uint8Array | null, type: string) 
   res.end(Buffer.from(bytes));
 }
 
-function serveStatic(res: ServerResponse, path: string) {
+function serveStatic(req: IncomingMessage, res: ServerResponse, path: string) {
   const rel = path === "/" ? "index.html" : path.replace(/^\/+/, "");
   const file = normalize(join(WEB, rel));
   if (!file.startsWith(WEB) || !existsSync(file) || !statSync(file).isFile()) return false;
-  res.writeHead(200, { "content-type": MIME[extname(file)] ?? "application/octet-stream", "cache-control": "no-store" });
-  res.end(readFileSync(file));
+  sendStatic(req, res, file, rel, MIME[extname(file)] ?? "application/octet-stream");
   return true;
 }
 
@@ -184,7 +184,7 @@ const server = createServer(async (req, res) => {
       const mm = path.match(re);
       if (mm && req.method === method) return send(res, 200, await fn(req, mm, url));
     }
-    if (req.method === "GET" && serveStatic(res, path)) return;
+    if ((req.method === "GET" || req.method === "HEAD") && serveStatic(req, res, path)) return;
     send(res, 404, { ok: false, error: "not found" });
   } catch (e) {
     send(res, 500, { ok: false, error: (e as Error).message });
