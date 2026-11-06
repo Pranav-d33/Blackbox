@@ -10,6 +10,8 @@ import { join } from "node:path";
 import { AbiCoder, Wallet, hexlify, keccak256, randomBytes, toUtf8Bytes } from "ethers";
 import type { Config } from "./config";
 import { RegistryClient } from "./chain/registry";
+import { type EnsAssetState, EnsWriter } from "./ens/writer";
+import { finding } from "./ens/names";
 import { type Entry, canonicalJson, entryHash, goJson, sha256Hex } from "./lib/canonical";
 import { type Bundle, type Policy, expectedEcho, extractContent, parseAnswer } from "./lib/interlock";
 import { SerialQueue } from "./lib/queue";
@@ -18,7 +20,7 @@ import type { Storage } from "./storage";
 import { type AllowlistEntry, type CheckpointRequest, DEFAULT_TASK, type Task, ZgDecider } from "./zg/decide";
 import { type Profile, loadProfile, simSection, vocabulary } from "./profile";
 import { ZgUnreachable } from "./zg/router";
-import { type MissionIndex, type Report, type ServiceView, loadFromChain, loadServices, verifyMission } from "./verifier/core";
+import { type MissionIndex, type Report, type ServiceView, loadEns, loadFromChain, loadServices, verifyMission } from "./verifier/core";
 
 const MANIFEST_VERSION = 1;
 
@@ -63,6 +65,8 @@ export interface MissionRecord {
   anchoredCount: number;
   replay: any | null;
   errors: string[];
+  /** ENS writes for this mission: the agent names at takeoff, then one record per inspected asset. */
+  ens?: { agents: { tx: string | null; writes: number; error?: string } | null; assets: Record<string, EnsAssetState> };
 }
 
 export class Missions {
@@ -80,6 +84,7 @@ export class Missions {
     public storage: Storage,
     public registry: RegistryClient | null,
     public robot: RobotClient,
+    public ens: EnsWriter | null = null,
   ) {
     this.dir = join(cfg.dataDir, "missions");
     mkdirSync(this.dir, { recursive: true });
@@ -178,6 +183,7 @@ export class Missions {
         service_registry: this.cfg.zg.mode === "mock" ? "mock" : unsealed ? "none (unsealed: not TEE-attested)" : `${this.cfg.zg.servingContract}@16661`,
       },
       storage: { kind: this.storage.kind, network: this.cfg.storage.network.name },
+      ens: this.ens ? this.ens.section(profile.assets?.zone ?? null) : null,
       created_at: new Date().toISOString(),
     };
     const manifestText = canonicalJson(manifest);
@@ -202,6 +208,7 @@ export class Missions {
       anchoredCount: 1,
       replay: null,
       errors: [],
+      ens: this.ens ? { agents: null, assets: {} } : undefined,
     };
     this.records.set(missionId, rec);
     this.current = rec;
@@ -222,6 +229,7 @@ export class Missions {
         );
         this.persist(rec);
       }
+      if (this.ens) this.publishAgents(rec, allow.signers);
       rec.stage = "Taking off";
       await this.robot.go();
       rec.status = "flying";
@@ -324,6 +332,7 @@ export class Missions {
         this.queueAnchor(rec, false);
       }
     }
+    if (this.ens && ["decision", "human", "safe_stop"].includes(entry.kind) && entry.body?.asset) this.publishAsset(rec, entry);
     if (entry.kind === "mission_end") {
       rec.status = "ended";
       this.queueAnchor(rec, true);
@@ -382,6 +391,49 @@ export class Missions {
       .catch((e) => this.fail(rec, `${close ? "close" : "anchor"}: ${e.message}`));
   }
 
+  // -------------------------------------------------------------------- ENS
+  private publishAgents(rec: MissionRecord, signers: string[]) {
+    const chain = this.cfg.chain;
+    const operator = chain.operatorKey ? new Wallet(chain.operatorKey).address : rec.robot;
+    this.ens!.publishAgents({
+      robot: rec.robot,
+      robotId: rec.robotId,
+      operator,
+      teeSigners: signers,
+      model: this.cfg.zg.visionModel,
+      registry: chain.enabled && chain.registry ? chain.registry : null,
+      chain: chain.enabled ? { chainId: chain.network.chainId, network: chain.network.name } : null,
+    })
+      .then((r) => ((rec.ens!.agents = { tx: r.tx, writes: r.writes }), this.persist(rec)))
+      .catch((e) => ((rec.ens!.agents = { tx: null, writes: 0, error: e.message.slice(0, 200) }), this.fail(rec, `ENS agents: ${e.message}`)));
+  }
+
+  /** decision / human / safe_stop on an asset: write what happened there to <asset>.<zone>.<parent>. */
+  private publishAsset(rec: MissionRecord, entry: Entry) {
+    const profile: Profile = rec.manifest.profile;
+    const zone = profile.assets?.zone;
+    if (!zone) return;
+    const b = entry.body, label: string = b.asset;
+    let f: string, text: string;
+    const name = (l: string) => profile.ui.labels[l]?.name ?? l;
+    if (entry.kind === "safe_stop") {
+      f = finding("safe_stop", "-", "safe_stop");
+      text = `Not decided: ${b.reason}. The drone safe-stopped; inspect again.`;
+    } else {
+      const ans = entry.kind === "decision" ? b.answer : rec.entries.filter((e) => e?.kind === "hold" && e.body.checkpoint === b.checkpoint).at(-1)?.body?.answer;
+      const action = entry.kind === "decision" ? b.action_applied : b.action;
+      f = finding(ans?.label ?? "unsure", ans?.severity ?? "-", action);
+      const who = entry.kind === "decision" ? "0G's sealed model decided, the robot verified the TEE signature" : "a human decided after a calibrated hold";
+      text = `${name(ans?.label ?? "unsure")}, severity ${ans?.severity ?? "?"}. ${profile.ui.outcomes?.[ans?.label] ?? action}. ${who}.`;
+    }
+    const st: EnsAssetState = { name: `${label}.${zone}.${this.ens!.parent}`, finding: f, description: text, tx: null, status: "queued" };
+    rec.ens!.assets[label] = st;
+    const base = this.cfg.publicVerifierUrl || `http://${this.cfg.host}:${this.cfg.port}/verify.html`;
+    this.ens!.publishAsset(zone, { label, description: text, finding: f, mission: rec.id, entry: `${entry.seq}:${entry.hash}`, url: `${base}?mission=${rec.id}` })
+      .then((tx) => (Object.assign(st, { tx, status: "written" }), this.persist(rec)))
+      .catch((e) => (Object.assign(st, { status: "error", error: e.message.slice(0, 200) }), this.fail(rec, `ENS ${st.name}: ${e.message}`)));
+  }
+
   // ----------------------------------------------------------------- verify
   async chainView(missionId: string) {
     if (!this.registry) return null;
@@ -404,6 +456,7 @@ export class Missions {
         missionId,
         fetchRoot: (r) => this.storage.download(r),
         servingRpc: this.cfg.zg.servingRpc,
+        ensRpc: this.cfg.ens?.rpc,
       });
       return verifyMission({ ...inp, replay: rec?.replay ?? null });
     }
@@ -424,6 +477,7 @@ export class Missions {
       chain: await this.chainView(missionId),
       roots: Object.fromEntries(Object.entries(rec.roots).map(([k, v]) => [k, v.root])),
       replay: entriesOverride ? null : rec.replay,
+      ens: await loadEns(rec.manifest, entriesOverride ?? rec.entries, this.cfg.ens?.rpc),
     });
   }
 
@@ -476,6 +530,7 @@ export class Missions {
       checkpoints: rec.checkpoints,
       crops: rec.crops,
       replay: rec.replay,
+      ens: rec.manifest.ens ? { ...rec.manifest.ens, ...(rec.ens ?? { agents: null, assets: {} }) } : null,
       errors: rec.errors.slice(-8),
       entries: rec.entries.filter(Boolean).map((e) => ({
         seq: e.seq,
@@ -503,6 +558,7 @@ function summarizeBody(e: Entry) {
     case "hold":
       return {
         checkpoint: b.checkpoint,
+        asset: b.asset ?? null,
         answer: b.answer,
         action_applied: b.action_applied ?? null,
         target_mm: b.target_mm,
@@ -518,9 +574,9 @@ function summarizeBody(e: Entry) {
         decision_model: b.decision_model ? { ...b.decision_model, raw_response: undefined } : null,
       };
     case "rejected":
-      return { checkpoint: b.checkpoint, reason: b.reason, source: b.source, attempted_answer: b.attempted_answer, signer: b.signer, request_id: b.zg?.request_id };
+      return { checkpoint: b.checkpoint, asset: b.asset ?? null, reason: b.reason, source: b.source, attempted_answer: b.attempted_answer, signer: b.signer, request_id: b.zg?.request_id };
     case "safe_stop":
-      return { checkpoint: b.checkpoint, reason: b.reason, asks: b.asks, refused: b.refused, last_error: b.last_error };
+      return { checkpoint: b.checkpoint, asset: b.asset ?? null, reason: b.reason, asks: b.asks, refused: b.refused, last_error: b.last_error };
     case "mission_start":
       return { manifest_root: b.manifest_root, manifest_hash: b.manifest_hash, defects: b.defects, backend: b.backend };
     default:
