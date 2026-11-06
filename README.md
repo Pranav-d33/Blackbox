@@ -267,15 +267,33 @@ Inspection data is about *things*: a module in row 2, a square of deck 12 m from
 
 The public verifier accepts an ENS name in place of a mission id: type `r2m13.solar.<parent>`, it reads `blackbox.mission` and verifies that mission from 0G Chain and 0G Storage.
 
-**Setup on Sepolia (MANUAL).** Register a `.eth` name at https://sepolia.app.ens.domains with the ENS key (ENSv2 fees are paid in test USDC there), fund that key with a little Sepolia ETH, then:
+**ENSv2 pieces used on Sepolia** (all set up by `npm run setup:ens`):
+
+| ENSv2 feature | How Blackbox uses it |
+|---|---|
+| **ETH Registrar** (commit-reveal, ERC-20 fees) | registers `<name>.eth`, paid in the Sepolia MockUSDC the registrar accepts. No real ETH: Sepolia ETH pays gas only |
+| **Permissioned Registry** (a UserRegistry per name, via VerifiableFactory) | the parent's own subregistry. `drone.<parent>` is an ERC-1155 name token **owned by the robot key**; `operator.` is a token owned by the core's writer; `0g-tee.`, `registry.`, `solar.`, `bridge.` are reserved entries routed to the resolver. `setParent` makes the canonical name verifiable |
+| **Permissioned Resolver** | one per parent. Agent records (addresses, ENSIP-11 address of BlackboxRegistry on 0G Chain) and, under wildcard resolution, one record set per inspected asset, plus the default record for every asset never inspected |
+| **Enhanced Access Control** | the name owner keeps every role. The core's key gets only `ROLE_SET_TEXT`, scoped with `grantSetterRoles` to the six asset text keys: it can file findings, and is refused if it tries to repoint `drone.` or change an agent's role |
+| **Universal Resolver V2** | every read, in the core, the CLI verifier and the browser verifier |
+
+The verifier also reads the Permissioned Registry: `drone.<parent>` must be a name token held by the robot key that signed the log.
+
+**Setup on Sepolia.** Pick a name, put your wallet's key in `.env` (it needs ~0.01 Sepolia ETH, nothing else), and run:
 
 ```bash
-ENS=sepolia ENS_PARENT=<your-name>.eth npm run setup:ens
+ENS=sepolia
+ENS_PARENT=blackbox-demo.eth
+ENS_OWNER_PRIVATE_KEY=0x...     # your wallet; becomes the owner of the name
 ```
 
-It deploys your Permissioned Resolver through ENS's VerifiableFactory, calls `setResolver` on the ETH registry, writes the default record and prints `ENS_RESOLVER=`. Put `ENS`, `ENS_PARENT` and `ENS_RESOLVER` in `.env`. Offline, `npm run dev:local` deploys a dev stand-in with the same ABI (`contracts/src/dev/DevEnsV2.sol`, `resolve(bytes,bytes)` on a Universal Resolver, DNS-encoded setters, default-record fallback) under `blackbox.eth` on anvil. The console labels it *dev ENS*.
+```bash
+npm run setup:ens
+```
 
-The reader was checked against ENS's own ENSv2 readiness names on mainnet (`ur.integration-tests.eth` → `0x2222…2222`, and `test.offchaindemo.eth` through CCIP-Read). **Not yet run against Sepolia with a registered name**: `setup:ens` on Sepolia is written from the ENS docs and needs a first run with a funded key.
+It mints the test USDC, deploys the resolver and the UserRegistry, registers the name (commit, a 65 s wait, register), issues the subnames, writes the agent records, grants the core's key its text roles and sends it 0.01 Sepolia ETH for gas. Copy the printed `ENS_RESOLVER=` into `.env` and restart the core. Rerun it whenever a key or the 0G TEE signer changes; it is idempotent. Do not use a public test key as the owner or robot: on Sepolia many have EIP-7702 code, which rejects the ERC-1155 name token. Offline, `npm run dev:local` deploys a dev stand-in with the same ABI (`contracts/src/dev/DevEnsV2.sol`, `resolve(bytes,bytes)` on a Universal Resolver, DNS-encoded setters, default-record fallback) under `blackbox.eth` on anvil. The console labels it *dev ENS*.
+
+The reader was checked against ENS's own ENSv2 readiness names on mainnet (`ur.integration-tests.eth` → `0x2222…2222`, and `test.offchaindemo.eth` through CCIP-Read). `setup:ens` was run end to end against the real ENSv2 contracts on an anvil fork of Sepolia (registration, subname tokens, records, EAC refusals, Universal Resolver reads, the verifier's registry check, and an idempotent rerun). The first run on live Sepolia is yours.
 
 ---
 
