@@ -15,6 +15,14 @@ K1=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
 K2=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
 A2=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
 
+# a core, robot or mock 0G left running would keep the port and the new one would die silently
+for port in 8787 8801 8790; do
+  if (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null; then
+    echo "port $port is already in use (an old core, robot or mock 0G?). Stop it first:  kill \$(lsof -t -i :$port)" >&2
+    exit 1
+  fi
+done
+
 pids=()
 cleanup() { for p in "${pids[@]:-}"; do kill "$p" 2>/dev/null || true; done; }
 trap cleanup EXIT INT TERM
