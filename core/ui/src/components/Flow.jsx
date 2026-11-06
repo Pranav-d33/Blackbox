@@ -58,6 +58,18 @@ function Mark() {
           );
         })}
       </div>
+      <div className="mt-3 flex items-center gap-2 text-[12px]">
+        {!S.pending.length ? (
+          <button onClick={() => engine.sampleMarks()} className="pressable rounded-lg bg-zg/[0.12] px-2.5 py-1.5 font-medium text-zg hover:bg-zg/[0.2]" title="Adds one real defect and one look-alike so you can fly straight away">
+            ✦ Try a sample
+          </button>
+        ) : (
+          <button onClick={() => engine.clearMarks()} className="pressable rounded-lg px-2 py-1.5 text-white/45 hover:bg-white/[0.06] hover:text-white">
+            Clear all marks
+          </button>
+        )}
+        <span className="text-white/35">{S.pending.length ? "Click the field to add more." : "or click the field to place your own."}</span>
+      </div>
       {S.pending.length ? (
         <ul className="mt-3 space-y-0.5">
           {S.pending.map((d, i) => {
@@ -76,8 +88,17 @@ function Mark() {
           })}
         </ul>
       ) : null}
-      <Button variant="primary" size="md" className="mt-4 w-full" disabled={engine.S.starting} onClick={engine.start}>
-        {S.pending.length ? `Fly the survey · ${S.pending.length} mark${S.pending.length > 1 ? "s" : ""}` : "Fly the survey"}
+      <Button variant="primary" size="md" className="mt-4 w-full" disabled={engine.S.starting} onClick={engine.start} aria-busy={engine.S.starting}>
+        {engine.S.starting ? (
+          <>
+            <span className="size-4 animate-spin rounded-full border-2 border-[#0b0b0f]/25 border-t-[#0b0b0f]" />
+            Registering on 0G…
+          </>
+        ) : S.pending.length ? (
+          `Fly the survey · ${S.pending.length} mark${S.pending.length > 1 ? "s" : ""}`
+        ) : (
+          "Fly the survey (no marks: a clean run)"
+        )}
       </Button>
     </>
   );

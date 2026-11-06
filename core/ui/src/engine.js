@@ -144,6 +144,31 @@ class Engine {
     this.renderMarkers();
     this.emit();
   }
+  clearMarks() {
+    this.S.pending = [];
+    this.renderMarkers();
+    this.emit();
+  }
+  /** One click to a flyable demo: a real defect and a harmless look-alike, placed on this scenario's own geometry. */
+  sampleMarks() {
+    const S = this.S;
+    const kinds = (S.scenario?.world?.kinds ?? []).map((k) => k.kind);
+    const defect = kinds.find((k) => this.kindInfo(k).defect);
+    const benign = kinds.find((k) => !this.kindInfo(k).defect);
+    const w = S.preview?.world;
+    let spots;
+    if (w?.rows_mm?.length >= 3) {
+      const at = (r, f) => [Math.round(r[0] + (r[2] - r[0]) * f), Math.round((r[1] + r[3]) / 2)];
+      spots = [[defect, ...at(w.rows_mm[1], 0.3)], [benign, ...at(w.rows_mm[2], 0.7)]];
+    } else {
+      const [dw, dh] = w?.deck_mm ?? S.scenario?.sim?.deck_mm ?? [36000, 16000];
+      spots = [[defect, Math.round(dw * 0.3), Math.round(dh * 0.35)], [benign, Math.round(dw * 0.65), Math.round(dh * 0.65)]];
+    }
+    S.pending = spots.filter(([k]) => k).map(([kind, x_mm, y_mm]) => ({ kind, x_mm, y_mm, variant: 0 }));
+    this.renderMarkers();
+    this.toast("Two sample marks added: a real defect and a look-alike. Press Fly the survey.", 5000);
+    this.emit();
+  }
   /** Where the demo is: mark the site, fly it, prove it. */
   step() {
     if (this.flying() || this.S.starting) return "fly";
@@ -301,7 +326,16 @@ class Engine {
       c.chain ? { tone: "ok", text: `0G Chain · ${c.chain.network}` } : { tone: "warn", text: "Chain off" },
       ...(c.arkiv ? [{ tone: "asset", text: "Arkiv · rabdi" }] : []),
       ...(st?.demo?.linkDown ? [{ tone: "bad", text: "0G link cut" }] : []),
+      ...this.publicChip(),
     ];
+  }
+
+  /** On a shared public instance: say so, and how many flights are left today. */
+  publicChip() {
+    const p = this.S.status?.public ?? this.S.cfg?.public;
+    if (!p?.enabled) return [];
+    const left = Math.max(0, p.dailyCap - p.flightsToday);
+    return [{ tone: left ? "idle" : "warn", text: left ? `Public demo · ${left} flights left today` : "Public demo · daily limit reached" }];
   }
 
   verifierUrl(m = this.mission()) {
