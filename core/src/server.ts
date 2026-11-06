@@ -8,6 +8,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { CORE_ROOT, loadConfig } from "./config";
+import { PublicGuard } from "./guard";
 import { RegistryClient } from "./chain/registry";
 import { Missions } from "./mission";
 import { ArkivWriter } from "./arkiv/write";
@@ -30,6 +31,7 @@ for (const evt of ["uncaughtException", "unhandledRejection"] as const) {
   });
 }
 
+const guard = new PublicGuard();
 const cfg = loadConfig();
 const publicBase = `http://${cfg.host}:${cfg.port}`;
 const storage = makeStorage(cfg, publicBase);
@@ -121,7 +123,16 @@ const routes: [string, RegExp, Handler][] = [
     }),
   ],
   ["GET", /^\/api\/robot\/state$/, async (_q, _m, u) => robot.state(Number(u.searchParams.get("since") ?? 0))],
-  ["POST", /^\/api\/mission\/start$/, async (q) => ({ mission: missions.summary(await missions.start({ ...(await body(q)), background: true })) })],
+  [
+    "POST",
+    /^\/api\/mission\/start$/,
+    async (q) => {
+      const b = await body(q);
+      const mission = missions.summary(await missions.start({ ...b, defects: guard.clampDefects(b.defects), background: true }));
+      guard.started(q);
+      return { mission };
+    },
+  ],
   ["POST", /^\/api\/world\/place$/, async (q) => robot.place(await body(q))],
   ["POST", /^\/api\/robot\/estop$/, async () => robot.estop()],
   ["POST", /^\/api\/robot\/human$/, async (q) => robot.human(await body(q))],
@@ -154,6 +165,9 @@ const server = createServer(async (req, res) => {
     return res.end();
   }
   try {
+    const busy = missions.current?.status === "preparing" || missions.current?.status === "flying";
+    const denied = guard.check(req, req.method ?? "GET", path, !!busy);
+    if (denied) return send(res, denied.status, { ok: false, error: denied.error });
     if (req.method === "GET" && path === "/api/robot/world.png") return sendBytes(res, await robot.bytes("/world.png"), "image/png");
     if (req.method === "GET" && path === "/api/robot/world/texture.jpg") return sendBytes(res, await robot.bytes("/world/texture.jpg", 20000), "image/jpeg");
     let pm = path.match(/^\/api\/scenarios\/([a-z0-9-]+)\/preview\.jpg$/);
