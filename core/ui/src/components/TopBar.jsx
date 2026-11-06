@@ -1,12 +1,11 @@
 import { engine } from "../engine.js";
 import { Button, Dot, Segmented } from "./ui.jsx";
 
-/** Brand, the scenario, what this core is wired to (0G, Chain, ENS), the camera and the full record. */
+/** Brand, the scenario, what this core is wired to (0G Compute, Storage, Chain), the camera and the full record. */
 export default function TopBar() {
   const S = engine.S;
   const flying = engine.flying();
   const chips = engine.chips();
-  const ens = engine.ens();
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start gap-3 p-4">
       <div className="panel pointer-events-auto flex h-12 items-center gap-3 rounded-2xl pr-1.5 pl-4">
@@ -35,13 +34,6 @@ export default function TopBar() {
             <span className="max-w-[180px] truncate">{c.text}</span>
           </span>
         ))}
-        {ens ? (
-          <span className="chip" title={`ENSv2 on ${ens.network}: every panel, deck square and agent has a name under ${ens.parent}`}>
-            <Dot tone="ens" />
-            <span className="ens-name !text-[12px]">{ens.parent}</span>
-            <span className="text-white/40">{ens.network === "local" ? "dev ENS" : ens.network}</span>
-          </span>
-        ) : null}
       </div>
 
       <div className="panel pointer-events-auto flex h-12 items-center gap-1.5 rounded-2xl px-1.5">
@@ -54,6 +46,11 @@ export default function TopBar() {
             { value: "top", label: "Top" },
           ]}
         />
+        {engine.arkiv() ? (
+          <Button variant="plain" onClick={engine.analytics} title="Site analytics, queried live from Arkiv">
+            Analytics
+          </Button>
+        ) : null}
         <Button variant="plain" disabled={!engine.mission()} onClick={() => engine.openRecord()}>
           Record
         </Button>

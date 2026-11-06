@@ -1,56 +1,129 @@
 import { useState } from "react";
 import { engine, short } from "../engine.js";
-import { Button, Dot, EnsName, Segmented, toneText } from "./ui.jsx";
+import { AssetId, Button, Dot, Segmented, toneText } from "./ui.jsx";
 import { Log, OnZeroG, Sdk } from "./Record.jsx";
 
-const ENS_LABELS = {
-  description: "description",
-  "blackbox.finding": "finding (label / severity / action)",
-  "blackbox.mission": "mission",
-  "blackbox.entry": "robot-signed entry (seq : hash)",
-  "blackbox.checked": "written at",
-  url: "verifier link",
-  "blackbox.role": "role",
-  "blackbox.robot_id": "zerobot robot id",
-  "blackbox.model": "0G model",
-  "blackbox.tee_signers": "TEE signers",
-  "blackbox.chain": "chain",
-};
+const when = (t) => (t ? new Date(t * 1000).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "–");
+const ArkivQuery = ({ q }) => (
+  <div className="mt-5 rounded-2xl bg-black/30 p-3.5">
+    <p className="mb-1 text-[11px] font-semibold tracking-[0.06em] text-white/40 uppercase">Arkiv query (Rabdi, read from your browser)</p>
+    <code className="block font-mono text-[11.5px] leading-relaxed break-all text-white/75">{q}</code>
+  </div>
+);
+const Loading = () => (
+  <p className="flex items-center gap-3 text-[14px] text-white/60">
+    <span className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+    Querying Arkiv…
+  </p>
+);
 
-/** An ENS name as ENS itself answers it: resolver, address and text records via the Universal Resolver. */
-function EnsRecord({ m }) {
-  if (m.loading) return <p className="flex items-center gap-3 text-[14px] text-white/60"><span className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />Resolving through the ENSv2 Universal Resolver…</p>;
-  const r = m.record;
-  const e = engine.ens();
-  const texts = Object.entries(r.texts ?? {});
-  const mission = r.texts?.["blackbox.mission"];
+/** One asset over time: every inspection by any inspector, and the owner's register entry. */
+function History({ m }) {
+  if (m.loading) return <Loading />;
+  const reg = m.register;
+  const li = (l) => (l === "safe_stop" ? { name: "Safe stop", color: "#f87171" } : engine.labelInfo(l));
   return (
     <div>
-      {r.error ? <p className="mb-4 text-[13px] text-bad">{r.error}</p> : null}
-      <dl>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
-          ["ENS network", e ? `${e.network}${e.network === "local" ? " (dev stand-in on anvil)" : ""}` : "–"],
-          ["Resolver", r.resolver],
-          ["ETH address", r.addr],
-          ...texts.map(([k, v]) => [ENS_LABELS[k] ?? k, v, k]),
-        ]
-          .filter(([, v]) => v)
-          .map(([k, v, key]) => (
-            <div key={k} className="relative flex gap-4 py-2 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/[0.06] last:after:hidden">
-              <dt className="w-52 shrink-0 text-[13px] text-white/45">{k}</dt>
-              <dd className={`min-w-0 flex-1 text-[13px] break-words ${key && key !== "description" ? "font-mono text-[12px]" : ""} text-white/90`}>
-                {key === "url" ? <a className="text-ens hover:underline" href={v} target="_blank" rel="noreferrer">{v}</a> : v}
-              </dd>
-            </div>
-          ))}
-      </dl>
-      <p className="mt-4 text-[12px] leading-relaxed text-white/45">
-        ENS is the address book, not the proof. The verifier re-reads this record and checks that the entry it names is robot-signed, chained and anchored on 0G Chain, with the same finding.
-      </p>
-      <div className="mt-4 flex gap-2">
-        {mission && mission === engine.mission()?.id ? <Button variant="zg" onClick={engine.verify}>Verify this mission</Button> : null}
-        {m.app ? <a href={m.app} target="_blank" rel="noreferrer"><Button>Open in the ENS app ↗</Button></a> : null}
+          ["Maker", reg?.maker],
+          ["Model", reg?.model],
+          ["Batch", reg?.batch],
+          ["Warranty until", reg?.warranty_until],
+        ].map(([k, v]) => (
+          <div key={k} className="rounded-xl bg-white/[0.05] px-3 py-2">
+            <div className="text-[11px] text-white/40">{k}</div>
+            <div className="truncate text-[13px] font-medium">{v ?? "not registered"}</div>
+          </div>
+        ))}
       </div>
+      {reg ? <p className="mt-2 font-mono text-[11px] text-white/35">register owned by the site owner {short(reg.owner, 8)}</p> : null}
+      <h3 className="mt-5 mb-1 text-[12px] font-semibold tracking-[0.04em] text-white/50 uppercase">{m.findings.length} inspection{m.findings.length === 1 ? "" : "s"}</h3>
+      <ol className="relative ml-2 border-l border-white/10">
+        {m.findings.map((f) => {
+          const l = li(f.label);
+          return (
+            <li key={f.key} className="relative py-2.5 pl-5">
+              <span className="absolute top-4 -left-[5px] size-2.5 rounded-full" style={{ background: l.color }} />
+              <div className="flex flex-wrap items-baseline gap-x-2">
+                <span className="text-[14px] font-semibold">{l.name}</span>
+                {f.severity >= 0 ? <span className="text-[12px] text-white/45">severity {f.severity}</span> : null}
+                <span className="text-[12px] text-white/45">→ {f.action}</span>
+                <span className="ml-auto text-[12px] text-white/40">{when(f.at)}</span>
+              </div>
+              <p className="text-[12px] text-white/60">{f.detail?.outcome ?? ""}</p>
+              <p className="mt-0.5 font-mono text-[11px] text-white/35">
+                mission {short(f.mission, 8)} · entry #{f.seq} · {f.source === "0g" ? `TEE ${short(f.detail?.tee_signer, 6)}` : f.source} · by {short(f.owner, 6)}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+      {!m.findings.length ? <p className="text-[13px] text-white/45">No inspection of this asset on Arkiv yet.</p> : null}
+      <ArkivQuery q={m.query} />
+    </div>
+  );
+}
+
+const Bars = ({ title, rows, color = "var(--color-zg)" }) => {
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  return (
+    <section className="mt-5">
+      <h3 className="mb-2 text-[12px] font-semibold tracking-[0.04em] text-white/50 uppercase">{title}</h3>
+      {rows.length ? (
+        rows.slice(0, 6).map(([k, n]) => (
+          <div key={k} className="mb-1.5 flex items-center gap-3 text-[13px]">
+            <span className="w-48 shrink-0 truncate text-white/75" title={k}>{k}</span>
+            <span className="h-2 rounded-full" style={{ width: `${(n / max) * 60}%`, background: color }} />
+            <span className="tabular-nums text-white/55">{n}</span>
+          </div>
+        ))
+      ) : (
+        <p className="text-[13px] text-white/40">None yet.</p>
+      )}
+    </section>
+  );
+};
+
+/** The site across every mission: what is broken, which maker and batch, which inspectors wrote it. */
+function Analytics({ m }) {
+  if (m.loading) return <Loading />;
+  const label = (l) => (l === "safe_stop" ? "Safe stop" : engine.labelInfo(l).name);
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          [m.total, "findings"],
+          [m.missions, "missions"],
+          [m.open.length, "open defects"],
+          [m.registered, `${engine.unitName()}s in the register`],
+        ].map(([v, l]) => (
+          <div key={l} className="rounded-xl bg-white/[0.05] px-3 py-2.5">
+            <div className="font-display text-[22px] leading-none font-semibold tabular-nums">{v}</div>
+            <div className="mt-1 text-[11px] text-white/45">{l}</div>
+          </div>
+        ))}
+      </div>
+      <Bars title="Findings by label" rows={m.byLabel.map(([k, n]) => [label(k), n])} />
+      <Bars title="Defects by maker and model" rows={m.defectsByMaker} color="var(--color-hold)" />
+      <Bars title="Defects by batch" rows={m.defectsByBatch} color="var(--color-hold)" />
+      <section className="mt-5">
+        <h3 className="mb-2 text-[12px] font-semibold tracking-[0.04em] text-white/50 uppercase">Open: the latest inspection found a defect</h3>
+        {m.open.length ? (
+          m.open.slice(0, 8).map((f) => (
+            <button key={f.key} onClick={() => engine.history(f.asset)} className="flex w-full items-center gap-3 rounded-lg py-1.5 text-left text-[13px] hover:bg-white/[0.04]">
+              <AssetId name={f.asset} className="w-16" />
+              <span className="text-white/80">{label(f.label)} · severity {f.severity}</span>
+              <span className="truncate text-white/40">{f.maker} {f.batch}</span>
+              <span className="ml-auto shrink-0 text-[12px] text-white/35">{when(f.at)}</span>
+            </button>
+          ))
+        ) : (
+          <p className="text-[13px] text-white/40">Nothing open.</p>
+        )}
+      </section>
+      <Bars title="Written by (inspector wallets)" rows={m.inspectors.map(([k, n]) => [short(k, 8), n])} color="var(--color-asset)" />
+      <ArkivQuery q={m.query} />
     </div>
   );
 }
@@ -146,7 +219,7 @@ export default function Sheet() {
         {m ? (
           <>
             <header className="flex items-center gap-3 px-7 pt-6 pb-4">
-              <h2 className={m.type === "ens" ? "ens-name !text-[17px]" : "font-display text-[20px] font-semibold tracking-[-0.02em]"}>{m.title}</h2>
+              <h2 className="font-display text-[20px] font-semibold tracking-[-0.02em]">{m.title}</h2>
               <span className="flex-1" />
               {m.link ? (
                 <a className="text-[13px] font-medium text-tint hover:underline" href={m.link} target="_blank" rel="noreferrer">
@@ -184,7 +257,6 @@ export default function Sheet() {
                   <figure>
                     <img src={m.crop} alt="" className="aspect-square w-full rounded-3xl bg-white/10 object-cover" />
                     <figcaption className="mt-2 text-[12px] leading-snug text-white/45">Exactly the crop the robot sent to 0G. Its keccak256 is the obs_hash, and the nonce comes from it.</figcaption>
-                    {m.ensName ? <div className="mt-3"><p className="text-[12px] text-white/45">ENS name of this {engine.unitName()}</p><EnsName name={m.ensName} /></div> : null}
                   </figure>
                   <div className="min-w-0">
                     <dl>
@@ -208,8 +280,9 @@ export default function Sheet() {
                 </div>
               ) : null}
 
-              {m.type === "ens" ? <EnsRecord m={m} /> : null}
               {m.type === "record" ? <RecordSheet m={m} /> : null}
+              {m.type === "history" ? <History m={m} /> : null}
+              {m.type === "analytics" ? <Analytics m={m} /> : null}
 
               {m.type === "qr" ? (
                 <div className="flex flex-col items-center gap-4 pb-2">

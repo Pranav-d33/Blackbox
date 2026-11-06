@@ -1,4 +1,5 @@
 import { readMissionOnChain } from "./chain.js";
+import { arkivPublic, assetHistory, siteSummary } from "../../src/arkiv/read";
 // Console engine: the mission state, polling, demo beats and the 3D scene.
 // A port of the old console.js with the DOM rendering taken out; React subscribes and renders.
 import { Scene3D } from "../../web/scene3d.js";
@@ -103,7 +104,7 @@ class Engine {
   worldMeta() {
     return (this.inMission() ? this.S.robot?.world : null) ?? this.S.preview?.world ?? null;
   }
-  /** ENS label of the asset under a point, same rule as the robot (world.py / solar_world.py asset_at). */
+  /** Label of the asset under a point, same rule as the robot (world.py / solar_world.py asset_at). */
   assetAt(x, y) {
     const w = this.worldMeta();
     if (!w) return null;
@@ -128,24 +129,15 @@ class Engine {
     if ((m = /^x(\d+)y(\d+)$/.exec(label ?? ""))) return [Number(m[1]) * 1000, Number(m[2]) * 1000, Number(m[1]) * 1000 + 1000, Number(m[2]) * 1000 + 1000];
     return null;
   }
-  ens = () => this.S.cfg?.ens ?? null;
-  ensName(label) {
-    const e = this.ens(), zone = this.profile()?.assets?.zone;
-    return label && e && zone ? `${label}.${zone}.${e.parent}` : null;
-  }
-  ensApp(name) {
-    const n = this.ens()?.network;
-    return n === "sepolia" ? `https://sepolia.app.ens.domains/${name}` : n === "mainnet" ? `https://app.ens.domains/${name}` : null;
-  }
   unitName = () => this.profile()?.assets?.unit ?? "asset";
-  /** What the 3D view shows under the cursor: the asset's ENS name and what is known about it. */
+  /** What the 3D view shows under the cursor: the asset's label and what is known about it. */
   describe(x, y) {
     const label = this.assetAt(x, y);
     if (!label) return null;
     const f = this.findings().find((r) => r.asset === label);
     const p = this.S.pending.find((d) => this.assetAt(d.x_mm, d.y_mm) === label);
     const sub = f?.label ? `${f.label.name} · ${f.outcome}` : p ? `${this.kindInfo(p.kind).name} placed · hidden from 0G` : this.S.kind && !this.flying() ? `Click to place ${this.kindInfo(this.S.kind).name.toLowerCase()}` : this.unitName();
-    return { label, name: this.ensName(label) ?? label, sub, rect: this.assetRect(label), color: f?.label?.color };
+    return { label, name: label, sub, rect: this.assetRect(label), color: f?.label?.color };
   }
   removePending(i) {
     this.S.pending.splice(i, 1);
@@ -158,17 +150,14 @@ class Engine {
     if (this.S.view === "mission" && this.mission()) return "prove";
     return "mark";
   }
-  /** Decisions as findings on named assets, newest first, with their ENS write state. */
+  /** Decisions as findings on labelled assets, newest first. */
   findings() {
     const m = this.mission();
-    const ensAssets = m?.ens?.assets ?? {};
     return this.decisions().map((r) => {
-      const st = r.asset ? ensAssets[r.asset] : null;
       return {
         ...r,
-        name: this.ensName(r.asset) ?? r.asset ?? `checkpoint ${r.k}`,
+        name: r.asset ?? `checkpoint ${r.k}`,
         outcome: r.stop ? "Safe stop, inspect again" : r.answer ? this.profile()?.ui?.outcomes?.[r.answer.label] ?? r.status : "Waiting for 0G",
-        ens: st ? { status: st.status, tx: st.tx, error: st.error } : null,
       };
     });
   }
@@ -265,7 +254,7 @@ class Engine {
     const verdict = d ? ["ok", "Accepted"] : c.stop ? ["bad", "Safe stop"] : lastRef ? ["bad", `${c.refusals.length} refused`] : ["wait", "Verifying"];
     return {
       k,
-      name: this.ensName(cpState?.asset) ?? cpState?.asset ?? null,
+      name: cpState?.asset ?? null,
       crop: `/api/missions/${m.id}/crop/${k}.png`,
       steps,
       focus,
@@ -291,7 +280,6 @@ class Engine {
       ...(m.privacy ? [
         { k: "Crops on 0G Storage", v: m.privacy.crops === "aes-256-gcm" ? "Encrypted (AES-256-GCM), key held by the operator" : m.privacy.crops },
         { k: "Inference", v: m.privacy.inference },
-        ...(m.privacy.ens ? [{ k: "ENS records", v: m.privacy.ens === "pointer" ? "Pointer only: mission + signed entry" : "Readable finding + pointer" }] : []),
       ] : []),
     ];
     if (m.errors.length) rows.push({ k: "Error", v: m.errors.at(-1), tone: "bad" });
@@ -311,6 +299,7 @@ class Engine {
           : { tone: "ok", text: `${c.zg.model} · sealed` },
       c.storage.kind === "0g" ? { tone: "ok", text: "0G Storage" } : { tone: "warn", text: "Local storage" },
       c.chain ? { tone: "ok", text: `0G Chain · ${c.chain.network}` } : { tone: "warn", text: "Chain off" },
+      ...(c.arkiv ? [{ tone: "asset", text: "Arkiv · rabdi" }] : []),
       ...(st?.demo?.linkDown ? [{ tone: "bad", text: "0G link cut" }] : []),
     ];
   }
@@ -634,7 +623,7 @@ class Engine {
     const r = await api(`/api/missions/${m.id}/verify?source=${this.S.cfg.chain ? "storage" : "local"}`);
     this.S.done.verify = true;
     const passed = r.checks.filter((c) => c.status === "pass").length;
-    this.S.lastVerify = { id: m.id, ok: r.ok, summary: r.ok ? `${passed} checks passed against 0G Chain, 0G Storage${r.checks.some((c) => c.id.startsWith("ens") && c.status === "pass") ? " and ENS" : ""}` : r.firstFailure };
+    this.S.lastVerify = { id: m.id, ok: r.ok, summary: r.ok ? `${passed} checks passed against 0G Chain, 0G Storage` : r.firstFailure };
     this.flashIt(r.ok ? "ok" : "bad", r.ok ? "Verified" : "Verification failed", r.ok ? `${r.checks.filter((c) => c.status === "pass").length} checks passed against 0G.` : r.firstFailure);
     this.openModal({ type: "report", title: "Verifier", report: r, link: this.verifierUrl(m), proof });
   });
@@ -715,16 +704,33 @@ class Engine {
       raw = JSON.parse(z.raw_response).choices[0].message.content;
     } catch {}
     const problems = mine.filter((e) => e.kind === "rejected" || e.kind === "safe_stop").map((e) => (e.kind === "rejected" ? `${e.body.source}: ${e.body.reason}` : e.body.reason));
-    this.openModal({ type: "checkpoint", ensName: this.ensName(x.asset), title: x.asset ? `Checkpoint ${k} · ${x.asset}` : `Checkpoint ${k}`, crop: `/api/missions/${m.id}/crop/${k}.png`, rows, raw, problems });
+    this.openModal({ type: "checkpoint", title: x.asset ? `Checkpoint ${k} · ${x.asset}` : `Checkpoint ${k}`, crop: `/api/missions/${m.id}/crop/${k}.png`, rows, raw, problems });
   });
 
-  ensLookup = this.guard(async (name) => {
-    if (!name) return;
-    this.openModal({ type: "ens", title: name, loading: true });
-    const r = await api(`/api/ens/lookup?name=${encodeURIComponent(name)}`);
-    if (this.S.modal?.title === name) this.openModal({ type: "ens", title: name, record: r, app: this.ensApp(name) });
-  });
   openRecord = (tab = "chain") => this.openModal({ type: "record", title: "Mission record", tab });
+
+  // ------------------------------------------------------------------ Arkiv (read in the browser)
+  arkiv = () => this.S.cfg?.arkiv ?? null;
+  arkivClient() {
+    return (this._ak ??= arkivPublic(this.arkiv()?.accessKey ?? ""));
+  }
+  defectLabels() {
+    const p = this.profile();
+    return (p?.decision?.labels ?? []).filter((l) => p.decision.label_actions?.[l] === "descend" && l !== "unsure");
+  }
+  /** Every inspection of one asset, across missions and inspectors, plus the owner's register entry. */
+  history = this.guard(async (asset) => {
+    const site = this.profile()?.id;
+    this.openModal({ type: "history", title: `${asset} · history`, loading: true });
+    const h = await assetHistory(this.arkivClient(), site, asset);
+    if (this.S.modal?.type === "history") this.openModal({ type: "history", title: `${asset} · history`, asset, ...h });
+  });
+  analytics = this.guard(async () => {
+    const p = this.profile();
+    this.openModal({ type: "analytics", title: `${p.title.replace(/ survey$/, "")} · analytics`, loading: true });
+    const a = await siteSummary(this.arkivClient(), p.id, this.defectLabels());
+    if (this.S.modal?.type === "analytics") this.openModal({ type: "analytics", title: `${p.title.replace(/ survey$/, "")} · analytics`, ...a });
+  });
 
   openModal(modal) {
     this.S.modal = modal;

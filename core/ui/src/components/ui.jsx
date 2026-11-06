@@ -1,8 +1,7 @@
-// Primitives: one button family, one segmented control, status dots, list rows, ENS names.
-import { engine } from "../engine.js";
+// Primitives: one button family, one segmented control, status dots, list rows, asset ids.
 
-const TONE = { ok: "bg-ok", bad: "bg-bad", wait: "bg-wait", hold: "bg-hold", warn: "bg-hold", idle: "bg-white/35", tint: "bg-tint", zg: "bg-zg", ens: "bg-ens" };
-const TONE_TEXT = { ok: "text-ok", bad: "text-bad", wait: "text-wait", hold: "text-hold", warn: "text-hold", idle: "text-white/55", tint: "text-tint", zg: "text-zg", ens: "text-ens" };
+const TONE = { ok: "bg-ok", bad: "bg-bad", wait: "bg-wait", hold: "bg-hold", warn: "bg-hold", idle: "bg-white/35", tint: "bg-tint", zg: "bg-zg", asset: "bg-asset" };
+const TONE_TEXT = { ok: "text-ok", bad: "text-bad", wait: "text-wait", hold: "text-hold", warn: "text-hold", idle: "text-white/55", tint: "text-tint", zg: "text-zg", asset: "text-asset" };
 export const toneText = (t) => TONE_TEXT[t] ?? "text-white/55";
 
 export function Dot({ tone = "idle", pulse = false, className = "" }) {
@@ -54,14 +53,10 @@ export function Segmented({ options, value, onChange, disabled = false, classNam
   );
 }
 
-/** An ENS name: opens the ENS record sheet (read through the Universal Resolver). */
-export function EnsName({ name, className = "" }) {
+/** The robot-signed label of an inspected asset (r2m13 = row 2, module 13; x12y03 = the 1 m² deck square at 12 m, 3 m). */
+export function AssetId({ name, className = "" }) {
   if (!name) return null;
-  return (
-    <button onClick={(e) => (e.stopPropagation(), engine.ensLookup(name))} className={`ens-name truncate text-left hover:underline ${className}`} title={`Look up ${name} on ENS`}>
-      {name}
-    </button>
-  );
+  return <span className={`asset-id truncate ${className}`}>{name}</span>;
 }
 
 export function SectionTitle({ children, aside }) {

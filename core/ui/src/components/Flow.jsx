@@ -5,12 +5,12 @@ const COPY = {
   "solar-farm": {
     mark: "Click a PV module to crack a cell or soil it. 0G is never told which is which.",
     fly: "The drone surveys every row. Where its camera sees a mark it holds, and 0G's sealed model decides: repair crew or cleaning round.",
-    prove: "Each module the drone looked at now has an ENS name that points at the robot-signed decision. Check it all from the chain.",
+    prove: "Every module the drone looked at has a robot-signed decision, stored on 0G and anchored on 0G Chain. Check it all yourself.",
   },
   "bridge-deck": {
     mark: "Click a 1 m square of the deck to add a crack or a harmless decoy (paint, cable, stain).",
     fly: "The drone sweeps the deck. Where it sees a mark it holds, and 0G's sealed model decides: structural crack or nothing to fix.",
-    prove: "Each square the drone looked at now has an ENS name that points at the robot-signed decision. Check it all from the chain.",
+    prove: "Every deck square the drone looked at has a robot-signed decision, stored on 0G and anchored on 0G Chain. Check it all yourself.",
   },
 };
 const copy = () => COPY[engine.profile()?.id] ?? COPY["solar-farm"];
@@ -67,7 +67,7 @@ function Mark() {
               <li key={i} className="group flex items-center gap-2.5 rounded-lg py-1">
                 <span className="size-2 shrink-0 rounded-full" style={{ background: ki.color }} />
                 <span className="w-24 shrink-0 text-[13px] text-white/80">{ki.name}</span>
-                <span className="ens-name min-w-0 flex-1 truncate">{engine.ensName(label) ?? label ?? "between rows"}</span>
+                <span className="asset-id min-w-0 flex-1 truncate">{label ?? "between rows"}</span>
                 <button onClick={() => engine.removePending(i)} className="text-[13px] text-white/30 opacity-0 transition-opacity group-hover:opacity-100 hover:text-white" title="Remove">
                   ✕
                 </button>
@@ -123,7 +123,7 @@ function Live() {
           <img src={live.crop} alt="" className="size-[72px] shrink-0 rounded-xl bg-white/10 object-cover" />
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="ens-name truncate">{live.name ?? `checkpoint ${live.k}`}</span>
+              <span className="asset-id truncate">{live.name ?? `checkpoint ${live.k}`}</span>
               <span className={`shrink-0 text-[12px] font-semibold ${toneText(live.verdict[0])}`}>{live.verdict[1]}</span>
             </div>
             <ol className="mt-2 flex items-center gap-1">
@@ -163,12 +163,12 @@ function Resume() {
   const down = engine.S.status?.demo?.linkDown;
   const closed = m.status === "closed";
   const at = engine.assetAt(...r.pose_mm) ?? (r.stoppedAt?.asset || null);
-  const where = r.stoppedAt?.asset ? engine.ensName(r.stoppedAt.asset) : at ? engine.ensName(at) : `waypoint ${r.wp_idx}`;
+  const where = r.stoppedAt?.asset ?? at ?? `waypoint ${r.wp_idx}`;
   return (
     <div className="mt-3 rounded-2xl bg-wait/[0.08] p-3.5 shadow-[inset_0_0_0_1px_rgb(251_191_36/0.2)]">
       <p className="text-[13px] font-semibold text-wait">Survey interrupted</p>
       <p className="mt-1 text-[12px] leading-relaxed text-white/65">
-        The drone safe-stopped at <span className="ens-name">{where}</span> ({r.stoppedAt?.reason ?? "no decision made"}) and flew home. The stop point is in its signed log.
+        The drone safe-stopped at <span className="asset-id">{where}</span> ({r.stoppedAt?.reason ?? "no decision made"}) and flew home. The stop point is in its signed log.
       </p>
       <div className="mt-2.5 flex flex-wrap gap-2">
         {down ? (
@@ -185,7 +185,6 @@ function Resume() {
 function Prove() {
   const f = engine.findings();
   const m = engine.mission();
-  const onEns = f.filter((x) => x.ens?.status === "written").length;
   const v = engine.S.lastVerify?.id === m?.id ? engine.S.lastVerify : null;
   const closed = m?.status === "closed";
   return (
@@ -195,7 +194,7 @@ function Prove() {
         {[
           [f.filter((x) => x.tone === "ok").length, "decided by 0G"],
           [f.filter((x) => x.tone === "bad").length, "refused or stopped"],
-          [engine.ens() ? onEns : "–", "named on ENS"],
+          [new Set(f.map((x) => x.asset).filter(Boolean)).size, `${engine.unitName()}s checked`],
         ].map(([v2, l]) => (
           <div key={l} className="rounded-xl bg-white/[0.04] px-2 py-2">
             <div className="font-display text-[19px] leading-none font-semibold tabular-nums">{v2}</div>
@@ -215,7 +214,7 @@ function Prove() {
       <Resume />
       <div className="mt-3 flex flex-col gap-2">
         <Button variant="zg" size="md" onClick={engine.verify} title={closed ? "" : "Works while open too; the close transaction lands a few seconds after landing"}>
-          Verify on 0G{engine.ens() ? " + ENS" : ""}
+          Verify on 0G
         </Button>
         <div className="grid grid-cols-2 gap-2">
           <Button size="md" onClick={engine.split} title="Same seed and world, every 0G answer forced to continue">
