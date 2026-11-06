@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07080b" />
+  <title>Blackbox · Workflows</title>
+  <meta name="description" content="Vision, text and voice workflows on the Blackbox SDK: every input ends in one signed action from the mission profile." />
+  <link rel="stylesheet" href="/vendor/fonts/fonts.css" />
+  <script>document.documentElement.classList.add("js")</script>
+  <link rel="stylesheet" href="/landing.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="wrap nav-in">
+      <a class="brand" href="/">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.7" /><circle cx="12" cy="12" r="3.2" fill="currentColor" /></svg>
+        Blackbox
+      </a>
+      <div class="nav-links">
+        <a href="#vision">Vision</a>
+        <a href="#text">Text</a>
+        <a href="#voice">Voice</a>
+        <a href="#more">More</a>
+      </div>
+      <div class="nav-cta">
+        <a class="btn ghost" href="/#sdk">SDK</a>
+        <a class="btn solid" href="/console.html">Open console</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="band" id="top">
+    <div class="wrap">
+      <p class="eyebrow">SDK workflows</p>
+      <h2>Any input. One signed action.</h2>
+      <p class="sub">A camera frame, a typed note or a spoken command all end the same way: 0G's sealed model picks one action from the mission profile, the robot checks the signature, and the entry goes into the same hash-chained log. The model can never widen what the robot may do.</p>
+    </div>
+  </section>
+
+  <section class="band alt" id="vision">
+    <div class="wrap">
+      <p class="eyebrow">Workflow 1 · Vision · <span class="tag">Built</span></p>
+      <h2>The camera asks, 0G decides.</h2>
+      <ol class="steps">
+        <li><i>1</i><b>Detector flags a mark.</b><span>On-board, cheap. Only flagged crops go to 0G, about 1.5% of modules in our sim runs.</span></li>
+        <li><i>2</i><b>Sealed vision call.</b><span>Crop + nonce to 0G's model in a TEE. Answer: one label from the profile, e.g. <code>cracked_cell</code>.</span></li>
+        <li><i>3</i><b>Unsure? Ask a human.</b><span>Below the hold threshold the drone waits for the crew (button, text or voice). Timeout means safe-stop.</span></li>
+        <li><i>4</i><b>Interlock.</b><span>Signer allowlisted, signature covers the bytes, nonce echoed, action in the vocabulary.</span></li>
+        <li><i>5</i><b>Act and record.</b><span>Descend or continue. Entry on 0G Storage, anchor on 0G Chain, finding on Arkiv.</span></li>
+      </ol>
+      <p class="note">Running today for the solar-farm and bridge-deck profiles. Try it in the <a href="/console.html">console</a>.</p>
+    </div>
+  </section>
+
+  <section class="band" id="text">
+    <div class="wrap">
+      <p class="eyebrow">Workflow 2 · Text · <span class="tag">Proposal</span></p>
+      <h2>The crew types, 0G maps it to an action.</h2>
+      <ol class="steps">
+        <li><i>1</i><b>Drone holds.</b><span>r3m14 is ambiguous. The console asks: descend or continue?</span></li>
+        <li><i>2</i><b>Crew types a note.</b><span><q>r3m14 looks like a cracked cell, send it to repair.</q> The note is hashed.</span></li>
+        <li><i>3</i><b>Sealed text model.</b><span>0GM-1.0 in a TEE gets the note, the allowed actions and this checkpoint only. Returns <code>{"action":"descend"}</code>, signed.</span></li>
+        <li><i>4</i><b>Interlock.</b><span><q>Fly to the highway</q> is not in the vocabulary: refused and logged. The drone keeps holding.</span></li>
+        <li><i>5</i><b>Logged as a human entry.</b><span>Note hash + signed answer + action, in the same chain as the vision decisions.</span></li>
+      </ol>
+      <p class="note">Builds on the existing hold path (<code>adapter.py</code> await-human, <code>POST /api/robot/human</code>). New: the text-model step and the note-hash field.</p>
+    </div>
+  </section>
+
+  <section class="band alt" id="voice">
+    <div class="wrap">
+      <p class="eyebrow">Workflow 3 · Voice · <span class="tag">Proposal</span></p>
+      <h2>Gloves on, screen off.</h2>
+      <ol class="steps">
+        <li><i>1</i><b>Drone speaks.</b><span><q>r3m14 unsure. Descend or continue?</q></span></li>
+        <li><i>2</i><b>Crew chief answers.</b><span><q>Drone, go down and look at r3m14.</q></span></li>
+        <li><i>3</i><b>Speech to text.</b><span>Whisper on 0G (<code>whisper-large-v3</code>) or on the operator's device. Only the transcript hash is logged.</span></li>
+        <li><i>4</i><b>Same as text.</b><span>Sealed text model maps it to one allowed action; the interlock checks it.</span></li>
+        <li><i>5</i><b>Drone reports back.</b><span><q>r3m14: cracked cell, severity 2, repair crew.</q> Read from the signed result.</span></li>
+      </ol>
+      <p class="note">Voice adds one failure mode, mishearing. The interlock bounds it: the worst a misheard command can do is pick the other allowed action, and silence means safe-stop.</p>
+    </div>
+  </section>
+
+  <section class="band" id="more">
+    <div class="wrap">
+      <p class="eyebrow">Same SDK, other profiles</p>
+      <h2>A new task is a new JSON file.</h2>
+      <div class="grid3">
+        <div class="layer"><b>Bridge deck · Built</b><span>Crack vs decoy (stain, joint). <code>scenarios/bridge-deck.json</code></span></div>
+        <div class="layer"><b>Warehouse pallets · Proposal</b><span>Damaged / intact / unsure, then flag for a human. New labels and prompt only.</span></div>
+        <div class="layer"><b>Two-tier check · Proposal</b><span>Cheap vision model first; the larger sealed model only below the hold threshold.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band finale">
+    <div class="wrap center">
+      <h2>Every path ends in the same log.</h2>
+      <p class="sub">Who told the drone to descend, the camera or the crew, is answerable by anyone with the record.</p>
+      <div class="hero-cta">
+        <a class="btn solid lg" href="/console.html">Open the live console</a>
+        <a class="btn ghost lg" href="/#sdk">Back to the SDK</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot wrap">Workflows 2 and 3 are proposals on top of the built human-hold path; they are labelled as such. Built at ETHGlobal Mumbai 2026.</footer>
+  <script type="module" src="/landing-motion.js"></script>
+</body>
+</html>
