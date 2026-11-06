@@ -28,7 +28,6 @@ ENV NODE_ENV=production \
     CORE_HOST=0.0.0.0 \
     CORE_DATA_DIR=/data/core \
     ROBOT_DATA_DIR=/data/robot
-VOLUME /data
 EXPOSE 8787
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
