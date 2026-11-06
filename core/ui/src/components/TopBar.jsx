@@ -8,8 +8,8 @@ export default function TopBar() {
   const chips = engine.chips();
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start gap-3 p-4">
-      <div className="panel pointer-events-auto flex h-12 items-center gap-3 rounded-2xl pr-1.5 pl-4">
-        <a href="/" className="flex items-center gap-2" title="Back to the launch page">
+      <div className="panel enter enter-down pointer-events-auto flex h-12 items-center gap-3 rounded-2xl pr-1.5 pl-4">
+        <a href="/" className="pressable flex items-center gap-2" title="Back to the landing page">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             <rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" strokeWidth="1.7" />
             <circle cx="12" cy="12" r="3.2" fill="currentColor" />
@@ -27,16 +27,16 @@ export default function TopBar() {
 
       <div className="flex-1" />
 
-      <div className="panel pointer-events-auto flex h-12 items-center gap-1.5 rounded-2xl px-2">
+      <div className="panel enter enter-down pointer-events-auto flex h-12 items-center gap-1.5 rounded-2xl px-2" style={{ "--i": 1 }}>
         {chips.map((c) => (
-          <span key={c.text} className="chip" title={c.text}>
+          <span key={c.text} className="chip enter enter-pop" title={c.text}>
             <Dot tone={c.tone} />
             <span className="max-w-[180px] truncate">{c.text}</span>
           </span>
         ))}
       </div>
 
-      <div className="panel pointer-events-auto flex h-12 items-center gap-1.5 rounded-2xl px-1.5">
+      <div className="panel enter enter-down pointer-events-auto flex h-12 items-center gap-1.5 rounded-2xl px-1.5" style={{ "--i": 2 }}>
         <Segmented
           value={S.cam}
           onChange={(m) => engine.setCam(m)}

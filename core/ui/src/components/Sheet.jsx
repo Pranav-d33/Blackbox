@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { engine, short } from "../engine.js";
 import { AssetId, Button, Dot, Segmented, toneText } from "./ui.jsx";
 import { Log, OnZeroG, Sdk } from "./Record.jsx";
@@ -11,10 +11,18 @@ const ArkivQuery = ({ q }) => (
   </div>
 );
 const Loading = () => (
-  <p className="flex items-center gap-3 text-[14px] text-white/60">
-    <span className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
-    Querying Arkiv…
-  </p>
+  <div role="status" aria-live="polite">
+    <p className="mb-4 flex items-center gap-3 text-[14px] text-white/60">
+      <span className="size-4 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+      Querying Arkiv…
+    </p>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-[58px] rounded-xl" style={{ animationDelay: `${i * 120}ms` }} />)}
+    </div>
+    <div className="skeleton mt-5 h-3 w-1/3 rounded-full" />
+    <div className="skeleton mt-3 h-3 w-2/3 rounded-full" />
+    <div className="skeleton mt-3 h-3 w-1/2 rounded-full" />
+  </div>
 );
 
 /** One asset over time: every inspection by any inspector, and the owner's register entry. */
@@ -30,8 +38,8 @@ function History({ m }) {
           ["Model", reg?.model],
           ["Batch", reg?.batch],
           ["Warranty until", reg?.warranty_until],
-        ].map(([k, v]) => (
-          <div key={k} className="rounded-xl bg-white/[0.05] px-3 py-2">
+        ].map(([k, v], i) => (
+          <div key={k} className="enter rounded-xl bg-white/[0.05] px-3 py-2" style={{ "--i": i }}>
             <div className="text-[11px] text-white/40">{k}</div>
             <div className="truncate text-[13px] font-medium">{v ?? "not registered"}</div>
           </div>
@@ -40,10 +48,10 @@ function History({ m }) {
       {reg ? <p className="mt-2 font-mono text-[11px] text-white/35">register owned by the site owner {short(reg.owner, 8)}</p> : null}
       <h3 className="mt-5 mb-1 text-[12px] font-semibold tracking-[0.04em] text-white/50 uppercase">{m.findings.length} inspection{m.findings.length === 1 ? "" : "s"}</h3>
       <ol className="relative ml-2 border-l border-white/10">
-        {m.findings.map((f) => {
+        {m.findings.map((f, idx) => {
           const l = li(f.label);
           return (
-            <li key={f.key} className="relative py-2.5 pl-5">
+            <li key={f.key} className="enter relative py-2.5 pl-5" style={{ "--i": Math.min(idx, 8) }}>
               <span className="absolute top-4 -left-[5px] size-2.5 rounded-full" style={{ background: l.color }} />
               <div className="flex flex-wrap items-baseline gap-x-2">
                 <span className="text-[14px] font-semibold">{l.name}</span>
@@ -71,10 +79,10 @@ const Bars = ({ title, rows, color = "var(--color-zg)" }) => {
     <section className="mt-5">
       <h3 className="mb-2 text-[12px] font-semibold tracking-[0.04em] text-white/50 uppercase">{title}</h3>
       {rows.length ? (
-        rows.slice(0, 6).map(([k, n]) => (
-          <div key={k} className="mb-1.5 flex items-center gap-3 text-[13px]">
+        rows.slice(0, 6).map(([k, n], i) => (
+          <div key={k} className="enter mb-1.5 flex items-center gap-3 text-[13px]" style={{ "--i": i }}>
             <span className="w-48 shrink-0 truncate text-white/75" title={k}>{k}</span>
-            <span className="h-2 rounded-full" style={{ width: `${(n / max) * 60}%`, background: color }} />
+            <span className="grow-x h-2 rounded-full" style={{ width: `${(n / max) * 60}%`, background: color, "--i": i }} />
             <span className="tabular-nums text-white/55">{n}</span>
           </div>
         ))
@@ -97,8 +105,8 @@ function Analytics({ m }) {
           [m.missions, "missions"],
           [m.open.length, "open defects"],
           [m.registered, `${engine.unitName()}s in the register`],
-        ].map(([v, l]) => (
-          <div key={l} className="rounded-xl bg-white/[0.05] px-3 py-2.5">
+        ].map(([v, l], i) => (
+          <div key={l} className="enter rounded-xl bg-white/[0.05] px-3 py-2.5" style={{ "--i": i }}>
             <div className="font-display text-[22px] leading-none font-semibold tabular-nums">{v}</div>
             <div className="mt-1 text-[11px] text-white/45">{l}</div>
           </div>
@@ -110,8 +118,8 @@ function Analytics({ m }) {
       <section className="mt-5">
         <h3 className="mb-2 text-[12px] font-semibold tracking-[0.04em] text-white/50 uppercase">Open: the latest inspection found a defect</h3>
         {m.open.length ? (
-          m.open.slice(0, 8).map((f) => (
-            <button key={f.key} onClick={() => engine.history(f.asset)} className="flex w-full items-center gap-3 rounded-lg py-1.5 text-left text-[13px] hover:bg-white/[0.04]">
+          m.open.slice(0, 8).map((f, i) => (
+            <button key={f.key} onClick={() => engine.history(f.asset)} style={{ "--i": i }} className="pressable enter flex w-full items-center gap-3 rounded-lg py-1.5 text-left text-[13px] hover:bg-white/[0.04]">
               <AssetId name={f.asset} className="w-16" />
               <span className="text-white/80">{label(f.label)} · severity {f.severity}</span>
               <span className="truncate text-white/40">{f.maker} {f.batch}</span>
@@ -152,16 +160,16 @@ const STATUS = { pass: "ok", fail: "bad", warn: "hold", skip: "idle" };
 function Report({ r }) {
   return (
     <div>
-      <div className="flex items-center gap-4 rounded-3xl bg-white/[0.06] p-5">
-        <span className={`grid size-11 shrink-0 place-items-center rounded-full text-[20px] font-bold ${r.ok ? "bg-ok text-black" : "bg-bad text-white"}`}>{r.ok ? "✓" : "!"}</span>
+      <div className="enter enter-pop flex items-center gap-4 rounded-3xl bg-white/[0.06] p-5">
+        <span className={`pop grid size-11 shrink-0 place-items-center rounded-full text-[20px] font-bold ${r.ok ? "bg-ok text-black" : "bg-bad text-white"}`}>{r.ok ? "✓" : "!"}</span>
         <div className="min-w-0">
           <div className="font-display text-[22px] font-semibold tracking-[0.012em]">{r.ok ? "Verified. Every check passed." : "Tampering detected."}</div>
           {r.firstFailure ? <p className="mt-1 text-[13px] leading-snug text-bad">{r.firstFailure}</p> : <p className="mt-1 font-mono text-[11px] text-white/45">robot {short(r.robot, 10)}</p>}
         </div>
       </div>
       <ul className="mt-4">
-        {r.checks.map((c) => (
-          <li key={c.id} className="relative flex gap-3 py-2.5 after:absolute after:inset-x-0 after:bottom-0 after:left-6 after:h-px after:bg-white/[0.07] last:after:hidden">
+        {r.checks.map((c, i) => (
+          <li key={c.id} style={{ "--i": Math.min(i, 12) + 3 }} className="enter relative flex gap-3 py-2.5 after:absolute after:inset-x-0 after:bottom-0 after:left-6 after:h-px after:bg-white/[0.07] last:after:hidden">
             <Dot tone={STATUS[c.status]} className="mt-1.5" />
             <div className="min-w-0">
               <div className="text-[14px] leading-snug">{c.title}</div>
@@ -206,13 +214,24 @@ function Proof({ p }) {
 export default function Sheet() {
   const m = engine.S.modal;
   const open = !!m;
+  // Escape closes the sheet; a keyboard action gets no animation of its own beyond the normal close
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => e.key === "Escape" && engine.closeModal();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
   return (
     <div
-      className={`fixed inset-0 z-50 grid place-items-center p-6 transition-[background-color,visibility] duration-500 ${open ? "visible bg-black/55" : "invisible bg-black/0"}`}
+      data-open={open}
+      className={`sheet-scrim fixed inset-0 z-50 grid place-items-center p-6 ${open ? "visible bg-black/55" : "invisible bg-black/0"}`}
       onClick={(e) => e.target === e.currentTarget && engine.closeModal()}
     >
       <div
-        className={`flex max-h-[calc(100vh-48px)] w-[min(820px,100%)] flex-col overflow-hidden rounded-[28px] bg-[rgb(16_17_21/0.94)] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08),0_40px_100px_rgb(0_0_0/0.6)] backdrop-blur-[30px] transition-[transform,opacity] duration-500 ease-[var(--ease-sheet)] ${
+        role="dialog"
+        aria-modal="true"
+        aria-label={m?.title ?? "Details"}
+        className={`flex max-h-[calc(100vh-48px)] w-[min(820px,100%)] flex-col overflow-hidden rounded-[28px] bg-[rgb(16_17_21/0.94)] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08),0_40px_100px_rgb(0_0_0/0.6)] backdrop-blur-[30px] transition-[transform,opacity] duration-[420ms] ease-[var(--ease-sheet)] ${
           open ? "translate-y-0 scale-100 opacity-100" : "translate-y-5 scale-[0.97] opacity-0"
         }`}
       >
@@ -228,7 +247,7 @@ export default function Sheet() {
               ) : null}
               <Button onClick={engine.closeModal}>Done</Button>
             </header>
-            <div className="scroll-soft min-h-0 overflow-y-auto px-7 pb-7">
+            <div key={m.type} className="scroll-soft enter min-h-0 overflow-y-auto px-7 pb-7" style={{ "--dy": "6px" }}>
               {m.type === "loading" ? (
                 <>
                   <p className="mb-5 flex items-center gap-3 text-[14px] text-white/65">
@@ -260,8 +279,8 @@ export default function Sheet() {
                   </figure>
                   <div className="min-w-0">
                     <dl>
-                      {m.rows.map(([k, v]) => (
-                        <div key={k} className="relative flex gap-4 py-2 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/[0.07] last:after:hidden">
+                      {m.rows.map(([k, v], i) => (
+                        <div key={k} style={{ "--i": Math.min(i, 10) }} className="enter relative flex gap-4 py-2 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/[0.07] last:after:hidden">
                           <dt className="w-32 shrink-0 text-[13px] text-white/50">{k}</dt>
                           <dd className="min-w-0 flex-1 truncate font-mono text-[12px] text-white/90" title={v}>{v}</dd>
                         </div>
@@ -286,7 +305,7 @@ export default function Sheet() {
 
               {m.type === "qr" ? (
                 <div className="flex flex-col items-center gap-4 pb-2">
-                  {m.svg ? <div className="rounded-3xl bg-white p-4 [&_svg]:block" dangerouslySetInnerHTML={{ __html: m.svg }} /> : null}
+                  {m.svg ? <div className="enter enter-pop rounded-3xl bg-white p-4 [&_svg]:block" dangerouslySetInnerHTML={{ __html: m.svg }} /> : null}
                   <p className="max-w-full font-mono text-[12px] break-all text-white/60">{m.url}</p>
                   {m.local ? <p className="text-[13px] text-white/45">Set PUBLIC_VERIFIER_URL to the deployed verifier so phones can open it.</p> : null}
                 </div>

@@ -22,7 +22,7 @@ function Step({ n, title, state, children, summary }) {
       <div className="flex items-center gap-3">
         <span
           className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold tabular-nums transition-colors duration-300 ${
-            state === "done" ? "bg-ok/90 text-[#062014]" : open ? "bg-white text-[#0b0b0f]" : "bg-white/[0.08] text-white/50"
+            state === "done" ? "pop bg-ok/90 text-[#062014]" : open ? "bg-white text-[#0b0b0f]" : "bg-white/[0.08] text-white/50"
           }`}
         >
           {state === "done" ? "✓" : n}
@@ -49,7 +49,7 @@ function Mark() {
             <button
               key={k.kind}
               onClick={() => engine.setKind(k.kind)}
-              className={`flex h-8 items-center gap-2 rounded-xl px-3 text-[13px] font-medium transition-colors ${on ? "bg-white/[0.14] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]" : "bg-white/[0.04] text-white/55 hover:text-white"}`}
+              className={`pressable flex h-8 items-center gap-2 rounded-xl px-3 text-[13px] font-medium ${on ? "bg-white/[0.14] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]" : "bg-white/[0.04] text-white/55 hover:text-white"}`}
             >
               <span className="size-2 rounded-full" style={{ background: ki.color }} />
               {ki.name}
@@ -64,7 +64,7 @@ function Mark() {
             const ki = engine.kindInfo(d.kind);
             const label = engine.assetAt(d.x_mm, d.y_mm);
             return (
-              <li key={i} className="group flex items-center gap-2.5 rounded-lg py-1">
+              <li key={`${d.kind}-${d.x_mm}-${d.y_mm}`} className="enter enter-pop group flex items-center gap-2.5 rounded-lg py-1">
                 <span className="size-2 shrink-0 rounded-full" style={{ background: ki.color }} />
                 <span className="w-24 shrink-0 text-[13px] text-white/80">{ki.name}</span>
                 <span className="asset-id min-w-0 flex-1 truncate">{label ?? "between rows"}</span>
@@ -105,7 +105,7 @@ function Live() {
             [tel.z, "m", "altitude"],
             [tel.cps, "", "checks"],
           ].map(([v, u, l]) => (
-            <div key={l} className="rounded-xl bg-white/[0.04] px-3 py-2">
+            <div key={l} className="enter rounded-xl bg-white/[0.04] px-3 py-2" style={{ "--i": l === "flight" ? 0 : l === "altitude" ? 1 : 2 }}>
               <div className="font-display text-[19px] leading-none font-semibold tabular-nums">
                 {v}
                 <span className="ml-0.5 text-[11px] font-medium text-white/40">{u}</span>
@@ -119,7 +119,7 @@ function Live() {
       )}
 
       {live ? (
-        <button onClick={() => engine.openCheckpoint(live.k)} className="mt-3 flex w-full gap-3 rounded-2xl bg-white/[0.04] p-3 text-left transition-colors hover:bg-white/[0.07]">
+        <button onClick={() => engine.openCheckpoint(live.k)} className="pressable enter enter-pop mt-3 flex w-full gap-3 rounded-2xl bg-white/[0.04] p-3 text-left hover:bg-white/[0.07]">
           <img src={live.crop} alt="" className="size-[72px] shrink-0 rounded-xl bg-white/10 object-cover" />
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-2">
@@ -165,7 +165,7 @@ function Resume() {
   const at = engine.assetAt(...r.pose_mm) ?? (r.stoppedAt?.asset || null);
   const where = r.stoppedAt?.asset ?? at ?? `waypoint ${r.wp_idx}`;
   return (
-    <div className="mt-3 rounded-2xl bg-wait/[0.08] p-3.5 shadow-[inset_0_0_0_1px_rgb(251_191_36/0.2)]">
+    <div className="enter enter-pop mt-3 rounded-2xl bg-wait/[0.08] p-3.5 shadow-[inset_0_0_0_1px_rgb(251_191_36/0.2)]">
       <p className="text-[13px] font-semibold text-wait">Survey interrupted</p>
       <p className="mt-1 text-[12px] leading-relaxed text-white/65">
         The drone safe-stopped at <span className="asset-id">{where}</span> ({r.stoppedAt?.reason ?? "no decision made"}) and flew home. The stop point is in its signed log.
@@ -196,15 +196,15 @@ function Prove() {
           [f.filter((x) => x.tone === "bad").length, "refused or stopped"],
           [new Set(f.map((x) => x.asset).filter(Boolean)).size, `${engine.unitName()}s checked`],
         ].map(([v2, l]) => (
-          <div key={l} className="rounded-xl bg-white/[0.04] px-2 py-2">
+          <div key={l} className="enter rounded-xl bg-white/[0.04] px-2 py-2" style={{ "--i": l.startsWith("decided") ? 0 : l.startsWith("refused") ? 1 : 2 }}>
             <div className="font-display text-[19px] leading-none font-semibold tabular-nums">{v2}</div>
             <div className="mt-1 text-[11px] leading-tight text-white/40">{l}</div>
           </div>
         ))}
       </div>
       {v ? (
-        <button onClick={engine.verify} className={`mt-3 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left ${v.ok ? "bg-ok/[0.1]" : "bg-bad/[0.12]"}`}>
-          <span className={`grid size-6 place-items-center rounded-full text-[12px] font-bold ${v.ok ? "bg-ok text-[#062014]" : "bg-bad text-white"}`}>{v.ok ? "✓" : "!"}</span>
+        <button key={`${v.id}-${v.ok}`} onClick={engine.verify} className={`pressable enter enter-pop mt-3 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left ${v.ok ? "bg-ok/[0.1]" : "bg-bad/[0.12]"}`}>
+          <span className={`pop grid size-6 place-items-center rounded-full text-[12px] font-bold ${v.ok ? "bg-ok text-[#062014]" : "bg-bad text-white"}`}>{v.ok ? "✓" : "!"}</span>
           <span className="min-w-0 text-[13px]">
             <span className={`font-semibold ${v.ok ? "text-ok" : "text-bad"}`}>{v.ok ? "Verified on 0G" : "Verification failed"}</span>
             <span className="block truncate text-[12px] text-white/55">{v.summary}</span>
@@ -242,7 +242,7 @@ export default function Flow() {
   const f = engine.findings();
   const p = engine.profile();
   return (
-    <aside className="panel pointer-events-auto flex max-h-full w-[348px] flex-col overflow-hidden rounded-3xl">
+    <aside className="panel enter enter-left pointer-events-auto flex max-h-full w-[348px] flex-col overflow-hidden rounded-3xl">
       <div className="px-5 pt-5 pb-1">
         <p className="text-[11px] font-semibold tracking-[0.08em] text-zg uppercase">{p?.assets?.unit ? `${p.title.replace(/ survey$/, "")}` : "Mission"}</p>
         <p className="mt-1 text-[13px] leading-snug text-white/50">{p?.summary}</p>

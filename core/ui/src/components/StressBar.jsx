@@ -9,7 +9,7 @@ export default function StressBar() {
   const has = !!engine.mission();
   if (S.comparing || (!flying && !has)) return null;
   return (
-    <div className="panel pointer-events-auto flex h-12 items-center gap-1.5 rounded-2xl py-1.5 pr-1.5 pl-4">
+    <div className="panel enter enter-up pointer-events-auto flex h-12 items-center gap-1.5 rounded-2xl py-1.5 pr-1.5 pl-4">
       <span className="mr-1.5 text-[12px] font-medium text-white/45">Try to break it</span>
       <Button variant="destructive" disabled={!flying} onClick={engine.forge} title="The operator signs a fake 'continue' with its own key. The robot refuses it.">
         {demo.forgeArmed ? "Forge armed…" : "Forge a decision"}

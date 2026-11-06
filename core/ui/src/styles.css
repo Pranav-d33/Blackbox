@@ -17,6 +17,8 @@
 
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @layer base {
@@ -66,8 +68,10 @@
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 8px 24px rgb(0 0 0 / 0.4);
   color: #fff; font-size: 12px; line-height: 1.3; white-space: nowrap;
-  transition: transform 150ms ease;
+  transition: transform 150ms ease, opacity 200ms ease;
+  animation: tag-in 300ms var(--ease-out-strong) backwards;
 }
+@keyframes tag-in { from { opacity: 0; } }
 .s3-tag::before { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
 .s3-tag b { font-weight: 600; }
 .s3-tag span { color: rgb(255 255 255 / 0.55); font-size: 11px; }
@@ -96,3 +100,51 @@
 
 @keyframes toast-in { from { opacity: 0; transform: translateY(-8px) scale(0.98); } }
 @keyframes rise-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* ---- motion system -------------------------------------------------------------------------
+   One entrance keyframe driven by custom properties, so every surface enters the same way:
+   --dx / --dy = where it comes from, --s = starting scale, --i = stagger index (45 ms apart,
+   callers cap it). Entrances use a strong ease-out; nothing starts from scale(0). */
+@keyframes enter {
+  from { opacity: 0; transform: translate(var(--dx, 0), var(--dy, 8px)) scale(var(--s, 1)); }
+}
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes ping-ring { 0% { transform: scale(1); opacity: 0.55; } 80%, 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+@layer components {
+  .enter { animation: enter 380ms var(--ease-out-strong) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+  .enter-left { --dx: -18px; --dy: 0px; animation-duration: 520ms; }
+  .enter-right { --dx: 18px; --dy: 0px; animation-duration: 520ms; }
+  .enter-down { --dy: -12px; }
+  .enter-up { --dy: 14px; }
+  .enter-pop { --dy: 4px; --s: 0.95; animation-duration: 300ms; }
+  .pop { animation: pop 380ms var(--ease-pop) backwards; }
+  .grow-x { transform-origin: left center; animation: grow-x 700ms var(--ease-out-strong) backwards; animation-delay: calc(var(--i, 0) * 60ms + 120ms); }
+
+  /* anything the user can press: instant press feedback, soft hover */
+  .pressable { transition: transform 160ms var(--ease-out-strong), background-color 150ms ease, box-shadow 200ms ease; }
+  .pressable:active { transform: scale(0.985); }
+
+  /* a live ring behind a status dot that is waiting on something */
+  .ping { position: relative; }
+  .ping::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: inherit; animation: ping-ring 1.8s var(--ease-out-strong) infinite; }
+
+  .skeleton { background: linear-gradient(90deg, rgb(255 255 255 / 0.05) 25%, rgb(255 255 255 / 0.12) 50%, rgb(255 255 255 / 0.05) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+}
+
+/* keyboard focus: visible and consistent, never on mouse click */
+:where(button, a, [role="button"], summary):focus-visible {
+  outline: 2px solid rgb(167 139 250 / 0.85);
+  outline-offset: 2px;
+}
+:where(button, a, [role="button"], summary):focus:not(:focus-visible) { outline: none; }
+
+/* the modal scrim fades; the sheet itself keeps its own spring-like curve */
+.sheet-scrim { transition: background-color 360ms ease, backdrop-filter 360ms ease, visibility 0s linear 360ms; }
+.sheet-scrim[data-open="true"] { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition-delay: 0s; }

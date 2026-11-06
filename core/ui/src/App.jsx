@@ -18,7 +18,7 @@ function Legend() {
   const p = engine.profile();
   if (!p) return null;
   return (
-    <div className="panel pointer-events-auto flex items-center gap-3 rounded-2xl px-3.5 py-2.5">
+    <div className="panel enter enter-up pointer-events-auto flex items-center gap-3 rounded-2xl px-3.5 py-2.5" style={{ "--i": 2 }}>
       {Object.values(p.ui.labels).map((l) => (
         <span key={l.name} className="flex items-center gap-1.5 text-[12px] whitespace-nowrap text-white/60">
           <span className="size-2 rounded-full" style={{ background: l.color }} />
@@ -56,7 +56,7 @@ export default function App() {
 
       {S.comparing ? (
         <div className="pointer-events-none absolute inset-x-0 top-[84px] z-20 flex justify-center">
-          <div className="panel pointer-events-auto flex items-center gap-4 rounded-2xl py-1.5 pr-1.5 pl-5 text-[13px]">
+          <div className="panel enter enter-down pointer-events-auto flex items-center gap-4 rounded-2xl py-1.5 pr-1.5 pl-5 text-[13px]">
             <span className="font-semibold">Same seed. Only 0G's answers differ.</span>
             <span className="flex items-center gap-1.5 text-white/65"><Dot tone="tint" />0G decided</span>
             <span className="flex items-center gap-1.5 text-white/65"><Dot tone="bad" />Forced to continue</span>

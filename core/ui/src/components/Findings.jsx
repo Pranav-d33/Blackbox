@@ -7,7 +7,7 @@ export default function Findings() {
   const m = engine.mission();
   if (!m || engine.S.view !== "mission") return null;
   return (
-    <aside className="panel pointer-events-auto flex max-h-full w-[340px] flex-col overflow-hidden rounded-3xl">
+    <aside className="panel enter enter-right pointer-events-auto flex max-h-full w-[340px] flex-col overflow-hidden rounded-3xl">
       <div className="flex items-baseline justify-between px-5 pt-5 pb-3">
         <h2 className="font-display text-[15px] font-semibold tracking-[-0.015em]">Findings</h2>
         <span className="text-[12px] text-white/40">{rows.length ? `${rows.length} checked` : "none yet"}</span>
@@ -16,9 +16,17 @@ export default function Findings() {
         {!rows.length ? (
           <p className="px-2 py-8 text-center text-[13px] leading-relaxed text-white/40">The drone holds and asks 0G each time its camera flags a mark. Findings appear here.</p>
         ) : (
-          rows.map((r) => (
-            <div key={r.k} role="button" tabIndex={0} onClick={() => engine.openCheckpoint(r.k)} className="mb-1.5 flex cursor-pointer gap-3 rounded-2xl p-2.5 transition-colors hover:bg-white/[0.05]">
-              <img src={r.crop} alt="" className="size-12 shrink-0 rounded-xl bg-white/10 object-cover" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
+          rows.map((r, i) => (
+            <div
+              key={r.k}
+              role="button"
+              tabIndex={0}
+              onClick={() => engine.openCheckpoint(r.k)}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), engine.openCheckpoint(r.k))}
+              style={{ "--i": Math.min(i, 5) }}
+              className="pressable enter group mb-1.5 flex cursor-pointer gap-3 rounded-2xl p-2.5 hover:bg-white/[0.05]"
+            >
+              <img src={r.crop} alt="" className="size-12 shrink-0 rounded-xl bg-white/10 object-cover transition-transform duration-300 ease-[var(--ease-out-strong)] group-hover:scale-[1.06]" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
               <div className="min-w-0 flex-1">
                 <AssetId name={r.name} className="block max-w-full" />
                 <div className="mt-0.5 flex items-center gap-1.5 text-[13px]">

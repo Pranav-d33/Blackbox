@@ -1,11 +1,12 @@
 // Primitives: one button family, one segmented control, status dots, list rows, asset ids.
+import { useLayoutEffect, useRef, useState } from "react";
 
 const TONE = { ok: "bg-ok", bad: "bg-bad", wait: "bg-wait", hold: "bg-hold", warn: "bg-hold", idle: "bg-white/35", tint: "bg-tint", zg: "bg-zg", asset: "bg-asset" };
 const TONE_TEXT = { ok: "text-ok", bad: "text-bad", wait: "text-wait", hold: "text-hold", warn: "text-hold", idle: "text-white/55", tint: "text-tint", zg: "text-zg", asset: "text-asset" };
 export const toneText = (t) => TONE_TEXT[t] ?? "text-white/55";
 
 export function Dot({ tone = "idle", pulse = false, className = "" }) {
-  return <span className={`inline-block size-2 shrink-0 rounded-full ${TONE[tone] ?? "bg-white/35"} ${pulse ? "pulse" : ""} ${className}`} />;
+  return <span className={`inline-block size-2 shrink-0 rounded-full ${TONE[tone] ?? "bg-white/35"} ${pulse ? "pulse ping" : ""} ${className}`} />;
 }
 
 const VARIANT = {
@@ -34,16 +35,45 @@ export function Button({ variant = "glass", size = "sm", className = "", childre
   );
 }
 
+/** Segmented control with a pill that slides between options (measured, so any label width works). */
 export function Segmented({ options, value, onChange, disabled = false, className = "" }) {
+  const root = useRef(null);
+  const [pill, setPill] = useState(null);
+  const [armed, setArmed] = useState(false);
+  const sig = options.map((o) => o.label).join("|");
+
+  useLayoutEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const measure = () => {
+      const on = el.querySelector('[aria-pressed="true"]');
+      setPill(on ? { x: on.offsetLeft, w: on.offsetWidth } : null);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    // no slide on first placement, only on later changes
+    const raf = requestAnimationFrame(() => setArmed(true));
+    return () => (ro.disconnect(), cancelAnimationFrame(raf));
+  }, [value, sig]);
+
   return (
-    <div className={`inline-flex items-center gap-0.5 rounded-xl bg-white/[0.05] p-0.5 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)] ${className}`}>
+    <div ref={root} role="group" className={`relative inline-flex items-center gap-0.5 rounded-xl bg-white/[0.05] p-0.5 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)] ${className}`}>
+      {pill ? (
+        <span
+          aria-hidden="true"
+          className={`absolute top-0.5 bottom-0.5 left-0 rounded-[10px] bg-white/[0.14] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] ${armed ? "transition-[transform,width] duration-[260ms] ease-[var(--ease-out-strong)]" : ""}`}
+          style={{ width: pill.w, transform: `translateX(${pill.x}px)` }}
+        />
+      ) : null}
       {options.map((o) => (
         <button
           key={o.value}
           disabled={disabled}
+          aria-pressed={o.value === value}
           onClick={() => onChange(o.value)}
-          className={`h-7 rounded-[10px] px-3 text-[12.5px] font-medium whitespace-nowrap transition-[background-color,color] duration-200 disabled:cursor-default ${
-            o.value === value ? "bg-white/[0.14] text-white" : "text-white/55 hover:text-white"
+          className={`relative z-10 h-7 rounded-[10px] px-3 text-[12.5px] font-medium whitespace-nowrap transition-[color,transform] duration-200 active:scale-[0.97] disabled:cursor-default ${
+            o.value === value ? "text-white" : "text-white/55 hover:text-white"
           }`}
         >
           {o.label}
@@ -72,7 +102,7 @@ export function SectionTitle({ children, aside }) {
 export function Row({ children, className = "", onClick }) {
   const Tag = onClick ? "button" : "div";
   return (
-    <Tag onClick={onClick} className={`relative flex w-full items-center gap-3 py-2.5 text-left after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/[0.06] last:after:hidden ${onClick ? "-mx-2 w-[calc(100%+1rem)] rounded-xl px-2 transition-colors hover:bg-white/[0.05]" : ""} ${className}`}>
+    <Tag onClick={onClick} className={`relative flex w-full items-center gap-3 py-2.5 text-left after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-white/[0.06] last:after:hidden ${onClick ? "-mx-2 w-[calc(100%+1rem)] rounded-xl px-2 pressable hover:bg-white/[0.05]" : ""} ${className}`}>
       {children}
     </Tag>
   );
