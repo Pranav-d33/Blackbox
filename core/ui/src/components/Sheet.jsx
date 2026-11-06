@@ -231,7 +231,7 @@ export default function Sheet() {
         role="dialog"
         aria-modal="true"
         aria-label={m?.title ?? "Details"}
-        className={`flex max-h-[calc(100vh-48px)] w-[min(820px,100%)] flex-col overflow-hidden rounded-[28px] bg-[rgb(16_17_21/0.94)] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08),0_40px_100px_rgb(0_0_0/0.6)] backdrop-blur-[30px] transition-[transform,opacity] duration-[420ms] ease-[var(--ease-sheet)] ${
+        className={`flex max-h-[calc(100vh-48px)] w-[min(820px,100%)] flex-col overflow-hidden rounded-[40px] bg-[rgb(16_17_21/0.94)] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08),0_40px_100px_rgb(0_0_0/0.6)] backdrop-blur-[30px] transition-[transform,opacity] duration-[420ms] ease-[var(--ease-sheet)] ${
           open ? "translate-y-0 scale-100 opacity-100" : "translate-y-5 scale-[0.97] opacity-0"
         }`}
       >

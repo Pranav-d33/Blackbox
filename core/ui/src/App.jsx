@@ -1,9 +1,10 @@
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { engine } from "./engine.js";
 import { Button, Dot } from "./components/ui.jsx";
 import TopBar from "./components/TopBar.jsx";
 import Flow from "./components/Flow.jsx";
 import Findings from "./components/Findings.jsx";
+import Site from "./components/Site.jsx";
 import StressBar from "./components/StressBar.jsx";
 import Sheet from "./components/Sheet.jsx";
 
@@ -36,14 +37,22 @@ function Legend() {
 export default function App() {
   useSyncExternalStore(engine.subscribe, engine.getVersion);
   const S = engine.S;
+  // keep the 3D view framed between whichever panes are showing (after every render, and when the window changes)
+  useLayoutEffect(() => engine.syncInsets());
+  useEffect(() => {
+    const f = () => engine.syncInsets();
+    addEventListener("resize", f);
+    return () => removeEventListener("resize", f);
+  }, []);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#07080b]">
       <Scene />
       <TopBar />
 
-      <div className="pointer-events-none absolute inset-x-0 top-[80px] bottom-[84px] z-10 flex justify-between gap-4 px-4">
+      <div data-panes className="pointer-events-none absolute inset-x-0 top-[80px] bottom-[84px] z-10 flex justify-between gap-4 px-4">
         <Flow />
+        <Site />
         <Findings />
       </div>
 

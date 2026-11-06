@@ -147,6 +147,15 @@ class Engine {
     this.renderMarkers();
     this.emit();
   }
+  /** Measure the side panes (layout, not transforms, so their entrance animation does not matter) and frame the 3D view between them. */
+  syncInsets() {
+    const root = document.querySelector("[data-panes]");
+    if (!root || !this.s3) return;
+    const l = root.querySelector('[data-pane="left"]');
+    const r = root.querySelector('[data-pane="right"]');
+    const gap = 16;
+    this.s3.setInsets(l ? l.offsetLeft + l.offsetWidth + gap : 0, r ? root.clientWidth - r.offsetLeft + gap : 0);
+  }
   clearMarks() {
     this.S.pending = [];
     this.renderMarkers();

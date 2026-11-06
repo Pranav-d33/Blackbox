@@ -263,7 +263,7 @@ export default function Flow() {
   const f = engine.findings();
   const p = engine.profile();
   return (
-    <aside className="panel enter enter-left pointer-events-auto flex max-h-full w-[348px] flex-col overflow-hidden rounded-3xl">
+    <aside data-pane="left" className="panel enter enter-left pointer-events-auto flex max-h-full w-[348px] flex-col overflow-hidden rounded-3xl">
       <div className="px-5 pt-5 pb-1">
         <p className="text-[11px] font-semibold tracking-[0.08em] text-zg uppercase">{p?.assets?.unit ? `${p.title.replace(/ survey$/, "")}` : "Mission"}</p>
         <p className="mt-1 text-[13px] leading-snug text-white/50">{p?.summary}</p>

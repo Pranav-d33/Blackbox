@@ -15,6 +15,12 @@
   --color-zg: #a78bfa;
   --color-asset: #5298ff;
 
+  /* One UI-style corners: generous radii everywhere, one scale for the whole console */
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.625rem;
+  --radius-3xl: 2.25rem;
+
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
@@ -63,7 +69,7 @@
 .s3-tag {
   position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer;
   display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
-  padding: 6px 10px 6px 12px; border: 0; border-radius: 10px;
+  padding: 7px 12px 7px 14px; border: 0; border-radius: 16px;
   background: rgb(12 13 17 / 0.82);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 8px 24px rgb(0 0 0 / 0.4);
@@ -81,7 +87,7 @@
 @keyframes pin-pulse { 50% { opacity: 0.55; } }
 
 .s3-hover {
-  position: absolute; left: 0; top: 0; pointer-events: none; padding: 7px 11px; border-radius: 10px;
+  position: absolute; left: 0; top: 0; pointer-events: none; padding: 8px 13px; border-radius: 14px;
   background: rgb(12 13 17 / 0.88); box-shadow: inset 0 0 0 1px rgb(82 152 255 / 0.35), 0 10px 30px rgb(0 0 0 / 0.45);
   font-size: 12px; line-height: 1.35; white-space: nowrap; transition: opacity 120ms ease;
 }
@@ -148,3 +154,9 @@
 /* the modal scrim fades; the sheet itself keeps its own spring-like curve */
 .sheet-scrim { transition: background-color 360ms ease, backdrop-filter 360ms ease, visibility 0s linear 360ms; }
 .sheet-scrim[data-open="true"] { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition-delay: 0s; }
+
+/* continuous (superellipse) corners where the browser supports them: the soft, Samsung-like curve instead of a plain arc.
+   Circles stay circles, so rounded-full is left alone. */
+@supports (corner-shape: squircle) {
+  [class*="rounded-"]:not(.rounded-full), .panel, .s3-tag, .s3-hover { corner-shape: squircle; }
+}

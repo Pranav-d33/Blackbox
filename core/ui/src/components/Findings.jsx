@@ -7,7 +7,7 @@ export default function Findings() {
   const m = engine.mission();
   if (!m || engine.S.view !== "mission") return null;
   return (
-    <aside className="panel enter enter-right pointer-events-auto flex max-h-full w-[340px] flex-col overflow-hidden rounded-3xl">
+    <aside data-pane="right" className="panel enter enter-right pointer-events-auto flex max-h-full w-[340px] flex-col overflow-hidden rounded-3xl">
       <div className="flex items-baseline justify-between px-5 pt-5 pb-3">
         <h2 className="font-display text-[15px] font-semibold tracking-[-0.015em]">Findings</h2>
         <span className="text-[12px] text-white/40">{rows.length ? `${rows.length} checked` : "none yet"}</span>

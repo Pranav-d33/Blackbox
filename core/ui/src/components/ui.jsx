@@ -62,7 +62,7 @@ export function Segmented({ options, value, onChange, disabled = false, classNam
       {pill ? (
         <span
           aria-hidden="true"
-          className={`absolute top-0.5 bottom-0.5 left-0 rounded-[10px] bg-white/[0.14] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] ${armed ? "transition-[transform,width] duration-[260ms] ease-[var(--ease-out-strong)]" : ""}`}
+          className={`absolute top-0.5 bottom-0.5 left-0 rounded-[14px] bg-white/[0.14] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] ${armed ? "transition-[transform,width] duration-[260ms] ease-[var(--ease-out-strong)]" : ""}`}
           style={{ width: pill.w, transform: `translateX(${pill.x}px)` }}
         />
       ) : null}
@@ -72,7 +72,7 @@ export function Segmented({ options, value, onChange, disabled = false, classNam
           disabled={disabled}
           aria-pressed={o.value === value}
           onClick={() => onChange(o.value)}
-          className={`relative z-10 h-7 rounded-[10px] px-3 text-[12.5px] font-medium whitespace-nowrap transition-[color,transform] duration-200 active:scale-[0.97] disabled:cursor-default ${
+          className={`relative z-10 h-7 rounded-[14px] px-3 text-[12.5px] font-medium whitespace-nowrap transition-[color,transform] duration-200 active:scale-[0.97] disabled:cursor-default ${
             o.value === value ? "text-white" : "text-white/55 hover:text-white"
           }`}
         >
