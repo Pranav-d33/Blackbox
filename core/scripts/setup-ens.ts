@@ -72,6 +72,19 @@ const e = cfg.ens;
 if (!e) throw new Error("ENS=none: set ENS=local or ENS=sepolia");
 if (!e.parent) throw new Error("ENS_PARENT is not set (e.g. blackbox-demo.eth)");
 const provider = new JsonRpcProvider(e.rpc, e.chainId, { staticNetwork: true });
+provider._getConnection().timeout = 30000; // public Sepolia RPCs can be slow
+/** Public RPCs time out now and then: retry a read a few times before giving up. */
+async function retry<T>(f: () => Promise<T>, what = "RPC read"): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await f();
+    } catch (x: any) {
+      if (i >= 5 || !/timeout|TIMEOUT|ECONNRESET|fetch failed|ETIMEDOUT|503|502|429|missing response|coalesce/i.test(String(x?.message ?? x))) throw x;
+      console.log(`  ${what} failed (${String(x.shortMessage ?? x.message).slice(0, 50)}), retrying…`);
+      await new Promise((r) => setTimeout(r, 3000 * i));
+    }
+  }
+}
 const ownerKey = process.env.ENS_OWNER_PRIVATE_KEY || e.key;
 if (!ownerKey) throw new Error("set ENS_OWNER_PRIVATE_KEY (the wallet that owns the name)");
 const owner = new Wallet(ownerKey, provider);
@@ -80,7 +93,7 @@ const reader = new EnsReader(e.rpc, e.chainId, e.universalResolver);
 const eth = async (a: string) => Number(await provider.getBalance(a)) / 1e18;
 const send = async (what: string, p: Promise<any>) => {
   const tx = await p;
-  const rc = await tx.wait();
+  const rc: any = await retry(() => tx.wait(), `${what} receipt`);
   if (rc?.status !== 1) throw new Error(`${what} reverted (${tx.hash})`);
   console.log(`  ${what.padEnd(34)} ${tx.hash}`);
   return rc;
@@ -112,7 +125,8 @@ if (e.network === "local") {
     // idempotent: the address is CREATE2(owner, salt), so a rerun finds the proxy it deployed before
     const head = await provider.getBlockNumber();
     for (let to = head; to > head - 200000; to -= 10000) {
-      const logs = await factory.queryFilter(factory.filters.ProxyDeployed(owner.address), Math.max(0, to - 9999), to).catch(() => []);
+      // a failed lookup must not look like "never deployed": redeploying at the same CREATE2 address reverts
+      const logs = await retry(() => factory.queryFilter(factory.filters.ProxyDeployed(owner.address), Math.max(0, to - 9999), to), "ProxyDeployed lookup");
       const hit = logs.map((l: any) => l.args).find((a: any) => a && BigInt(a.salt) === salt && getAddress(a.implementation) === getAddress(impl));
       if (hit) {
         console.log(`  ${what.padEnd(34)} ${hit.proxyAddress} (deployed before)`);
@@ -149,12 +163,13 @@ if (e.network === "local") {
     await send("commit", registrar.commit(c));
     const wait = Number(await registrar.MIN_COMMITMENT_AGE()) + 5;
     console.log(`  waiting ${wait} s (commit-reveal)…`);
-    const t0 = (await provider.getBlock("latest"))!.timestamp;
-    while ((await provider.getBlock("latest"))!.timestamp < t0 + wait) {
+    const now = async () => (await retry(() => provider.getBlock("latest"), "block read"))!.timestamp;
+    const t0 = await now();
+    while ((await now()) < t0 + wait) {
       await new Promise((r) => setTimeout(r, 5000));
       if (/127\.0\.0\.1|localhost/.test(e.rpc)) await provider.send("evm_mine", []).catch(() => {}); // an anvil fork mines only on demand
     }
-    await send(`register ${e.parent} (1 year, USDC)`, registrar.register(label, owner.address, secret, sub, resolver, YEAR, SEPOLIA.mockUSDC, ref));
+    await send(`register ${e.parent} (1 year, USDC)`, retry(() => registrar.register(label, owner.address, secret, sub, resolver, YEAR, SEPOLIA.mockUSDC, ref), "register"));
   } else {
     if (getAddress(await ethReg.getResolver(label)) !== getAddress(resolver)) await send("setResolver", ethReg.setResolver(labelhash, resolver));
     if (getAddress(await ethReg.getSubregistry(label)) !== getAddress(sub)) await send("setSubregistry", ethReg.setSubregistry(labelhash, sub));
