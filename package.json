@@ -13,6 +13,7 @@
     "probe": "npm --prefix core run probe --",
     "keys": "npm --prefix core run keys",
     "setup:robot": "npm --prefix core run setup:robot",
+    "setup:ens": "npm --prefix core run setup:ens",
     "test": "npm run test:contracts && npm run test:robot && npm run test:core",
     "test:contracts": "cd contracts && forge test",
     "test:robot": "cd robot && .venv/bin/python -m unittest discover -s tests",
