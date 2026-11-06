@@ -39,22 +39,22 @@ No 0G, no decision: if 0G is unreachable the drone safe-stops and logs "0G unrea
 | Human drone survey price | **$300 to $500 per MW** | averroes.ai (vendor blog, weak source) |
 | Flag rate in our MuJoCo runs | about **1.5%** of modules | `robot/data` logs (demo operator plants the marks) |
 
-**The cost idea.** Blackbox only calls 0G on crops the on-board detector flags, never on every panel. Assumptions: 1 MW ≈ 1,800 modules, detector flags 3% (1.06% real defects plus soiling and false positives), about 1,400 input and 40 output tokens per call. Prices from the 0G Router model pages (read 2026-11-07).
+**The cost idea.** Blackbox only calls 0G on crops the on-board detector flags, never on every panel. Assumptions: 1 MW ≈ 1,800 modules, detector flags **1.5%**, the rate measured over 8 MuJoCo solar-farm runs (16 crops over 136 modules each; 1.06% real defects plus soiling and false positives fits that), about 1,400 input and 40 output tokens per call. Prices from the 0G Router model pages (read 2026-11-07).
 
 | Scope | Calls | Sealed 0GM-1.0 ($0.08 / $0.48 per M) | Qwen2.5-VL-72B ($0.045 / $0.195 per M) | Human survey |
 |---|---|---|---|---|
-| 1 MW | ~54 | **~$0.007** | ~$0.004 | $300 to $500 |
-| 100 MW | ~5,400 | **~$0.71** | ~$0.38 | $30k to $50k |
-| The 232,934-module plant | ~6,990 | **~$0.92** | ~$0.49 | n/a |
+| 1 MW | ~27 | **~$0.0035** | ~$0.0019 | $300 to $500 |
+| 100 MW | ~2,700 | **~$0.35** | ~$0.19 | $30k to $50k |
+| The 232,934-module plant | ~3,490 | **~$0.46** | ~$0.25 | n/a |
 | Naive, every panel, 1 MW | 1,800 | ~$0.24 | ~$0.13 | n/a |
 
-Pitch line: **"About 1 panel in 100 is broken. We only ask 0G about the few the camera flags, so making every decision verifiable costs under a dollar for 100 MW, against a $30k survey."**
+Pitch line: **"About 1 panel in 100 is broken. We only ask 0G about the few the camera flags, so making every decision verifiable costs about 35 cents for 100 MW, against a $30k survey."**
 
 Say honestly: inference is not the business risk; flight time, hardware and missed defects are. We don't claim to replace the survey price, only that the verifiable layer is negligible next to it. Storage and chain fees are not in these figures.
 
 ### Beyond the camera: text and voice
 
-The same sealed call and interlock take a crew's typed note or spoken command ("go down and look at r3m14") and map it to one allowed action. The transcript hash and the signed answer go into the same log, so "who told it to descend?" has an answer. See [voice-workflow.md](voice-workflow.md) and `/workflows.html`. Status: proposal on top of the built human-hold path.
+The same sealed call and interlock take a crew's typed note or spoken command ("go down and look at r3m14") and map it to one allowed action. The transcript hash and the signed answer go into the same log, so "who told it to descend?" has an answer. See [voice-workflow.md](voice-workflow.md) and `/workflows.html`. Status: built (text, and voice via the browser's speech recognition); the verifier checks crew decisions like vision ones.
 
 ---
 
@@ -91,6 +91,6 @@ Prize: **Build on Arkiv (from scratch)**, $3,000 / $1,000. Judged 25% each:
 | Why Arkiv | the Postgres comparison above | [arkiv/why-arkiv.md](../arkiv/why-arkiv.md) |
 | How you use Arkiv | 4 entity types (`finding`, `asset`, `blob`, `mission`), two owning wallets, expiry, mirror fallback; measured against 0G Storage (batch write 7 s vs 76 s, read 0.36 s vs 2.8 s) | [arkiv/schema.md](../arkiv/schema.md), [arkiv/benchmark.md](../arkiv/benchmark.md) |
 
-Required items: testnet integration (Rabdi, chain 7794095), wallet addresses and a sample query (README, Arkiv section), `schema.md`, `friction.md`. **Still missing: an open-source LICENSE file.**
+Required items: testnet integration (Rabdi, chain 7794095), wallet addresses and a sample query (README, Arkiv section), `schema.md`, `friction.md`. License: MIT ([LICENSE](../LICENSE)).
 
 Possible add-on: **Arkiv + Swarm bonus ($500)**, storing the encrypted camera crops on Swarm and pointing to them from `blackbox.finding`. Not built.

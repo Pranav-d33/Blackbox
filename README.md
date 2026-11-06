@@ -75,7 +75,7 @@ The operator console is a full-screen 3D view of the mission: the scenario's wor
 
 **Why 0G.** Compute, storage and chain in one network, all three inside the control loop: the sealed model decides, 0G Storage holds the signed log, 0G Chain anchors it. No 0G, no decision.
 
-**What it costs.** About 1 panel in 100 is defective on a real survey (2,481 of 232,934 modules, [Remote Sensing 2023](https://www.mdpi.com/2072-4292/15/7/1914)). Blackbox asks 0G only about crops the on-board detector flags (assumed 3%, measured 1.5% in our sim), so sealed inference costs about **$0.007 per MW**, under $1 for 100 MW, against $300 to $500 per MW for a human drone survey. Workings and assumptions: [docs/pitch-numbers-and-workflows.md](docs/pitch-numbers-and-workflows.md).
+**What it costs.** About 1 panel in 100 is defective on a real survey (2,481 of 232,934 modules, [Remote Sensing 2023](https://www.mdpi.com/2072-4292/15/7/1914)). Blackbox asks 0G only about crops the on-board detector flags (1.5%, measured over 8 sim runs), so sealed inference costs about **$0.0035 per MW**, about $0.35 for 100 MW, against $300 to $500 per MW for a human drone survey. Workings and assumptions: [docs/pitch-numbers-and-workflows.md](docs/pitch-numbers-and-workflows.md).
 
 **Why Arkiv as well.** 0G makes the record provable, not askable: storage returns a file by root and nothing else. Arkiv makes each finding queryable by panel, maker and batch, owned by the wallet that wrote it, expiring after the working period. It is never trusted for the verdict. Full narrative: [docs/narrative-0g-arkiv.md](docs/narrative-0g-arkiv.md).
 
@@ -100,21 +100,24 @@ flowchart LR
     F --> G[Signed entry on 0G Storage, anchor on 0G Chain, finding on Arkiv]
 ```
 
-**2. Text (proposal).** The crew answers a hold with a typed note; a sealed text model (0GM-1.0) maps it to one allowed action.
+**2. Text (built).** The crew answers a hold in their own words; the same sealed model (0GM-1.0, text only) maps them to one label and action from the profile. The answer must echo `crewNonce = sha256(checkpoint nonce : sha256(words))`, so neither the earlier vision answer nor an answer to different words can be replayed. The robot runs the normal `verify_bundle` on it.
 
 ```mermaid
 flowchart LR
     A[Drone holds at r3m14] --> B["Crew types: 'looks cracked, send to repair'"]
     B --> C[Hash the note]
-    C --> D[Sealed text model: note + allowed actions + this checkpoint]
-    D --> E{Interlock}
-    E -- "'fly to the highway'" --> R[Refused, logged, keep holding, timeout = safe-stop]
-    E -- descend --> F[POST /api/robot/human: human entry with note hash + signed answer]
+    C --> D[Sealed 0G model: words + allowed labels/actions + crew nonce]
+    D --> E{Robot interlock: signer, binding, crew nonce, vocabulary}
+    E -- "'fly to the highway' -> refuse" --> R[Rejected entry, keep holding, timeout = safe-stop]
+    E -- "cracked_cell -> descend" --> F[human entry: words, hash, signed answer, action]
+    F --> V[Verifier re-checks it like a vision decision]
 ```
 
-**3. Voice (proposal).** Same as text with speech at each end: speech-to-text (`whisper-large-v3` on 0G, or on-device) in, text-to-speech of the signed finding out. Only the transcript hash is logged. Mishearing is bounded by the interlock: the worst outcome is the other allowed action. Detail: [docs/voice-workflow.md](docs/voice-workflow.md).
+**3. Voice (built).** The mic button in the console uses the browser's speech recognition, fills the same box and sends it as `via: "voice"`. Everything after that is the text flow. Mishearing is bounded by the interlock: the worst outcome is the other allowed action, and silence means safe-stop. Next: `whisper-large-v3` on 0G for transcription. Detail: [docs/voice-workflow.md](docs/voice-workflow.md).
 
-Built today: the hold path (`robot/blackbox_robot/adapter.py` await-human, `POST /api/robot/human`). Not built: the text-model step, the note/transcript hash field, speech in and out.
+**Try it.** In the console press **Ask the crew** (bottom bar); at the next checkpoint the drone holds and Findings shows a reply box and a mic. Or set `HOLD_ON_UNSURE=1` to hold whenever 0G's vision answer is `unsure`. Real uses: the crew on the ground sees what a crop can't (hail damage, a nest, a hot junction box) and the call becomes part of the evidence; "who told it to descend?" has an answer in the log.
+
+Code: `POST /api/robot/instruct` → `Missions.onInstruct` → `ZgDecider.instruct` (`core/src/zg/decide.ts`) → `Adapter.instruct` (`robot/blackbox_robot/adapter.py`); verifier check in `core/src/verifier/core.ts`; tests `robot/tests/test_robot.py` (crew path), `core/test/crew.test.ts`. Not built: reading the finding back by text-to-speech.
 
 ---
 
