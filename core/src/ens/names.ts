@@ -64,8 +64,8 @@ export function ensAppUrl(network: string, name: string): string | null {
 }
 
 /** Network facts (docs.ens.domains/learn/deployments, checked Nov 2026). */
-export const ENS_NETWORKS: Record<string, { chainId: number; rpc: string; universalResolver: string }> = {
-  sepolia: { chainId: 11155111, rpc: "https://ethereum-sepolia-rpc.publicnode.com", universalResolver: "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe" },
-  mainnet: { chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", universalResolver: "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe" },
-  local: { chainId: 31337, rpc: "http://127.0.0.1:8545", universalResolver: "" },
+export const ENS_NETWORKS: Record<string, { chainId: number; rpc: string; universalResolver: string; ethRegistry: string }> = {
+  sepolia: { chainId: 11155111, rpc: "https://ethereum-sepolia-rpc.publicnode.com", universalResolver: "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe", ethRegistry: "0xd4ebcbbdf463c9c45784603db0ddd499bc44a8b4" },
+  mainnet: { chainId: 1, rpc: "https://ethereum-rpc.publicnode.com", universalResolver: "0xeEeEEEeE14D718C2B47D9923Deab1335E144EeEe", ethRegistry: "" },
+  local: { chainId: 31337, rpc: "http://127.0.0.1:8545", universalResolver: "", ethRegistry: "" },
 };

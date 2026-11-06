@@ -3,7 +3,7 @@
  * Trusts nothing the operator says: recomputes every hash, signature, nonce and
  * TEE binding from the raw log, and compares the chain anchors on 0G Galileo.
  */
-import { AbiCoder, Contract, JsonRpcProvider, getBytes, hashMessage, keccak256, recoverAddress } from "ethers";
+import { AbiCoder, Contract, JsonRpcProvider, getBytes, hashMessage, id, keccak256, recoverAddress } from "ethers";
 import { BLACKBOX_REGISTRY_ABI, ROBOT_REGISTRY_ABI, type ChainAnchor, type ChainMission, toChainAnchors, toChainMission } from "../chain/abi";
 import { type Entry, ZERO_HASH, canonicalJson, entryHash, keccakHex } from "../lib/canonical";
 import { type Policy, checkpointNonce, extractContent, parseAnswer, verifyBundle, vocabulary } from "../lib/interlock";
@@ -63,6 +63,8 @@ export interface EnsView {
   section: EnsSection;
   agents: Record<string, EnsRecord>;
   assets: Record<string, EnsRecord>;
+  /** ENSv2 Permissioned Registry facts: the parent's subregistry and who holds the drone's name token. */
+  registry?: { subregistry: string; droneOwner: string | null } | null;
   error?: string;
 }
 
@@ -448,13 +450,15 @@ function ensChecks(inp: VerifyInputs, manifest: any, robot: string | null, E: En
   const tee = v.agents.tee;
   const signers: string[] = manifest.policy?.tee_signers ?? [];
   if (manifest.policy?.attestation !== "none" && !signers.some((s) => eq(s, tee?.addr))) probs.push(`${sec.names.tee} resolves to ${tee?.addr ?? "nothing"}, not an allowlisted TEE signer`);
+  const reg = v.registry;
+  if (reg && !eq(reg.droneOwner, robot)) probs.push(`the ${sec.names.robot} name token in the ENSv2 registry is held by ${reg.droneOwner ?? "nobody"}, not the robot key`);
   add({
     id: "ens-agents",
     title: T1,
     status: probs.length ? "warn" : "pass",
     detail: probs.length
       ? `${probs.join("; ")}. The log and chain checks above do not depend on ENS.`
-      : `${sec.names.robot} = robot ${short(robot)}, ${sec.names.tee} = TEE signer ${short(tee?.addr)} (${sec.network}, Universal Resolver ${short(sec.universal_resolver)})`,
+      : `${sec.names.robot} = robot ${short(robot)}${reg ? ` and its ENSv2 name token is held by the robot key (UserRegistry ${short(reg.subregistry)})` : ""}, ${sec.names.tee} = TEE signer ${short(tee?.addr)} (${sec.network}, Universal Resolver ${short(sec.universal_resolver)})`,
   });
 
   const byAsset = new Map<string, Entry>();
@@ -507,7 +511,18 @@ export async function loadEns(manifest: any, entries: Entry[], rpcOverride?: str
     const labels = [...new Set(entries.map((e) => e.body?.asset).filter((a): a is string => typeof a === "string"))];
     const assets: Record<string, EnsRecord> = {};
     if (sec.zone) await pool(labels, 4, async (l) => (assets[l] = await r.record(assetName(l, sec.zone!, sec.parent), ASSET_KEYS)));
-    return { section: sec, agents, assets };
+    let registry: EnsView["registry"] = null;
+    const ethReg = ENS_NETWORKS[sec.network]?.ethRegistry;
+    const [label, tld, ...rest] = sec.parent.split(".");
+    if (ethReg && tld === "eth" && !rest.length) {
+      const prov = new JsonRpcProvider(rpc, sec.chain_id, { staticNetwork: true });
+      const sub: string = await new Contract(ethReg, ["function getSubregistry(string) view returns (address)"], prov).getSubregistry(label);
+      if (sub !== "0x0000000000000000000000000000000000000000") {
+        const o: string = await new Contract(sub, ["function getOwner(uint256) view returns (address)"], prov).getOwner(BigInt(id(sec.names.robot.split(".")[0])));
+        registry = { subregistry: sub, droneOwner: o === "0x0000000000000000000000000000000000000000" ? null : o };
+      }
+    }
+    return { section: sec, agents, assets, registry };
   } catch (e) {
     return { section: sec, agents: {}, assets: {}, error: (e as Error).message.slice(0, 160) };
   }

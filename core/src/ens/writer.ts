@@ -87,6 +87,9 @@ export class EnsWriter {
         }
         for (const [k, v] of Object.entries(w.texts)) if (have.texts[k] !== v) calls.push(RESOLVER.encodeFunctionData("setText", [dns, k, v]));
       }
+      // On a real ENS the agent records belong to the name owner (setup:ens); the core's key holds text roles only.
+      if (calls.length && this.cfg.network !== "local")
+        throw new Error(`${calls.length} agent record(s) on ENS differ from this mission's keys (e.g. a new TEE signer): rerun npm run setup:ens as the owner of ${this.cfg.parent}`);
       return { tx: await this.send(calls), writes: calls.length, names };
     });
   }
