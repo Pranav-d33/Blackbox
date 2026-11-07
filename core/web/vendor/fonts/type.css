@@ -1,0 +1,4 @@
+/* Landing + workflows type: Archivo (display, variable weight + width), Inter Tight (text), JetBrains Mono (labels). SIL OFL. */
+@font-face { font-family: "Archivo"; font-style: normal; font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; src: url(./Archivo-var.woff2) format("woff2"); }
+@font-face { font-family: "Inter Tight"; font-style: normal; font-weight: 100 900; font-display: swap; src: url(./InterTight-var.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 100 800; font-display: swap; src: url(./JetBrainsMono-var.woff2) format("woff2"); }

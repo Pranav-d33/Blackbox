@@ -1,6 +1,6 @@
 // Landing + workflows motion. Progressive enhancement: with no JS or with reduced motion everything is simply visible.
 //  - Lenis smooth scroll, anchor links glide
-//  - h1/h2: each word rises out of a clipped line; <em> accent words get a hand-drawn underline
+//  - h1/h2: each word rises out of a clipped line; <em> accent words get a solid bar wiped in
 //  - blocks blur up as they enter, siblings staggered
 //  - one rAF scroll loop: nav state, reading progress, parallax, hero copy drift, the steps' progress bar
 //  - figures count up, cards get a pointer spotlight
@@ -29,7 +29,6 @@ document.addEventListener("click", (e) => {
 });
 
 // ---- split headings into masked words
-const UNDERLINE = "M3 13 C 50 5, 112 3, 162 9 S 252 17, 297 6";
 function splitWords(el) {
   let n = 0;
   const wrapText = (node) => {
@@ -54,7 +53,7 @@ function splitWords(el) {
     });
   walk(el);
   el.querySelectorAll("em").forEach((em) => {
-    em.insertAdjacentHTML("beforeend", `<svg class="ul" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="${UNDERLINE}"/></svg>`);
+    em.insertAdjacentHTML("beforeend", `<span class="ul" aria-hidden="true"></span>`);
     em.style.setProperty("--ud", `${n * 38 + 420}ms`);
   });
   el.setAttribute("aria-label", el.textContent.trim());
