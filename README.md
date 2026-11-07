@@ -16,24 +16,21 @@ Track: **Physical AI: Agents with a Body** (0G). Lane: robots and machines (MuJo
 
 ## Contents
 
-1. [What the judges see (demo beats)](#what-the-judges-see)
+1. [What the judges see](#what-the-judges-see)
 2. [Qualification map](#qualification-map)
 3. [Why web3, why 0G, why Arkiv](#why-web3-why-0g-why-arkiv)
 4. [Workflows: vision, text, voice](#workflows-vision-text-voice)
 5. [Architecture](#architecture)
 6. [SDK: mission profiles and the Robot interface](#sdk-mission-profiles-and-the-robot-interface)
-7. [Project structure](#project-structure)
-8. [0G technology used](#0g-technology-used) · [Arkiv](#arkiv-queryable-findings-asset-register-backup)
+7. [0G technology used](#0g-technology-used)
+8. [Arkiv: queryable findings, asset register, backup](#arkiv-queryable-findings-asset-register-backup)
 9. [Quick start: offline, no keys](#quick-start-offline-no-keys)
-10. [Run on 0G testnet (Galileo)](#run-on-0g-testnet-galileo)
-11. [Manual values checklist](#manual-values-checklist)
-12. [Going to mainnet](#going-to-mainnet)
-13. [Not yet verified against live 0G](#not-yet-verified-against-live-0g)
-14. [Testing](#testing)
-15. [Claims we make (and don't)](#claims-we-make-and-dont)
-16. [Submission checklist](#submission-checklist)
-17. [Deployment addresses](#deployment-addresses)
-18. [Credits](#credits)
+10. [Testing](#testing)
+11. [Claims we make (and don't)](#claims-we-make-and-dont)
+12. [Deployment addresses](#deployment-addresses)
+13. [Credits](#credits)
+
+Also: [project structure](docs/project-structure.md) · [running on 0G testnet and mainnet](docs/running-on-0g.md)
 
 ---
 
@@ -100,24 +97,10 @@ flowchart LR
     F --> G[Signed entry on 0G Storage, anchor on 0G Chain, finding on Arkiv]
 ```
 
-**2. Text (built).** The crew answers a hold in their own words; the same sealed model (0GM-1.0, text only) maps them to one label and action from the profile. The answer must echo `crewNonce = sha256(checkpoint nonce : sha256(words))`, so neither the earlier vision answer nor an answer to different words can be replayed. The robot runs the normal `verify_bundle` on it.
-
-```mermaid
-flowchart LR
-    A[Drone holds at r3m14] --> B["Crew types: 'looks cracked, send to repair'"]
-    B --> C[Hash the note]
-    C --> D[Sealed 0G model: words + allowed labels/actions + crew nonce]
-    D --> E{Robot interlock: signer, binding, crew nonce, vocabulary}
-    E -- "'fly to the highway' -> refuse" --> R[Rejected entry, keep holding, timeout = safe-stop]
-    E -- "cracked_cell -> descend" --> F[human entry: words, hash, signed answer, action]
-    F --> V[Verifier re-checks it like a vision decision]
-```
-
-**3. Voice (built).** The mic button in the console uses the browser's speech recognition, fills the same box and sends it as `via: "voice"`. Everything after that is the text flow. Mishearing is bounded by the interlock: the worst outcome is the other allowed action, and silence means safe-stop. Next: `whisper-large-v3` on 0G for transcription. Detail: [docs/voice-workflow.md](docs/voice-workflow.md).
+**2. Text and 3. Voice (built).** When 0G is unsure, the drone holds and the crew answers in words, typed or spoken through the console mic. The same sealed model maps the words to one allowed label and action, the answer must echo a nonce bound to those words, and the robot runs the normal interlock on it. Detail: [docs/voice-workflow.md](docs/voice-workflow.md).
 
 **Try it.** In the console press **Ask the crew** (bottom bar); at the next checkpoint the drone holds and Findings shows a reply box and a mic. Or set `HOLD_ON_UNSURE=1` to hold whenever 0G's vision answer is `unsure`. Real uses: the crew on the ground sees what a crop can't (hail damage, a nest, a hot junction box) and the call becomes part of the evidence; "who told it to descend?" has an answer in the log.
 
-Code: `POST /api/robot/instruct` → `Missions.onInstruct` → `ZgDecider.instruct` (`core/src/zg/decide.ts`) → `Adapter.instruct` (`robot/blackbox_robot/adapter.py`); verifier check in `core/src/verifier/core.ts`; tests `robot/tests/test_robot.py` (crew path), `core/test/crew.test.ts`. Not built: reading the finding back by text-to-speech.
 
 ---
 
@@ -227,64 +210,6 @@ class MyRobot(Robot):
 
 ---
 
-## Project structure
-
-```
-.
-├── README.md                    you are here
-├── .env.example                 every setting; values you must fill are marked  <-- SET ME
-├── package.json                 root scripts: setup, dev:local, test, robot, core, verify, probe, replay
-├── scripts/dev-local.sh         one command: anvil + contracts + mock 0G + core + robot (offline)
-├── scenarios/                   mission profiles: solar-farm.json, bridge-deck.json (incl. the asset register)
-├── docs/                        why-0g.md (the narrative), demo-script.md (video and booth)
-│
-├── contracts/                   Foundry, solc 0.8.27, evm cancun
-│   ├── src/BlackboxRegistry.sol      register / anchor / close missions; robot-signed (EIP-191), relayable; zerobot isOperator()
-│   ├── src/SimpleRobotRegistry.sol   zerobot-compatible stand-in for anvil / mainnet (zerobot is Galileo-only today)
-│   ├── src/interfaces/IRobotRegistry.sol  zerobot RobotRegistry subset (struct copied verbatim)
-│   ├── script/Deploy.s.sol           deploys, writes deployments/<chainId>.json
-│   └── test/BlackboxRegistry.t.sol   10 tests: happy path, forged signer, replayed digest, stale count, revoked operator…
-│
-├── robot/                       Python 3.9+ (3.11 recommended); the only process with the robot key
-│   ├── blackbox_robot/
-│   │   ├── sdk.py               Robot interface, world registry, profile vocabulary checks, 3D texture
-│   │   ├── world.py             seeded concrete deck, 5 crack + 2 decoy variants, camera crops, anomaly map
-│   │   ├── solar_world.py       solar farm: PV module rows, 3 cracked-cell + 2 soiling variants
-│   │   ├── mujoco_drone.py      Skydio X2 quadrotor: SE(3) attitude control, rotor mixing
-│   │   ├── models/skydio_x2/    MJCF model and mesh from MuJoCo Menagerie (Apache-2.0)
-│   │   ├── physics.py           backends: mujoco (default), pybullet, dependency-free "native"
-│   │   ├── mission.py           deterministic lawnmower survey, checkpoints, outcomes, trajectory hash
-│   │   ├── interlock.py         verify before actuate (parse, nonce, TEE signer, signature binding)
-│   │   ├── episode_log.py       canonical JSON + keccak256 chain + robot EIP-191 signatures
-│   │   ├── adapter.py           HTTP service: lease watchdog, safe stop, outbox, anchor signing
-│   │   ├── replay.py            replay CLI + counterfactual ("force continue")
-│   │   ├── rover.py             real-hardware twin (Pi, gpiozero, picamera2), UNTESTED on hardware
-│   │   └── probe_images.py      writes the Gate A probe crops
-│   ├── assets/probe/            crack-*.png, decoy-*.png used by `npm run probe`
-│   └── tests/                   unittest: interlock, adapter flow, lease safe stop, replay; cross-language vectors
-│
-└── core/                        TypeScript (Node 20+), run with tsx
-    ├── src/server.ts            HTTP: console, robot-facing API, demo controls, verifier API
-    ├── src/mission.ts           manifest (with the profile), registerMission, checkpoint relay, writer queue, anchors, close, demo hooks
-    ├── src/profile.ts           mission profile loader and validation
-    ├── src/zg/router.ts         0G Router client (trust mode, failover, kill switch)
-    ├── src/zg/services.ts       InferenceServing.getService() reader + /v1/proxy/signature fetch
-    ├── src/zg/decide.ts         prompt contract, vision call, bundle, R16 decision model
-    ├── src/storage/index.ts     0G Storage (MemData + Indexer) and local dev store
-    ├── src/arkiv/               Arkiv: entity schemas, batched writer, browser-safe reads (history, analytics, mirror)
-    ├── src/chain/               BlackboxRegistry + RobotRegistry ABIs and client
-    ├── src/lib/                 canonical/Go JSON, interlock mirror, serial queue
-    ├── src/verifier/            isomorphic verifier (core.ts), CLI, browser bundle entry
-    ├── src/mock0g/              DEV-ONLY Router + broker emulator (never a fallback)
-    ├── scripts/                 probe-0g.ts (Gate A), setup-robot.ts (zerobot), arkiv-register.ts, arkiv-bench.ts, keys.ts
-    ├── test/crosslang.test.ts   Python and TypeScript must agree byte-for-byte
-    ├── ui/                      operator console source (React + Tailwind, Vite): `npm run build:console` builds it into web/
-    └── web/                     launch page, built console (console.html), 3D scene (scene3d.js), public verifier (verify.html)
-                                 vendor/: three.js, qrcode, the X2 mesh (served locally, works offline)
-```
-
----
-
 ## 0G technology used
 
 | 0G part | What we use | How | Network | Code |
@@ -351,161 +276,7 @@ Open **http://127.0.0.1:8787** (launch page) and **/console.html** (operator con
 
 Physics defaults to MuJoCo (prebuilt wheels for Linux, macOS and Windows; CPU only, no GPU needed). PyBullet is optional and compiles from source on macOS arm64 (about 5 minutes); if it fails, remove it from `robot/requirements.txt`. The 3D console falls back to software rendering on machines without a GPU.
 
----
-
-## Run on 0G testnet (Galileo)
-
-Each step marked **MANUAL** needs you.
-
-**1. Wallets (MANUAL).**
-
-```bash
-cp .env.example .env
-```
-
-```bash
-npm run keys
-```
-
-Put `OPERATOR_PRIVATE_KEY` and `ROBOT_PRIVATE_KEY` in `.env`, then fund the **operator** address at https://faucet.0g.ai (0.1 0G/day; Storage fees and gas). The robot key needs no funds: its anchors are relayed.
-
-**2. 0G Router key (MANUAL).** Create an `sk-…` key at https://pc.0g.ai, make a small **mainnet** deposit, and set `ZG_API_KEY`. The Router and its TEE providers are on mainnet even while Storage and Chain are on Galileo.
-
-**3. Deploy `BlackboxRegistry` to Galileo (MANUAL).**
-
-```bash
-cd contracts && DEPLOYER_PRIVATE_KEY=<key> ROBOT_REGISTRY=0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb forge script script/Deploy.s.sol --rpc-url galileo --broadcast
-```
-
-Copy `blackboxRegistry` from `contracts/deployments/16602.json` into `.env` as `BLACKBOX_REGISTRY`. If the tx is rejected over fees, add `--legacy --with-gas-price 3000000000`.
-
-Then verify it on chainscan (etherscan-compatible API; confirm the flags against the 0G docs):
-
-```bash
-forge verify-contract <BLACKBOX_REGISTRY> src/BlackboxRegistry.sol:BlackboxRegistry --chain-id 16602 --verifier etherscan --verifier-url https://chainscan-galileo.0g.ai/open/api --etherscan-api-key <key> --constructor-args $(cast abi-encode "constructor(address)" 0x291162e93D7A80Eb8F738882a28a7a8A5FBA73bb)
-```
-
-**4. Register the robot on zerobot.**
-
-```bash
-npm run setup:robot
-```
-
-This calls `registerRobot` and `addOperator(robot key)`. Copy the printed `ROBOT_ID=` into `.env`.
-
-**5. Gate A probe against live 0G (MANUAL check).**
-
-```bash
-npm run probe -- --echo 20 --storage
-```
-
-Then run it for the solar farm profile too, which sends that profile's prompt with the crops in `robot/assets/probe-solar` (regenerate them with `cd robot && .venv/bin/python -m blackbox_robot.probe_images assets/probe-solar solar-farm`):
-
-```bash
-npm run probe -- --scenario solar-farm
-```
-
-It prints, for each probe crop: label accuracy, nonce echo, TEE signer, **which signature binding matched**, latency and a 1 KB storage round trip. Then:
-
-- set `LEASE_MS` to the printed value (3× the median latency, capped at 12 s);
-- set `TEE_BINDING` to the binding that matched (`go` or `raw`). If **none** matched, read [Not yet verified](#not-yet-verified-against-live-0g) before the demo;
-- if fewer than 4 of 5 cracks are flagged, or a decoy is not rejected, add real crack photos (`BLACKBOX_TEXTURE_DIR`), and keep `qwen3-vl-plus` as the fallback.
-
-**6. Run.** Use three terminals.
-
-```bash
-npm run core
-```
-
-```bash
-npm run robot
-```
-
-Open http://127.0.0.1:8787/console.html, pick a scenario, place a defect and a benign mark, and press **Start mission**. Ledger rows link to storagescan and chainscan.
-
-**7. Public verifier on Vercel (MANUAL).**
-
-```bash
-npm --prefix core run build:web && cd core/web && npx vercel deploy --prod
-```
-
-`vercel.json` serves `verify.html` at `/`. Set `PUBLIC_VERIFIER_URL=https://<your-app>.vercel.app/verify.html` so the console's QR code works on a phone. The page needs no backend: it reads Galileo RPC plus the indexer gateway directly.
-
-**8. Command-line verify and replay.**
-
-```bash
-npm run verify -- --mission 0x<missionId>
-```
-
-```bash
-npm run replay -- --core http://127.0.0.1:8787 --mission 0x<missionId>
-```
-
----
-
-## Manual values checklist
-
-| Value | Where | How to get it | Needed for |
-|---|---|---|---|
-| `OPERATOR_PRIVATE_KEY` | `.env` | `npm run keys`, then fund at faucet.0g.ai | Storage fees, registry txs, zerobot robot owner |
-| `ROBOT_PRIVATE_KEY` | `.env` (robot machine only) | `npm run keys` | robot signatures (no funds) |
-| `DEPLOYER_PRIVATE_KEY` | shell / `.env` | can equal the operator key | `forge script` |
-| `ZG_API_KEY` | `.env` | pc.0g.ai → API keys (`sk-…`) + mainnet deposit | every 0G Compute call |
-| `BLACKBOX_REGISTRY` | `.env` + [addresses table](#deployment-addresses) | step 3 | chain anchoring, verifier |
-| `ROBOT_ID` | `.env` | step 4 | registerMission |
-| `LEASE_MS`, `TEE_BINDING` | `.env` | step 5 (`npm run probe`) | safe-stop lease, interlock |
-| `ZG_ROUTER_ENDPOINTS` 2nd entry | `.env` | **testnet Router URL: not documented; ask at the 0G booth** | R17 failover |
-| `PUBLIC_VERIFIER_URL` | `.env` | step 7 | QR code |
-| `ARKIV=rabdi`, tGLM on the inspector wallet | `.env` | https://hub.arkiv.network/faucet, then `npm run arkiv:register` | queryable findings, analytics, the 0G Storage mirror |
-| `CHAINSCAN_API_KEY` | shell | chainscan account | contract verification |
-| Real crack textures | `BLACKBOX_TEXTURE_DIR/crack/*.png`, `/decoy/*.png` | e.g. a CC-BY concrete-crack dataset (credit it below) | Gate A accuracy on 0GM |
-| Rover pins | `ROVER_*` env (see `robot/blackbox_robot/rover.py`) | your wiring | hardware lane |
-
----
-
-## Going to mainnet
-
-Everything is config. Nothing in the code is testnet-specific.
-
-1. `CHAIN=mainnet` (chain 16661). Storage switches to `https://indexer-storage-turbo.0g.ai` (set `STORAGE_NETWORK=mainnet`).
-2. **Robot identity:** zerobot is not deployed on mainnet yet. Either deploy zerobot's own contracts (Hardhat scripts in their repo, Apache-2.0), or let `Deploy.s.sol` deploy our ABI-compatible `SimpleRobotRegistry` by leaving `ROBOT_REGISTRY` unset:
-
-   ```bash
-   cd contracts && DEPLOYER_PRIVATE_KEY=<key> forge script script/Deploy.s.sol --rpc-url mainnet --broadcast
-   ```
-
-3. Set `RPC_URL` to a third-party RPC; the 0G docs call `evmrpc` development-only.
-4. Use a dedicated operator wallet with real 0G for Storage fees and gas. Keep `ROBOT_PRIVATE_KEY` only on the robot, ideally in a secure element or HSM.
-5. Redeploy the verifier with `?network=mainnet&registry=<mainnet registry>`.
-6. Compute is unchanged: the Router and the TEE signer lookup are already mainnet.
-
----
-
-## Unsealed fallback (only when no TEE vision provider is healthy)
-
-`0gm-1.0-35b-a3b` is the only TEE vision model on the Router, and it has one provider. When `GET /v1/providers` reports that provider `is_healthy: false`, a Private key cannot reach any image-capable model. Setting `ZG_ATTESTATION=none` (with a Standard-trust key, `ZG_TRUST_MODE=standard` and another vision model such as `qwen3-vl-plus`) lets the demo still run on 0G's Router, Storage and Chain.
-
-It is explicit everywhere, never a silent downgrade:
-
-- The manifest records `policy.attestation = "none"`, so it is anchored with the mission.
-- The robot still parses and nonce-checks every answer, but prints a warning at takeoff and skips the TEE signature, signer and binding checks.
-- The console badge reads *unsealed, not TEE-attested*, and the verifier shows `WARN` (not `PASS`) on the signer, binding and registry checks, with the reason.
-- The default is `ZG_ATTESTATION=tee`. The sealed claims in this README hold only for `tee` runs.
-
-## Not yet verified against live 0G
-
-These were researched from the 0G docs and SDK source but **not exercised with a real `sk-` key** while building. The probe (step 5) checks all of them.
-
-| Assumption | Why it matters | Fallback |
-|---|---|---|
-| **Signature binding through the Router.** The broker signs `sha256(upstream request):sha256(response bytes)`. The Router adds `x_0g_trace`; we assume it re-marshals Go-style, so removing `x_0g_*` and re-marshalling rebuilds the signed bytes (`go`). `raw` covers pass-through | If neither matches, the robot (correctly) refuses every answer and safe-stops | Call the provider directly (Direct mode via `@0gfoundation/0g-compute-ts-sdk` `getRequestHeaders`), where the response bytes are the signed bytes |
-| `0gm-1.0-35b-a3b` accepts an OpenAI `image_url` data URI | The vision call | Try the `anthropic` message format (both are listed as supported) |
-| The Router passes `ZG-Res-Key`; otherwise the body id is `chatcmpl-<chatKey>` | Signature lookup | We try header, then stripped body id, then the raw body id |
-| Signatures are kept about 20 minutes, in memory, on the broker | The verifier needs them later | We fetch right after each answer and store `{text, signature}` in the entry |
-| `/v1/decisions` response schema is undocumented | R16 hold | The parser searches for a probability. If none is found it never holds and records the raw response |
-| Testnet Router URL for R17 failover | Second endpoint | Ask at the booth. Failover code is ready (`ZG_ROUTER_ENDPOINTS`) |
-| Indexer `GET /file?root=` returns raw bytes for existing files (it returned `{"code":101}` for unknown roots) | Browser verifier | Point the verifier's *Storage source* at a public core (`/api/storage/:root`, SDK download) |
-| storagescan URL format `/tx/<hash>` | Links only | Cosmetic |
+**On 0G testnet:** wallets, Router key, contract deploy, probe, mainnet and the open assumptions are in [docs/running-on-0g.md](docs/running-on-0g.md).
 
 ---
 
@@ -515,13 +286,7 @@ These were researched from the 0G docs and SDK source but **not exercised with a
 npm test
 ```
 
-This runs:
-
-- **contracts**: 10 Foundry tests (register/anchor/close; non-operator signer; replayed digest; stale count; revoked zerobot operator; closed mission).
-- **robot**: unittests (28 plus 3 asset-naming tests). The interlock refuses forged, tampered, unsigned and wrong-nonce answers and answers with extra keys. A full adapter mission covers forgery refusals, a replay match and a tampered entry named. The lease safe-stops with "0G unreachable, no decision made". SDK tests: the profile's vocabulary is enforced both ways, a profile cannot grant actions the robot lacks, the world registry, and a MuJoCo solar survey that is deterministic and flies by tilting.
-- **core**: type-check plus 7 cross-language tests. Python and TypeScript agree byte-for-byte on canonical JSON, Go-style JSON, nonces, interlock verdicts, entry hashes and robot signatures, and the mock classifier separates all 7 probe crops. The mock also judges PV-module crops (cracked cells vs soiling) and answers in whatever vocabulary the profile's prompt declares. `test/arkiv.test.ts`: every asset label maps to one register entry, and blobs served by the Arkiv mirror are reported, never hidden. `test/privacy.test.ts`: crops round-trip under the mission key and fail under any other.
-
-End to end (local): `npm run dev:local`, then drive the console. All beats above were run against the local stack while building.
+Runs 10 Foundry contract tests, the Python robot unittests (interlock refusals, adapter flow, lease safe-stop, replay, SDK profile checks) and the TypeScript type-check plus cross-language tests that require Python and TypeScript to agree byte-for-byte on hashes, nonces and signatures. End to end: `npm run dev:local`, then drive the console.
 
 ---
 
@@ -537,15 +302,6 @@ End to end (local): `npm run dev:local`, then drive the console. All beats above
 Our nonce is `keccak256(missionId, obs_hash, checkpoint)`. That is the PRD's `keccak256(obs_hash, seq)` plus the mission id, so an answer signed in one mission cannot be replayed in another.
 
 ---
-
-## Submission checklist
-
-- [ ] Project name and short description (top of this README)
-- [ ] Public GitHub repo with README and setup instructions
-- [ ] Demo video under 3 minutes (2:30 to 2:50, beats above) and the live demo link (Vercel verifier)
-- [ ] Contract deployment addresses (table below) with chainscan links
-- [ ] 3 sample `request_id`s with storagescan links (`npm run verify` prints them)
-- [ ] Team names and contacts (Telegram, X)
 
 ## Deployment addresses
 
