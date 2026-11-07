@@ -62,13 +62,6 @@ $("m-proof").innerHTML =
   m.chain.anchors.map((t, i) => link(i === m.chain.anchors.length - 1 ? "Anchored and closed" : `Anchor ${i + 1}`, t)).join("") +
   (ex ? `<a href="${ex}/address/${m.chain.registry}" target="_blank" rel="noreferrer">BlackboxRegistry<span>${m.chain.registry}</span></a>` : "");
 
-// ---- ticker: the real log entries of that mission, looping
-const tick1 = m.checkpoints
-  .map((c) => `<span><i>#${String(c.seq ?? c.k).padStart(4, "0")}</i> <b>${c.asset ?? "#" + c.k}</b> ${labelOf(c.label).name.toLowerCase()} → ${c.outcome} · req ${short(c.request_id ?? "", 8)} · ${sealed ? "TEE sig ✓" : "unsealed"}</span>`)
-  .concat(m.chain.anchors.map((t, j) => `<span><i>anchor ${j + 1}</i> head pinned on chain · tx ${short(t, 10)}</span>`))
-  .join("");
-if (tick1) $("ticker").innerHTML = tick1 + tick1;
-
 // ---- hero card
 $("hc-title").textContent = `${H.profile.title.replace(/ survey$/, "")} · ${short(H.mission_id, 10)}`;
 $("hc-link").href = ex ? `${ex}/tx/${H.chain.close_tx ?? H.chain.register_tx}` : verifyUrl;
