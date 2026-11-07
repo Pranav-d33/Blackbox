@@ -13,7 +13,7 @@ const VARIANT = {
   glass: "bg-white/[0.07] hover:bg-white/[0.12] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]",
   primary: "bg-white text-[#0b0b0f] hover:bg-white/90 font-semibold",
   zg: "bg-zg text-[#120a24] hover:bg-zg/90 font-semibold",
-  destructive: "bg-white/[0.05] hover:bg-bad/15 text-bad shadow-[inset_0_0_0_1px_rgb(248_113_113/0.18)]",
+  destructive: "bg-white/[0.05] hover:bg-bad/15 text-bad shadow-[inset_0_0_0_1px_rgb(240_171_252/0.18)]",
   danger: "bg-bad text-white",
   plain: "bg-transparent hover:bg-white/[0.08] text-white/75",
 };

@@ -6,7 +6,7 @@ const DOES = { descend: "Goes closer for a close-up", continue: "Moves on to the
 /**
  * The right-hand pane before a flight. Findings only exist after a mission starts, which left the right side of the
  * console empty (and the 3D view off-centre) on first load. This fills it with what a visitor needs to know first:
- * what the site is, what 0G can decide here and what the drone does about it, and how an answer is trusted.
+ * what the site is, and what 0G can decide here and what the drone does about it.
  */
 export default function Site() {
   const S = engine.S;
@@ -23,12 +23,12 @@ export default function Site() {
     dw ? [`${Math.round(dw / 1000)}×${Math.round(dh / 1000)}`, "metres"] : null,
   ].filter(Boolean);
 
-  const labels = Object.entries(p.ui.labels);
+  const labels = Object.keys(p.ui.labels).map((key) => [key, engine.labelInfo(key)]);
 
   return (
-    <aside data-pane="right" className="panel enter enter-right pointer-events-auto flex max-h-full w-[340px] flex-col overflow-hidden rounded-3xl">
+    <aside data-pane="right" className="panel enter enter-right pointer-events-auto flex max-h-full w-[304px] flex-col overflow-hidden rounded-3xl">
       <div className="px-5 pt-5 pb-3">
-        <h2 className="font-display text-[15px] font-semibold tracking-[-0.015em]">The site</h2>
+        <h2 className="font-display text-[13px] font-bold tracking-[0.04em] uppercase">The site</h2>
         <p className="mt-1 text-[13px] leading-snug text-white/50">{p.summary}</p>
       </div>
 
@@ -62,23 +62,6 @@ export default function Site() {
           </ul>
         </div>
 
-        <div className="mt-5">
-          <SectionTitle>Why you can trust an answer</SectionTitle>
-          <ol className="space-y-2.5">
-            {[
-              ["The model runs in 0G", "and signs its answer with the enclave's key."],
-              ["The robot checks the signature", "and the nonce before it moves. No valid answer, no move."],
-              ["Everything is logged", "robot-signed on 0G Storage, anchored on 0G Chain."],
-            ].map(([b, t], i) => (
-              <li key={b} className="enter flex gap-3 text-[12.5px] leading-snug text-white/55" style={{ "--i": i + 5 }}>
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-white/[0.08] text-[11px] font-semibold text-white/60 tabular-nums">{i + 1}</span>
-                <span>
-                  <b className="font-medium text-white/85">{b}</b> {t}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </div>
       </div>
     </aside>
   );

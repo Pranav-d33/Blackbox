@@ -29,7 +29,7 @@ const Loading = () => (
 function History({ m }) {
   if (m.loading) return <Loading />;
   const reg = m.register;
-  const li = (l) => (l === "safe_stop" ? { name: "Safe stop", color: "#f87171" } : engine.labelInfo(l));
+  const li = (l) => (l === "safe_stop" ? { name: "Safe stop", color: "#f0abfc" } : engine.labelInfo(l));
   return (
     <div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

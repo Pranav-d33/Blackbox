@@ -17,6 +17,8 @@ async function api(path, body) {
   return j;
 }
 
+const VIOLET = { defect: "#a78bfa", benign: "#6d6487", unsure: "#ddd6fe", wait: "#c4b5fd", stop: "#f0abfc" };
+
 const PHASE = { READY: "idle", TAKEOFF: "fly", SURVEY: "fly", INSPECT: "fly", HOLD: "hold", RTH: "fly", SAFE_RTH: "stop", LANDED: "done", STOPPED: "stop" };
 const PHASE_TEXT = { READY: "Ready", TAKEOFF: "Taking off", SURVEY: "Surveying", INSPECT: "Inspecting", HOLD: "Holding · asking 0G", RTH: "Returning", SAFE_RTH: "Safe stop · returning", LANDED: "Landed", STOPPED: "Safe-stopped" };
 
@@ -78,13 +80,17 @@ class Engine {
   flying = () => ["preparing", "flying"].includes(this.mission()?.status);
   inMission = () => this.S.view === "mission" && !!this.S.robot?.sim && this.S.robot.mission_id === this.mission()?.id;
   profile = () => (this.S.view === "mission" ? this.mission()?.profile : null) ?? this.S.scenario;
+  /** Black and violet only: a defect is bright violet, a harmless mark muted, "unsure" pale. The profile's own colours are ignored. */
   labelInfo = (label) => {
-    const u = this.profile()?.ui?.labels?.[label];
-    return { name: u?.name ?? label, color: u?.color ?? "#f5f5f7" };
+    const p = this.profile();
+    const u = p?.ui?.labels?.[label];
+    const labels = p?.decision?.labels ?? [];
+    const color = label === "unsure" ? VIOLET.unsure : label === labels[0] ? VIOLET.defect : label ? VIOLET.benign : VIOLET.stop;
+    return { name: u?.name ?? label, color };
   };
   kindInfo = (kind) => {
     const k = (this.profile()?.world?.kinds ?? []).find((x) => x.kind === kind);
-    return { name: k?.name ?? kind, defect: k?.truth === "defect", color: k?.truth === "defect" ? "#ff9f0a" : "#c7c7cc", variants: k?.variants ?? 1 };
+    return { name: k?.name ?? kind, defect: k?.truth === "defect", color: k?.truth === "defect" ? VIOLET.defect : VIOLET.benign, variants: k?.variants ?? 1 };
   };
   phase() {
     const sim = this.S.robot?.sim;
@@ -483,12 +489,12 @@ class Engine {
         const c = cps.get(cp.k);
         const a = c?.decision?.answer ?? c?.hold?.answer;
         const tag = cp.asset ?? `#${cp.k}`;
-        let state = "waiting", color = "#ffd60a", title = `${tag} · asking 0G…`, sub = "";
-        if (cp.outcome === "safe_stop") [state, color, title, sub] = ["stopped", "#ff453a", `${tag} · safe stop`, "no decision made"];
+        let state = "waiting", color = VIOLET.wait, title = `${tag} · asking 0G…`, sub = "";
+        if (cp.outcome === "safe_stop") [state, color, title, sub] = ["stopped", VIOLET.stop, `${tag} · safe stop`, "no decision made"];
         else if (a) {
           const li = this.labelInfo(a.label);
           [state, color, title, sub] = [cp.outcome ?? "waiting", li.color, `${cp.asset ?? `#${cp.k}`} · ${li.name}`, `sev ${a.severity} → ${cp.outcome ?? a.action}`];
-        } else if (c?.refusals.length) [color, sub] = ["#ff453a", `${c.refusals.length} refused`];
+        } else if (c?.refusals.length) [color, sub] = [VIOLET.stop, `${c.refusals.length} refused`];
         list.push({ k: cp.k, x_mm: cp.target_mm[0], y_mm: cp.target_mm[1], state, color, title, sub });
       }
     } else {
@@ -506,7 +512,7 @@ class Engine {
       .map((cp) => {
         const a = cps.get(cp.k)?.decision?.answer;
         const li = a ? this.labelInfo(a.label) : { name: "defect" };
-        return { k: cp.k, x_mm: cp.target_mm[0], y_mm: cp.target_mm[1], state: "descend", color: "#ff453a", title: `#${cp.k} ${li.name}`, sub: "0G: inspect · forced: skipped" };
+        return { k: cp.k, x_mm: cp.target_mm[0], y_mm: cp.target_mm[1], state: "descend", color: VIOLET.stop, title: `#${cp.k} ${li.name}`, sub: "0G: inspect · forced: skipped" };
       });
     this.s3.setMarkers(list);
   }

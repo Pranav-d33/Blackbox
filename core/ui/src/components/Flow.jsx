@@ -22,12 +22,12 @@ function Step({ n, title, state, children, summary }) {
       <div className="flex items-center gap-3">
         <span
           className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold tabular-nums transition-colors duration-300 ${
-            state === "done" ? "pop bg-ok/90 text-[#062014]" : open ? "bg-white text-[#0b0b0f]" : "bg-white/[0.08] text-white/50"
+            state === "done" ? "pop bg-ok/90 text-[#0b0614]" : open ? "bg-white text-[#0b0b0f]" : "bg-white/[0.08] text-white/50"
           }`}
         >
           {state === "done" ? "✓" : n}
         </span>
-        <h2 className={`font-display text-[15px] font-semibold tracking-[-0.015em] ${open ? "text-white" : "text-white/60"}`}>{title}</h2>
+        <h2 className={`font-display text-[13px] font-bold tracking-[0.04em] uppercase ${open ? "text-white" : "text-white/55"}`}>{title}</h2>
         {!open && summary ? <span className="ml-auto truncate text-[12px] text-white/40">{summary}</span> : null}
       </div>
       {open ? <div className="mt-3 animate-[rise-in_300ms_var(--ease-out-soft)] pl-9">{children}</div> : null}
@@ -49,7 +49,7 @@ function Mark() {
             <button
               key={k.kind}
               onClick={() => engine.setKind(k.kind)}
-              className={`pressable flex h-8 items-center gap-2 rounded-xl px-3 text-[13px] font-medium ${on ? "bg-white/[0.14] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]" : "bg-white/[0.04] text-white/55 hover:text-white"}`}
+              className={`pressable flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-[12.5px] font-medium ${on ? "bg-white/[0.14] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]" : "bg-white/[0.04] text-white/55 hover:text-white"}`}
             >
               <span className="size-2 rounded-full" style={{ background: ki.color }} />
               {ki.name}
@@ -58,18 +58,21 @@ function Mark() {
           );
         })}
       </div>
-      <div className="mt-3 flex items-center gap-2 text-[12px]">
-        {!S.pending.length ? (
-          <button onClick={() => engine.sampleMarks()} className="pressable rounded-lg bg-zg/[0.12] px-2.5 py-1.5 font-medium text-zg hover:bg-zg/[0.2]" title="Adds one real defect and one look-alike so you can fly straight away">
-            ✦ Try a sample
-          </button>
-        ) : (
+      {!S.pending.length ? (
+        <>
+          <Button variant="primary" size="md" className="mt-4 w-full" onClick={() => engine.sampleMarks()} title="Adds one real defect and one look-alike so you can fly straight away">
+            Add sample marks
+          </Button>
+          <p className="mt-2 text-center text-[12px] text-white/35">or pick a kind above and click the field</p>
+        </>
+      ) : (
+        <div className="mt-3 flex items-center gap-2 text-[12px]">
           <button onClick={() => engine.clearMarks()} className="pressable rounded-lg px-2 py-1.5 text-white/45 hover:bg-white/[0.06] hover:text-white">
             Clear all marks
           </button>
-        )}
-        <span className="text-white/35">{S.pending.length ? "Click the field to add more." : "or click the field to place your own."}</span>
-      </div>
+          <span className="text-white/35">Click the field to add more.</span>
+        </div>
+      )}
       {S.pending.length ? (
         <ul className="mt-3 space-y-0.5">
           {S.pending.map((d, i) => {
@@ -88,7 +91,7 @@ function Mark() {
           })}
         </ul>
       ) : null}
-      <Button variant="primary" size="md" className="mt-4 w-full" disabled={engine.S.starting} onClick={engine.start} aria-busy={engine.S.starting}>
+      <Button variant={S.pending.length || engine.S.starting ? "primary" : "plain"} size="md" className="mt-3 w-full" disabled={engine.S.starting} onClick={engine.start} aria-busy={engine.S.starting}>
         {engine.S.starting ? (
           <>
             <span className="size-4 animate-spin rounded-full border-2 border-[#0b0b0f]/25 border-t-[#0b0b0f]" />
@@ -97,7 +100,7 @@ function Mark() {
         ) : S.pending.length ? (
           `Fly the survey · ${S.pending.length} mark${S.pending.length > 1 ? "s" : ""}`
         ) : (
-          "Fly the survey (no marks: a clean run)"
+          "Fly a clean run (no marks)"
         )}
       </Button>
     </>
@@ -112,6 +115,7 @@ function Live() {
   const phase = engine.phase();
   const flash = engine.S.flash && Date.now() < engine.S.flash.until ? engine.S.flash : null;
   const stage = engine.mission()?.stage;
+  const holding = engine.findings().find((x) => x.askHuman);
   const tone = phase.tone === "fly" ? "tint" : phase.tone === "hold" ? "wait" : phase.tone === "stop" ? "bad" : phase.tone === "done" ? "ok" : "idle";
   return (
     <>
@@ -123,10 +127,10 @@ function Live() {
         <div className="mt-3 grid grid-cols-3 gap-2">
           {[
             [tel.t, "s", "flight"],
-            [tel.z, "m", "altitude"],
             [tel.cps, "", "checks"],
+            [engine.findings().filter((x) => x.tone === "ok").length, "", "decided"],
           ].map(([v, u, l]) => (
-            <div key={l} className="enter rounded-xl bg-white/[0.04] px-3 py-2" style={{ "--i": l === "flight" ? 0 : l === "altitude" ? 1 : 2 }}>
+            <div key={l} className="enter rounded-xl bg-white/[0.04] px-3 py-2" style={{ "--i": l === "flight" ? 0 : l === "checks" ? 1 : 2 }}>
               <div className="font-display text-[19px] leading-none font-semibold tabular-nums">
                 {v}
                 <span className="ml-0.5 text-[11px] font-medium text-white/40">{u}</span>
@@ -171,7 +175,28 @@ function Live() {
           <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-white/65">{flash.detail}</p>
         </div>
       ) : null}
-      {engine.flying() ? <p className="mt-3 text-[12px] text-white/40">Click the field to drop another mark mid-flight.</p> : null}
+      {holding ? (
+        <div className="enter enter-pop mt-3 rounded-2xl bg-wait/[0.1] px-3.5 py-2.5 shadow-[inset_0_0_0_1px_rgb(221_214_254/0.25)]">
+          <div className="flex items-center gap-2 text-[13px] font-semibold text-wait">
+            <Dot tone="wait" pulse />
+            The drone is asking the crew
+          </div>
+          <p className="mt-0.5 text-[12px] leading-snug text-white/65">Answer on <span className="asset-id">{holding.name ?? `#${holding.k}`}</span> in Findings: tap an action, type what you see, or use the mic.</p>
+        </div>
+      ) : null}
+      {engine.flying() ? (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button size="md" onClick={engine.askCrew} title="The drone holds at the next checkpoint and asks the crew; their words go through 0G and the interlock">
+              {engine.S.status?.demo?.crewArmed ? "Armed…" : "Ask the crew"}
+            </Button>
+            <Button variant="destructive" size="md" onClick={engine.estop} title="Stop the drone now and bring it home; logged as an operator e-stop">
+              E-stop
+            </Button>
+          </div>
+          <p className="mt-2 text-[12px] text-white/40">Click the field to drop another mark mid-flight.</p>
+        </>
+      ) : null}
     </>
   );
 }
@@ -186,7 +211,7 @@ function Resume() {
   const at = engine.assetAt(...r.pose_mm) ?? (r.stoppedAt?.asset || null);
   const where = r.stoppedAt?.asset ?? at ?? `waypoint ${r.wp_idx}`;
   return (
-    <div className="enter enter-pop mt-3 rounded-2xl bg-wait/[0.08] p-3.5 shadow-[inset_0_0_0_1px_rgb(251_191_36/0.2)]">
+    <div className="enter enter-pop mt-3 rounded-2xl bg-wait/[0.08] p-3.5 shadow-[inset_0_0_0_1px_rgb(221_214_254/0.2)]">
       <p className="text-[13px] font-semibold text-wait">Survey interrupted</p>
       <p className="mt-1 text-[12px] leading-relaxed text-white/65">
         The drone safe-stopped at <span className="asset-id">{where}</span> ({r.stoppedAt?.reason ?? "no decision made"}) and flew home. The stop point is in its signed log.
@@ -225,7 +250,7 @@ function Prove() {
       </div>
       {v ? (
         <button key={`${v.id}-${v.ok}`} onClick={engine.verify} className={`pressable enter enter-pop mt-3 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left ${v.ok ? "bg-ok/[0.1]" : "bg-bad/[0.12]"}`}>
-          <span className={`pop grid size-6 place-items-center rounded-full text-[12px] font-bold ${v.ok ? "bg-ok text-[#062014]" : "bg-bad text-white"}`}>{v.ok ? "✓" : "!"}</span>
+          <span className={`pop grid size-6 place-items-center rounded-full text-[12px] font-bold ${v.ok ? "bg-ok text-[#0b0614]" : "bg-bad text-white"}`}>{v.ok ? "✓" : "!"}</span>
           <span className="min-w-0 text-[13px]">
             <span className={`font-semibold ${v.ok ? "text-ok" : "text-bad"}`}>{v.ok ? "Verified on 0G" : "Verification failed"}</span>
             <span className="block truncate text-[12px] text-white/55">{v.summary}</span>
@@ -234,20 +259,28 @@ function Prove() {
       ) : null}
       <Resume />
       <div className="mt-3 flex flex-col gap-2">
-        <Button variant="zg" size="md" onClick={engine.verify} title={closed ? "" : "Works while open too; the close transaction lands a few seconds after landing"}>
-          Verify on 0G
-        </Button>
-        <div className="grid grid-cols-2 gap-2">
-          <Button size="md" onClick={engine.split} title="Same seed and world, every 0G answer forced to continue">
-            Replay without 0G
+        {v ? (
+          <Button variant="zg" size="md" onClick={engine.qr} title="A QR code for the public verifier: a judge re-checks this mission on their own phone">
+            Verify on your phone (QR)
           </Button>
-          <Button size="md" onClick={engine.qr}>
-            Phone QR
+        ) : (
+          <Button variant="zg" size="md" onClick={engine.verify} title={closed ? "" : "Works while open too; the close transaction lands a few seconds after landing"}>
+            Verify on 0G
+          </Button>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="md" className="px-2 text-[13px]" onClick={engine.split} title="Same seed and world, every 0G answer forced to continue">
+            Replay, no 0G
+          </Button>
+          <Button variant="destructive" size="md" className="px-2 text-[13px]" onClick={engine.tamperLog} title="Lower a severity in a local copy of the log. The verifier names the entry.">
+            Edit the log
           </Button>
         </div>
-        <Button variant="plain" onClick={() => engine.guard(engine.selectScenario)(engine.S.scenario.id)}>
-          New mission
-        </Button>
+        {!v ? (
+          <Button variant="plain" onClick={engine.qr}>
+            Phone QR
+          </Button>
+        ) : null}
       </div>
     </>
   );
@@ -263,10 +296,16 @@ export default function Flow() {
   const f = engine.findings();
   const p = engine.profile();
   return (
-    <aside data-pane="left" className="panel enter enter-left pointer-events-auto flex max-h-full w-[348px] flex-col overflow-hidden rounded-3xl">
+    <aside data-pane="left" className="panel enter enter-left pointer-events-auto flex max-h-full w-[316px] flex-col overflow-hidden rounded-3xl">
       <div className="px-5 pt-5 pb-1">
-        <p className="text-[11px] font-semibold tracking-[0.08em] text-zg uppercase">{p?.assets?.unit ? `${p.title.replace(/ survey$/, "")}` : "Mission"}</p>
-        <p className="mt-1 text-[13px] leading-snug text-white/50">{p?.summary}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-display text-[12px] font-bold tracking-[0.08em] text-zg uppercase">{p?.assets?.unit ? `${p.title.replace(/ survey$/, "")}` : "Mission"}</p>
+          {step === "prove" ? (
+            <button onClick={() => engine.guard(engine.selectScenario)(engine.S.scenario.id)} className="pressable rounded-lg px-2 py-1 text-[12px] font-medium text-white/55 hover:bg-white/[0.06] hover:text-white">
+              New mission
+            </button>
+          ) : null}
+        </div>
         {m?.resumeOf && engine.S.view === "mission" ? (
           <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-wait/[0.1] px-2 py-1 text-[11.5px] text-wait">
             Resumed from {short(m.resumeOf.parent, 8)} at waypoint {m.resumeOf.wp_idx}
@@ -283,6 +322,14 @@ export default function Flow() {
         <Step n={3} title="Prove it" state={st("prove")}>
           <Prove />
         </Step>
+      </div>
+      <div className="flex flex-wrap gap-1.5 border-t border-white/[0.06] px-4 py-3" title="What this core is wired to">
+        {engine.chips().map((c) => (
+          <span key={c.text} className="flex items-center gap-1.5 text-[11px] text-white/45">
+            <Dot tone={c.tone} />
+            <span className="max-w-[140px] truncate">{c.text}</span>
+          </span>
+        ))}
       </div>
     </aside>
   );

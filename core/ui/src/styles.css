@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
-/* One dark surface over the 3D scene, white type at three opacities, colour only for meaning:
-   violet = 0G, blue = an asset id, green / red / yellow = verified / refused / waiting. */
+/* One black surface over the 3D scene, white type at three opacities, and violet only for meaning:
+   bright violet = verified / 0G, pale lilac = waiting, orchid = refused or stopped. Matches the landing page. */
 @theme {
   --font-sans: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  --font-display: "Archivo", "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 
-  --color-ok: #34d399;
-  --color-bad: #f87171;
-  --color-wait: #fbbf24;
-  --color-hold: #fb923c;
-  --color-tint: #67e8f9;
+  --color-ok: #a78bfa;
+  --color-bad: #f0abfc;
+  --color-wait: #ddd6fe;
+  --color-hold: #c4b5fd;
+  --color-tint: #c4b5fd;
   --color-zg: #a78bfa;
-  --color-asset: #5298ff;
+  --color-asset: #c4b5fd;
 
   /* One UI-style corners: generous radii everywhere, one scale for the whole console */
   --radius-lg: 0.875rem;
@@ -31,7 +31,7 @@
   html, body, #root { height: 100%; }
   body {
     margin: 0;
-    background: #07080b;
+    background: #000;
     color: rgb(255 255 255 / 0.94);
     font-family: var(--font-sans);
     font-size: 14px;
@@ -47,9 +47,10 @@
 }
 
 @layer components {
+  .font-display { font-stretch: 108%; letter-spacing: -0.005em; }
   /* the panel material: dark, lightly frosted, with a hairline edge */
   .panel {
-    background: rgb(14 15 19 / 0.78);
+    background: rgb(6 5 10 / 0.84);
     -webkit-backdrop-filter: blur(22px) saturate(150%);
     backdrop-filter: blur(22px) saturate(150%);
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07), inset 0 1px 0 rgb(255 255 255 / 0.06), 0 20px 50px rgb(0 0 0 / 0.45);

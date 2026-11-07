@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { engine } from "../engine.js";
 import { Button, Dot, AssetId, toneText } from "./ui.jsx";
 
@@ -6,11 +6,16 @@ import { Button, Dot, AssetId, toneText } from "./ui.jsx";
 export default function Findings() {
   const rows = engine.findings();
   const m = engine.mission();
+  const holdK = rows.find((r) => r.askHuman)?.k;
+  // when the drone starts asking the crew, bring that row into view
+  useEffect(() => {
+    if (holdK != null) document.querySelector(`[data-finding="${holdK}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [holdK]);
   if (!m || engine.S.view !== "mission") return null;
   return (
-    <aside data-pane="right" className="panel enter enter-right pointer-events-auto flex max-h-full w-[340px] flex-col overflow-hidden rounded-3xl">
+    <aside data-pane="right" className="panel enter enter-right pointer-events-auto flex max-h-full w-[304px] flex-col overflow-hidden rounded-3xl">
       <div className="flex items-baseline justify-between px-5 pt-5 pb-3">
-        <h2 className="font-display text-[15px] font-semibold tracking-[-0.015em]">Findings</h2>
+        <h2 className="font-display text-[13px] font-bold tracking-[0.04em] uppercase">Findings</h2>
         <span className="text-[12px] text-white/40">{rows.length ? `${rows.length} checked` : "none yet"}</span>
       </div>
       <div className="scroll-soft min-h-0 flex-1 overflow-y-auto px-3 pb-3">
@@ -20,12 +25,13 @@ export default function Findings() {
           rows.map((r, i) => (
             <div
               key={r.k}
+              data-finding={r.k}
               role="button"
               tabIndex={0}
               onClick={() => engine.openCheckpoint(r.k)}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), engine.openCheckpoint(r.k))}
               style={{ "--i": Math.min(i, 5) }}
-              className="pressable enter group mb-1.5 flex cursor-pointer gap-3 rounded-2xl p-2.5 hover:bg-white/[0.05]"
+              className={`pressable enter group mb-1.5 flex cursor-pointer gap-3 rounded-2xl p-2.5 hover:bg-white/[0.05] ${r.askHuman ? "bg-wait/[0.08] shadow-[inset_0_0_0_1px_rgb(221_214_254/0.35)]" : ""}`}
             >
               <img src={r.crop} alt="" className="size-12 shrink-0 rounded-xl bg-white/10 object-cover transition-transform duration-300 ease-[var(--ease-out-strong)] group-hover:scale-[1.06]" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
               <div className="min-w-0 flex-1">
@@ -102,7 +108,7 @@ function CrewReply({ k }) {
         onChange={(e) => setNote(e.target.value)}
         maxLength={280}
         disabled={busy}
-        placeholder="Or tell it: “bird droppings, move on”"
+        placeholder="Or say what you see…"
         className="min-w-0 flex-1 rounded-lg bg-white/5 px-2 py-1 text-[12px] text-white/90 outline-none ring-1 ring-white/10 placeholder:text-white/35 focus:ring-white/30"
       />
       {Speech ? (

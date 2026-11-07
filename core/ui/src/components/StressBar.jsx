@@ -1,35 +1,40 @@
+import { useState } from "react";
 import { engine } from "../engine.js";
 import { Button } from "./ui.jsx";
 
-/** Optional: try to cheat the robot. Each one is refused, safe-stopped or caught by the verifier. */
+/**
+ * Try to cheat the robot. Two attacks up front (the ones that tell the story in one click each), the rest behind
+ * "More". Shown while flying, and after a flight only while 0G is still cut so it can be restored.
+ * Editing the log lives in step 3 (Prove it); asking the crew and the e-stop live in step 2.
+ */
 export default function StressBar() {
   const S = engine.S;
+  const [more, setMore] = useState(false);
   const demo = S.status?.demo ?? {};
   const flying = engine.flying();
-  const has = !!engine.mission();
-  if (S.comparing || (!flying && !has)) return null;
+  if (S.comparing || (!flying && !demo.linkDown)) return null;
   return (
-    <div className="panel enter enter-up pointer-events-auto flex h-12 items-center gap-1.5 rounded-2xl py-1.5 pr-1.5 pl-4">
-      <span className="mr-1.5 text-[12px] font-medium text-white/45">Try to break it</span>
-      <Button variant="destructive" disabled={!flying} onClick={engine.forge} title={flying ? "The operator signs a fake 'continue' with its own key. The robot refuses it." : "Available while the drone is flying"}>
-        {demo.forgeArmed ? "Forge armed…" : "Forge a decision"}
-      </Button>
-      <Button variant="destructive" disabled={!flying} onClick={engine.tamperAnswer} title={flying ? "The core flips 0G's answer but keeps 0G's real signature. The robot refuses it." : "Available while the drone is flying"}>
-        {demo.tamperArmed ? "Flip armed…" : "Flip 0G's answer"}
-      </Button>
-      <Button variant="destructive" disabled={!has} onClick={engine.tamperLog} title={has ? "Lower a severity in a local copy of the log. The verifier names the entry." : "Fly a survey first, then try editing its log"}>
-        Edit the log
-      </Button>
-      <span className="mx-0.5 h-5 w-px bg-white/10" />
-      <Button disabled={!flying} onClick={engine.askCrew} title={flying ? "The drone holds at the next checkpoint and asks the crew. Type or speak the answer; 0G maps it to an action." : "Available while the drone is flying"}>
-        {demo.crewArmed ? "Crew ask armed…" : "Ask the crew"}
-      </Button>
-      <Button variant={demo.linkDown ? "danger" : "destructive"} onClick={engine.toggleLink} title="No signed answer means the lease runs out and the drone flies home. Nothing is faked.">
+    <div className="panel enter enter-up pointer-events-auto flex h-14 items-center gap-2 rounded-2xl py-2 pr-2 pl-4">
+      <span className="mr-1 font-display text-[12px] font-bold tracking-[0.08em] text-white/50 uppercase">Try to break it</span>
+      {flying ? (
+        <Button variant="destructive" size="md" onClick={engine.forge} title="The operator signs a fake 'continue' with its own key. The robot refuses it.">
+          {demo.forgeArmed ? "Forge armed…" : "Forge a decision"}
+        </Button>
+      ) : null}
+      <Button variant={demo.linkDown ? "danger" : "destructive"} size="md" onClick={engine.toggleLink} title="No signed answer means the lease runs out and the drone flies home. Nothing is faked.">
         {demo.linkDown ? "Restore 0G" : "Cut 0G"}
       </Button>
-      <Button variant="destructive" disabled={!flying} onClick={engine.estop} title={flying ? "Stop the drone now and bring it home" : "Available while the drone is flying"}>
-        E-stop
-      </Button>
+      {flying ? (
+        more ? (
+          <Button variant="destructive" size="md" onClick={engine.tamperAnswer} title="The core flips 0G's answer but keeps 0G's real signature. The robot refuses it.">
+            {demo.tamperArmed ? "Flip armed…" : "Flip 0G's answer"}
+          </Button>
+        ) : (
+          <Button variant="plain" size="md" onClick={() => setMore(true)} title="One more attack: flip 0G's answer but keep its signature">
+            More…
+          </Button>
+        )
+      ) : null}
     </div>
   );
 }

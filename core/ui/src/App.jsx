@@ -14,13 +14,13 @@ function Scene() {
   return <div ref={ref} className="absolute inset-0 [&_canvas]:block [&_canvas]:!h-full [&_canvas]:!w-full" />;
 }
 
-/** What the pins mean, bottom-right over the scene. */
+/** What the pins mean, bottom-right over the scene. Hidden while flying: the pins carry their own labels then. */
 function Legend() {
   const p = engine.profile();
-  if (!p) return null;
+  if (!p || engine.flying() || engine.S.status?.demo?.linkDown) return null;
   return (
     <div className="panel enter enter-up pointer-events-auto flex items-center gap-3 rounded-2xl px-3.5 py-2.5" style={{ "--i": 2 }}>
-      {Object.values(p.ui.labels).map((l) => (
+      {Object.keys(p.ui.labels).map((key) => engine.labelInfo(key)).map((l) => (
         <span key={l.name} className="flex items-center gap-1.5 text-[12px] whitespace-nowrap text-white/60">
           <span className="size-2 rounded-full" style={{ background: l.color }} />
           {l.name}
@@ -46,7 +46,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#07080b]">
+    <div className="relative h-full w-full overflow-hidden bg-black">
       <Scene />
       <TopBar />
 
