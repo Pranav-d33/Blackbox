@@ -10,7 +10,7 @@ export default function TopBar() {
       <div className="panel enter enter-down pointer-events-auto flex h-12 items-center gap-3 rounded-2xl pr-1.5 pl-4">
         <a href="/" className="pressable flex items-center gap-2" title="Back to the landing page">
           <span className="size-3.5 rounded-[2px] bg-zg shadow-[inset_0_0_0_3px_#000,0_0_0_1px_var(--color-zg)]" aria-hidden="true" />
-          <span className="font-display text-[15px] font-extrabold tracking-[0.06em] uppercase">Blackbox</span>
+          <span className="font-display text-lead font-extrabold tracking-[0.06em] uppercase">Blackbox</span>
         </a>
         <span className="h-5 w-px bg-white/10" />
         <Segmented

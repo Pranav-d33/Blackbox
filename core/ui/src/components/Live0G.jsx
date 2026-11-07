@@ -43,12 +43,12 @@ function Lane({ lane, value, sub, bump }) {
   const L = LANES[lane];
   return (
     <div className="min-w-0 flex-1 rounded-2xl bg-white/[0.04] px-3 py-2.5">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.06em] text-white/50 uppercase">
+      <div className="flex items-center gap-1.5 text-caption font-semibold tracking-[0.06em] text-white/50 uppercase">
         <Dot tone={L.tone} />
         <span className="truncate">{L.name}</span>
       </div>
-      <div key={bump} className="pop font-display mt-1 text-[19px] leading-none font-semibold tabular-nums">{value}</div>
-      <div className="mt-1 truncate text-[11px] text-white/40">{sub}</div>
+      <div key={bump} className="pop font-display mt-1 text-metric leading-none font-semibold tabular-nums">{value}</div>
+      <div className="mt-1 truncate text-caption text-white/40">{sub}</div>
     </div>
   );
 }
@@ -75,14 +75,14 @@ export default function Live0G() {
     <div data-pane="live" className="panel enter enter-up pointer-events-auto w-full max-w-[620px] rounded-3xl p-3.5" role="region" aria-label="Live activity on 0G">
       <div className="flex items-center gap-2.5 px-1 pb-2.5">
         <Dot tone={head[0]} pulse={busy || closing} />
-        <span className="font-display text-[13px] font-bold tracking-[0.04em] uppercase">{head[1]}</span>
+        <span className="font-display text-body font-bold tracking-[0.04em] uppercase">{head[1]}</span>
         {m.stage ? (
-          <span className="flex min-w-0 items-center gap-2 text-[12px] text-white/55">
+          <span className="flex min-w-0 items-center gap-2 text-meta text-white/55">
             <span className="size-3 shrink-0 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
             <span className="truncate">{m.stage}</span>
           </span>
         ) : null}
-        <span className="ml-auto font-mono text-[11px] text-white/35">{short(m.id, 8)}</span>
+        <span className="ml-auto font-mono text-caption text-white/35">{short(m.id, 8)}</span>
       </div>
 
       <div className="flex gap-2">
@@ -95,8 +95,8 @@ export default function Live0G() {
       <>
         <ul className="mt-2.5 min-h-[165px]" aria-live="polite">
           {events.map((e, i) => (
-            <li key={e.id} className="enter flex items-center gap-2.5 py-1.5 text-[12.5px]" style={{ "--i": 0, opacity: 1 - i * 0.14 }}>
-              <span className="w-[74px] shrink-0 text-[10.5px] font-semibold tracking-[0.05em] text-white/40 uppercase">{LANES[e.lane].name.replace("0G ", "")}</span>
+            <li key={e.id} className="enter flex items-center gap-2.5 py-1.5 text-body" style={{ "--i": 0, opacity: 1 - i * 0.14 }}>
+              <span className="w-[74px] shrink-0 text-caption font-semibold tracking-[0.05em] text-white/40 uppercase">{LANES[e.lane].name.replace("0G ", "")}</span>
               {e.color ? <span className="size-2 shrink-0 rounded-full" style={{ background: e.color }} /> : null}
               <span className={`min-w-0 flex-1 truncate ${e.bad ? "text-bad" : "text-white/85"}`} title={e.sub ?? e.text}>
                 {e.text}
@@ -104,7 +104,7 @@ export default function Live0G() {
               </span>
               {!e.done ? <span className="size-3 shrink-0 animate-spin rounded-full border-2 border-white/15 border-t-white/60" title="in flight" /> : null}
               {e.href && e.ref ? (
-                <a href={e.href} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-[11px] text-asset hover:underline" title="Open on the explorer">
+                <a href={e.href} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-caption text-asset hover:underline" title="Open on the explorer">
                   {e.ref} ↗
                 </a>
               ) : null}

@@ -7,6 +7,17 @@
   --font-display: "Archivo", "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 
+  /* Type scale: six steps, nothing in between. caption = uppercase labels and mono meta,
+     meta = secondary text, body = default UI text, lead = emphasised rows and sheet intros,
+     metric = stat figures, title = sheet headings. */
+  --text-caption: 11px;
+  --text-meta: 12px;
+  --text-body: 13px;
+  --text-lead: 14px;
+  --text-metric: 20px;
+  --text-title: 24px;
+  --text-title--line-height: 1.15;
+
   --color-ok: #a78bfa;
   --color-bad: #f0abfc;
   --color-wait: #ddd6fe;
@@ -34,7 +45,7 @@
     background: #000;
     color: rgb(255 255 255 / 0.94);
     font-family: var(--font-sans);
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.45;
     letter-spacing: -0.006em;
     font-feature-settings: "cv11", "ss01";

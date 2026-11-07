@@ -18,10 +18,10 @@ const VARIANT = {
   plain: "bg-transparent hover:bg-white/[0.08] text-white/75",
 };
 const SIZE = {
-  xs: "h-7 px-2.5 text-[12px]",
-  sm: "h-8 px-3.5 text-[13px]",
-  md: "h-10 px-4 text-[14px]",
-  lg: "h-12 px-5 text-[15px]",
+  xs: "h-7 px-2.5 text-meta",
+  sm: "h-8 px-3.5 text-body",
+  md: "h-10 px-4 text-lead",
+  lg: "h-12 px-5 text-lead",
 };
 
 export function Button({ variant = "glass", size = "sm", className = "", children, ...rest }) {
@@ -72,7 +72,7 @@ export function Segmented({ options, value, onChange, disabled = false, classNam
           disabled={disabled}
           aria-pressed={o.value === value}
           onClick={() => onChange(o.value)}
-          className={`relative z-10 h-7 rounded-[14px] px-3 text-[12.5px] font-medium whitespace-nowrap transition-[color,transform] duration-200 active:scale-[0.97] disabled:cursor-default ${
+          className={`relative z-10 h-7 rounded-[14px] px-3 text-body font-medium whitespace-nowrap transition-[color,transform] duration-200 active:scale-[0.97] disabled:cursor-default ${
             o.value === value ? "text-white" : "text-white/55 hover:text-white"
           }`}
         >
@@ -92,8 +92,8 @@ export function AssetId({ name, className = "" }) {
 export function SectionTitle({ children, aside }) {
   return (
     <div className="mb-2 flex items-baseline justify-between">
-      <h3 className="text-[12px] font-semibold tracking-[0.04em] text-white/50 uppercase">{children}</h3>
-      {aside ? <span className="text-[12px] text-white/40">{aside}</span> : null}
+      <h3 className="text-meta font-semibold tracking-[0.04em] text-white/50 uppercase">{children}</h3>
+      {aside ? <span className="text-meta text-white/40">{aside}</span> : null}
     </div>
   );
 }

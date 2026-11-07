@@ -21,14 +21,14 @@ function Step({ n, title, state, children, summary }) {
     <section className={`relative px-5 py-4 ${open ? "" : "opacity-90"}`}>
       <div className="flex items-center gap-3">
         <span
-          className={`grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold tabular-nums transition-colors duration-300 ${
+          className={`grid size-6 shrink-0 place-items-center rounded-full text-caption font-semibold tabular-nums transition-colors duration-300 ${
             state === "done" ? "pop bg-ok/90 text-[#0b0614]" : open ? "bg-white text-[#0b0b0f]" : "bg-white/[0.08] text-white/50"
           }`}
         >
           {state === "done" ? "✓" : n}
         </span>
-        <h2 className={`font-display text-[13px] font-bold tracking-[0.04em] uppercase ${open ? "text-white" : "text-white/55"}`}>{title}</h2>
-        {!open && summary ? <span className="ml-auto truncate text-[12px] text-white/40">{summary}</span> : null}
+        <h2 className={`font-display text-body font-bold tracking-[0.04em] uppercase ${open ? "text-white" : "text-white/55"}`}>{title}</h2>
+        {!open && summary ? <span className="ml-auto truncate text-meta text-white/40">{summary}</span> : null}
       </div>
       {open ? <div className="mt-3 animate-[rise-in_300ms_var(--ease-out-soft)] pl-9">{children}</div> : null}
     </section>
@@ -40,7 +40,7 @@ function Mark() {
   const kinds = S.scenario?.world?.kinds ?? [];
   return (
     <>
-      <p className="text-[13px] leading-relaxed text-white/60">{copy().mark}</p>
+      <p className="text-body leading-relaxed text-white/60">{copy().mark}</p>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {kinds.map((k) => {
           const ki = engine.kindInfo(k.kind);
@@ -49,11 +49,11 @@ function Mark() {
             <button
               key={k.kind}
               onClick={() => engine.setKind(k.kind)}
-              className={`pressable flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-[12.5px] font-medium ${on ? "bg-white/[0.14] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]" : "bg-white/[0.04] text-white/55 hover:text-white"}`}
+              className={`pressable flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-body font-medium ${on ? "bg-white/[0.14] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]" : "bg-white/[0.04] text-white/55 hover:text-white"}`}
             >
               <span className="size-2 rounded-full" style={{ background: ki.color }} />
               {ki.name}
-              <span className="text-[11px] text-white/35">{ki.defect ? "defect" : "benign"}</span>
+              <span className="text-caption text-white/35">{ki.defect ? "defect" : "benign"}</span>
             </button>
           );
         })}
@@ -63,10 +63,10 @@ function Mark() {
           <Button variant="primary" size="md" className="mt-4 w-full" onClick={() => engine.sampleMarks()} title="Adds one real defect and one look-alike so you can fly straight away">
             Add sample marks
           </Button>
-          <p className="mt-2 text-center text-[12px] text-white/35">or pick a kind above and click the field</p>
+          <p className="mt-2 text-center text-meta text-white/35">or pick a kind above and click the field</p>
         </>
       ) : (
-        <div className="mt-3 flex items-center gap-2 text-[12px]">
+        <div className="mt-3 flex items-center gap-2 text-meta">
           <button onClick={() => engine.clearMarks()} className="pressable rounded-lg px-2 py-1.5 text-white/45 hover:bg-white/[0.06] hover:text-white">
             Clear all marks
           </button>
@@ -81,9 +81,9 @@ function Mark() {
             return (
               <li key={`${d.kind}-${d.x_mm}-${d.y_mm}`} className="enter enter-pop group flex items-center gap-2.5 rounded-lg py-1">
                 <span className="size-2 shrink-0 rounded-full" style={{ background: ki.color }} />
-                <span className="w-24 shrink-0 text-[13px] text-white/80">{ki.name}</span>
+                <span className="w-24 shrink-0 text-body text-white/80">{ki.name}</span>
                 <span className="asset-id min-w-0 flex-1 truncate">{label ?? "between rows"}</span>
-                <button onClick={() => engine.removePending(i)} className="text-[13px] text-white/30 opacity-0 transition-opacity group-hover:opacity-100 hover:text-white" title="Remove">
+                <button onClick={() => engine.removePending(i)} className="text-body text-white/30 opacity-0 transition-opacity group-hover:opacity-100 hover:text-white" title="Remove">
                   ✕
                 </button>
               </li>
@@ -119,7 +119,7 @@ function Live() {
   const tone = phase.tone === "fly" ? "tint" : phase.tone === "hold" ? "wait" : phase.tone === "stop" ? "bad" : phase.tone === "done" ? "ok" : "idle";
   return (
     <>
-      <div className={`flex items-center gap-2 text-[13px] font-medium ${toneText(tone)}`}>
+      <div className={`flex items-center gap-2 text-body font-medium ${toneText(tone)}`}>
         <Dot tone={tone} pulse={tone === "tint" || tone === "wait"} />
         {stage ?? phase.text}
       </div>
@@ -131,16 +131,16 @@ function Live() {
             [engine.findings().filter((x) => x.tone === "ok").length, "", "decided"],
           ].map(([v, u, l]) => (
             <div key={l} className="enter rounded-xl bg-white/[0.04] px-3 py-2" style={{ "--i": l === "flight" ? 0 : l === "checks" ? 1 : 2 }}>
-              <div className="font-display text-[19px] leading-none font-semibold tabular-nums">
+              <div className="font-display text-metric leading-none font-semibold tabular-nums">
                 {v}
-                <span className="ml-0.5 text-[11px] font-medium text-white/40">{u}</span>
+                <span className="ml-0.5 text-caption font-medium text-white/40">{u}</span>
               </div>
-              <div className="mt-1 text-[11px] text-white/40">{l}</div>
+              <div className="mt-1 text-caption text-white/40">{l}</div>
             </div>
           ))}
         </div>
       ) : (
-        <p className="mt-2 text-[13px] leading-relaxed text-white/55">{copy().fly}</p>
+        <p className="mt-2 text-body leading-relaxed text-white/55">{copy().fly}</p>
       )}
 
       {live ? (
@@ -149,17 +149,17 @@ function Live() {
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between gap-2">
               <span className="asset-id truncate">{live.name ?? `checkpoint ${live.k}`}</span>
-              <span className={`shrink-0 text-[12px] font-semibold ${toneText(live.verdict[0])}`}>{live.verdict[1]}</span>
+              <span className={`shrink-0 text-meta font-semibold ${toneText(live.verdict[0])}`}>{live.verdict[1]}</span>
             </div>
             <ol className="mt-2 flex items-center gap-1">
               {live.steps.map((s) => (
                 <li key={s.name} className="flex flex-1 flex-col gap-1">
                   <span className={`h-1 rounded-full transition-colors duration-300 ${CIRCLE[s.state]}`} />
-                  <span className={`text-[10.5px] ${s.state === "todo" ? "text-white/30" : "text-white/70"}`}>{s.name}</span>
+                  <span className={`text-caption ${s.state === "todo" ? "text-white/30" : "text-white/70"}`}>{s.name}</span>
                 </li>
               ))}
             </ol>
-            <p className={`mt-1 truncate text-[12px] ${live.focus?.state === "fail" ? "text-bad" : "text-white/55"}`}>{live.focus?.detail}</p>
+            <p className={`mt-1 truncate text-meta ${live.focus?.state === "fail" ? "text-bad" : "text-white/55"}`}>{live.focus?.detail}</p>
             {live.lease ? (
               <div className="mt-1.5 h-[2px] overflow-hidden rounded-full bg-white/10" title="Lease: no signed answer before it runs out means a safe stop">
                 <div className="h-full rounded-full bg-wait transition-[width] duration-200 ease-linear" style={{ width: `${Math.round(live.lease * 100)}%` }} />
@@ -171,17 +171,17 @@ function Live() {
 
       {flash ? (
         <div key={flash.id} className={`mt-3 animate-[rise-in_400ms_var(--ease-out-soft)] rounded-2xl px-3.5 py-2.5 ${flash.tone === "bad" ? "bg-bad/[0.12]" : flash.tone === "ok" ? "bg-ok/[0.1]" : "bg-zg/[0.12]"}`}>
-          <div className={`text-[13px] font-semibold ${flash.tone === "bad" ? "text-bad" : flash.tone === "ok" ? "text-ok" : "text-zg"}`}>{flash.title}</div>
-          <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-white/65">{flash.detail}</p>
+          <div className={`text-body font-semibold ${flash.tone === "bad" ? "text-bad" : flash.tone === "ok" ? "text-ok" : "text-zg"}`}>{flash.title}</div>
+          <p className="mt-0.5 line-clamp-2 text-meta leading-snug text-white/65">{flash.detail}</p>
         </div>
       ) : null}
       {holding ? (
         <div className="enter enter-pop mt-3 rounded-2xl bg-wait/[0.1] px-3.5 py-2.5 shadow-[inset_0_0_0_1px_rgb(221_214_254/0.25)]">
-          <div className="flex items-center gap-2 text-[13px] font-semibold text-wait">
+          <div className="flex items-center gap-2 text-body font-semibold text-wait">
             <Dot tone="wait" pulse />
             The drone is asking the crew
           </div>
-          <p className="mt-0.5 text-[12px] leading-snug text-white/65">Answer on <span className="asset-id">{holding.name ?? `#${holding.k}`}</span> in Findings: tap an action, type what you see, or use the mic.</p>
+          <p className="mt-0.5 text-meta leading-snug text-white/65">Answer on <span className="asset-id">{holding.name ?? `#${holding.k}`}</span> in Findings: tap an action, type what you see, or use the mic.</p>
         </div>
       ) : null}
       {engine.flying() ? (
@@ -194,7 +194,7 @@ function Live() {
               E-stop
             </Button>
           </div>
-          <p className="mt-2 text-[12px] text-white/40">Click the field to drop another mark mid-flight.</p>
+          <p className="mt-2 text-meta text-white/40">Click the field to drop another mark mid-flight.</p>
         </>
       ) : null}
     </>
@@ -212,8 +212,8 @@ function Resume() {
   const where = r.stoppedAt?.asset ?? at ?? `waypoint ${r.wp_idx}`;
   return (
     <div className="enter enter-pop mt-3 rounded-2xl bg-wait/[0.08] p-3.5 shadow-[inset_0_0_0_1px_rgb(221_214_254/0.2)]">
-      <p className="text-[13px] font-semibold text-wait">Survey interrupted</p>
-      <p className="mt-1 text-[12px] leading-relaxed text-white/65">
+      <p className="text-body font-semibold text-wait">Survey interrupted</p>
+      <p className="mt-1 text-meta leading-relaxed text-white/65">
         The drone safe-stopped at <span className="asset-id">{where}</span> ({r.stoppedAt?.reason ?? "no decision made"}) and flew home. The stop point is in its signed log.
       </p>
       <div className="mt-2.5 flex flex-wrap gap-2">
@@ -235,7 +235,7 @@ function Prove() {
   const closed = m?.status === "closed";
   return (
     <>
-      <p className="text-[13px] leading-relaxed text-white/60">{copy().prove}</p>
+      <p className="text-body leading-relaxed text-white/60">{copy().prove}</p>
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
         {[
           [f.filter((x) => x.tone === "ok").length, "decided by 0G"],
@@ -243,17 +243,17 @@ function Prove() {
           [new Set(f.map((x) => x.asset).filter(Boolean)).size, `${engine.unitName()}s checked`],
         ].map(([v2, l]) => (
           <div key={l} className="enter rounded-xl bg-white/[0.04] px-2 py-2" style={{ "--i": l.startsWith("decided") ? 0 : l.startsWith("refused") ? 1 : 2 }}>
-            <div className="font-display text-[19px] leading-none font-semibold tabular-nums">{v2}</div>
-            <div className="mt-1 text-[11px] leading-tight text-white/40">{l}</div>
+            <div className="font-display text-metric leading-none font-semibold tabular-nums">{v2}</div>
+            <div className="mt-1 text-caption leading-tight text-white/40">{l}</div>
           </div>
         ))}
       </div>
       {v ? (
         <button key={`${v.id}-${v.ok}`} onClick={engine.verify} className={`pressable enter enter-pop mt-3 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left ${v.ok ? "bg-ok/[0.1]" : "bg-bad/[0.12]"}`}>
-          <span className={`pop grid size-6 place-items-center rounded-full text-[12px] font-bold ${v.ok ? "bg-ok text-[#0b0614]" : "bg-bad text-white"}`}>{v.ok ? "✓" : "!"}</span>
-          <span className="min-w-0 text-[13px]">
+          <span className={`pop grid size-6 place-items-center rounded-full text-meta font-bold ${v.ok ? "bg-ok text-[#0b0614]" : "bg-bad text-white"}`}>{v.ok ? "✓" : "!"}</span>
+          <span className="min-w-0 text-body">
             <span className={`font-semibold ${v.ok ? "text-ok" : "text-bad"}`}>{v.ok ? "Verified on 0G" : "Verification failed"}</span>
-            <span className="block truncate text-[12px] text-white/55">{v.summary}</span>
+            <span className="block truncate text-meta text-white/55">{v.summary}</span>
           </span>
         </button>
       ) : null}
@@ -269,10 +269,10 @@ function Prove() {
           </Button>
         )}
         <div className="grid grid-cols-2 gap-2">
-          <Button size="md" className="px-2 text-[13px]" onClick={engine.split} title="Same seed and world, every 0G answer forced to continue">
+          <Button size="md" className="px-2 text-body" onClick={engine.split} title="Same seed and world, every 0G answer forced to continue">
             Replay, no 0G
           </Button>
-          <Button variant="destructive" size="md" className="px-2 text-[13px]" onClick={engine.tamperLog} title="Lower a severity in a local copy of the log. The verifier names the entry.">
+          <Button variant="destructive" size="md" className="px-2 text-body" onClick={engine.tamperLog} title="Lower a severity in a local copy of the log. The verifier names the entry.">
             Edit the log
           </Button>
         </div>
@@ -299,15 +299,15 @@ export default function Flow() {
     <aside data-pane="left" className="panel enter enter-left pointer-events-auto flex max-h-full w-[316px] flex-col overflow-hidden rounded-3xl">
       <div className="px-5 pt-5 pb-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-display text-[12px] font-bold tracking-[0.08em] text-zg uppercase">{p?.assets?.unit ? `${p.title.replace(/ survey$/, "")}` : "Mission"}</p>
+          <p className="font-display text-meta font-bold tracking-[0.08em] text-zg uppercase">{p?.assets?.unit ? `${p.title.replace(/ survey$/, "")}` : "Mission"}</p>
           {step === "prove" ? (
-            <button onClick={() => engine.guard(engine.selectScenario)(engine.S.scenario.id)} className="pressable rounded-lg px-2 py-1 text-[12px] font-medium text-white/55 hover:bg-white/[0.06] hover:text-white">
+            <button onClick={() => engine.guard(engine.selectScenario)(engine.S.scenario.id)} className="pressable rounded-lg px-2 py-1 text-meta font-medium text-white/55 hover:bg-white/[0.06] hover:text-white">
               New mission
             </button>
           ) : null}
         </div>
         {m?.resumeOf && engine.S.view === "mission" ? (
-          <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-wait/[0.1] px-2 py-1 text-[11.5px] text-wait">
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-wait/[0.1] px-2 py-1 text-caption text-wait">
             Resumed from {short(m.resumeOf.parent, 8)} at waypoint {m.resumeOf.wp_idx}
           </p>
         ) : null}
@@ -325,7 +325,7 @@ export default function Flow() {
       </div>
       <div className="flex flex-wrap gap-1.5 border-t border-white/[0.06] px-4 py-3" title="What this core is wired to">
         {engine.chips().map((c) => (
-          <span key={c.text} className="flex items-center gap-1.5 text-[11px] text-white/45">
+          <span key={c.text} className="flex items-center gap-1.5 text-caption text-white/45">
             <Dot tone={c.tone} />
             <span className="max-w-[140px] truncate">{c.text}</span>
           </span>

@@ -15,12 +15,12 @@ export default function Findings() {
   return (
     <aside data-pane="right" className="panel enter enter-right pointer-events-auto flex max-h-full w-[304px] flex-col overflow-hidden rounded-3xl">
       <div className="flex items-baseline justify-between px-5 pt-5 pb-3">
-        <h2 className="font-display text-[13px] font-bold tracking-[0.04em] uppercase">Findings</h2>
-        <span className="text-[12px] text-white/40">{rows.length ? `${rows.length} checked` : "none yet"}</span>
+        <h2 className="font-display text-body font-bold tracking-[0.04em] uppercase">Findings</h2>
+        <span className="text-meta text-white/40">{rows.length ? `${rows.length} checked` : "none yet"}</span>
       </div>
       <div className="scroll-soft min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         {!rows.length ? (
-          <p className="px-2 py-8 text-center text-[13px] leading-relaxed text-white/40">The drone holds and asks 0G each time its camera flags a mark. Findings appear here.</p>
+          <p className="px-2 py-8 text-center text-body leading-relaxed text-white/40">The drone holds and asks 0G each time its camera flags a mark. Findings appear here.</p>
         ) : (
           rows.map((r, i) => (
             <div
@@ -36,16 +36,16 @@ export default function Findings() {
               <img src={r.crop} alt="" className="size-12 shrink-0 rounded-xl bg-white/10 object-cover transition-transform duration-300 ease-[var(--ease-out-strong)] group-hover:scale-[1.06]" onError={(e) => (e.currentTarget.style.visibility = "hidden")} />
               <div className="min-w-0 flex-1">
                 <AssetId name={r.name} className="block max-w-full" />
-                <div className="mt-0.5 flex items-center gap-1.5 text-[13px]">
+                <div className="mt-0.5 flex items-center gap-1.5 text-body">
                   {r.label ? <span className="size-1.5 shrink-0 rounded-full" style={{ background: r.label.color }} /> : <Dot tone={r.tone} pulse={r.tone === "wait"} />}
                   <span className="font-medium text-white/90">{r.label ? r.label.name : r.status}</span>
                   {r.answer ? <span className="text-white/40">· sev {r.answer.severity}</span> : null}
                 </div>
-                <div className={`mt-0.5 truncate text-[12px] ${r.tone === "bad" ? "text-bad" : "text-white/55"}`}>{r.outcome}</div>
+                <div className={`mt-0.5 truncate text-meta ${r.tone === "bad" ? "text-bad" : "text-white/55"}`}>{r.outcome}</div>
                 <div className="mt-1 flex items-center justify-between gap-2">
-                  <span className={`text-[11px] ${toneText(r.tone)}`}>{r.tone === "ok" ? `${r.status} · TEE-signed` : r.status}</span>
+                  <span className={`text-caption ${toneText(r.tone)}`}>{r.tone === "ok" ? `${r.status} · TEE-signed` : r.status}</span>
                   {engine.arkiv() && r.asset ? (
-                    <button onClick={(e) => (e.stopPropagation(), engine.history(r.asset))} className="text-[11px] text-asset hover:underline" title="Every inspection of this asset, from Arkiv">
+                    <button onClick={(e) => (e.stopPropagation(), engine.history(r.asset))} className="text-caption text-asset hover:underline" title="Every inspection of this asset, from Arkiv">
                       History
                     </button>
                   ) : null}
@@ -109,7 +109,7 @@ function CrewReply({ k }) {
         maxLength={280}
         disabled={busy}
         placeholder="Or say what you see…"
-        className="min-w-0 flex-1 rounded-lg bg-white/5 px-2 py-1 text-[12px] text-white/90 outline-none ring-1 ring-white/10 placeholder:text-white/35 focus:ring-white/30"
+        className="min-w-0 flex-1 rounded-lg bg-white/5 px-2 py-1 text-meta text-white/90 outline-none ring-1 ring-white/10 placeholder:text-white/35 focus:ring-white/30"
       />
       {Speech ? (
         <Button size="xs" type="button" onClick={listen} disabled={busy} title="Speak to the drone">

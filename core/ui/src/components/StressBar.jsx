@@ -15,7 +15,7 @@ export default function StressBar() {
   if (S.comparing || (!flying && !demo.linkDown)) return null;
   return (
     <div className="panel enter enter-up pointer-events-auto flex h-14 items-center gap-2 rounded-2xl py-2 pr-2 pl-4">
-      <span className="mr-1 font-display text-[12px] font-bold tracking-[0.08em] text-white/50 uppercase">Try to break it</span>
+      <span className="mr-1 font-display text-meta font-bold tracking-[0.08em] text-white/50 uppercase">Try to break it</span>
       {flying ? (
         <Button variant="destructive" size="md" onClick={engine.forge} title="The operator signs a fake 'continue' with its own key. The robot refuses it.">
           {demo.forgeArmed ? "Forge armed…" : "Forge a decision"}
