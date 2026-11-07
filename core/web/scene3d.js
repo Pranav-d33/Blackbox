@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { fitCamera, freeRect, viewOffset } from "./framing.js";
 import { Line2 } from "three/addons/lines/Line2.js";
 import { LineGeometry } from "three/addons/lines/LineGeometry.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
@@ -210,7 +211,11 @@ export class Scene3D {
       this.resize();
       this._reframe();
     });
-    this.controls.addEventListener("start", () => (this.userMoved = true));
+    // only a real orbit, pan or zoom stops the auto-framing; a plain click (placing a mark) must not
+    this.controls.addEventListener("start", () => (this._camAtStart = this.camera.position.clone()));
+    this.controls.addEventListener("end", () => {
+      if (this._camAtStart && this.camera.position.distanceTo(this._camAtStart) > 0.05) this.userMoved = true;
+    });
     this._ro.observe(el);
     this.resize();
     this.renderer.setAnimationLoop(() => this._frame());
@@ -220,17 +225,21 @@ export class Scene3D {
    * How much of the canvas the side panes cover (px, left and right). The deck is framed, and centred, in the free
    * window between them. Until the user orbits or zooms themselves, a change re-frames the camera.
    */
-  setInsets(left, right) {
-    left = Math.max(0, Math.round(left));
-    right = Math.max(0, Math.round(right));
-    if (left === this._pl && right === this._pr) return;
-    this._pl = left;
-    this._pr = right;
+  setInsets(left, right, top = 0, bottom = 0) {
+    const n = [left, right, top, bottom].map((v) => Math.max(0, Math.round(v)));
+    if (n.every((v, k) => v === [this._pl, this._pr, this._pt, this._pb][k])) return;
+    [this._pl, this._pr, this._pt, this._pb] = n;
     this.resize();
     this._reframe();
   }
+  /** The part of the canvas the deck should fill, in pixels. The landing page has no panes: the whole canvas. */
+  _free() {
+    const w = this.el.clientWidth || 1200, h = this.el.clientHeight || 800;
+    if (this._pl !== undefined) return freeRect(w, h, { left: this._pl, right: this._pr, top: this._pt, bottom: this._pb });
+    return freeRect(w, h, { left: this.insetLeft + this.insetX / 2, right: this.insetX / 2 });
+  }
   _reframe() {
-    if (this.userMoved || !this.meta) return;
+    if (this.userMoved || !this.meta || this.mode === "chase") return;
     const [W, H] = this.meta.deck_mm.map(mm);
     this._frameCamera(W, H);
   }
@@ -463,16 +472,24 @@ export class Scene3D {
     });
   }
 
-  _frameCamera(W, H) {
-    // the home pad sits ~3 m west of the surface: keep it in frame; the side panels cover ~350 px each
+  /** The landing page has no panes and its hero was framed by hand: it keeps this original framing. */
+  _frameLegacy(W, H) {
     const tx = (W - 3) / 2, ty = H * 0.42;
     const w = this.el.clientWidth || 1200, h = this.el.clientHeight || 800;
-    const cover = w <= 900 ? 0 : this._pl !== undefined ? this._pl + this._pr : this.insetLeft + this.insetX;
-    const visible = Math.max(0.45, (w - cover) / w);
     const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * (w / h));
-    const dist = Math.max((W + 9) * 1.3 / (2 * Math.tan(half) * visible), (H * 1.8) / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2))));
+    const dist = Math.max((W + 9) * 1.3 / (2 * Math.tan(half)), (H * 1.8) / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2))));
     this.camera.position.set(tx, ty - dist * 0.8, dist * 0.56);
     this.controls.target.set(tx, ty, 0);
+    this.controls.update();
+    this.userMoved = false;
+  }
+
+  _frameCamera(W, H, mode = this.mode === "top" ? "top" : "orbit") {
+    if (this._pl === undefined && !this.insetLeft && !this.insetX) return this._frameLegacy(W, H);
+    const w = this.el.clientWidth || 1200, h = this.el.clientHeight || 800;
+    const fit = fitCamera(THREE, { fov: this.camera.fov, w, h, W, H, mode, free: this._free() });
+    this.camera.position.copy(fit.position);
+    this.controls.target.copy(fit.target);
     this.controls.update();
     this.userMoved = false;
   }
@@ -597,12 +614,7 @@ export class Scene3D {
 
   setCameraMode(mode) {
     this.mode = mode;
-    if (mode === "top" && this.meta) {
-      const [W, H] = this.meta.deck_mm.map(mm);
-      this.camera.position.set(W / 2, H / 2 - 0.01, Math.max(W, H) * 1.15);
-      this.controls.target.set(W / 2, H / 2, 0);
-    }
-    if (mode === "orbit" && this.meta) this._frameCamera(...this.meta.deck_mm.map(mm));
+    if (this.meta && (mode === "top" || mode === "orbit")) this._frameCamera(...this.meta.deck_mm.map(mm), mode);
   }
 
   // ------------------------------------------------------------------ input
@@ -666,9 +678,11 @@ export class Scene3D {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     // shift the picture so the deck sits in the middle of the free window between the panes, not of the whole canvas
-    const l = this._pl ?? this.insetLeft, r = this._pr ?? 0;
-    if ((l || r) && w > 900) this.camera.setViewOffset(w, h, -(l - r) / 2, 0, w, h);
-    else this.camera.clearViewOffset();
+    const f = this._free();
+    if (f.x0 || f.y0 || f.x1 < w || f.y1 < h) {
+      const o = viewOffset(w, h, f);
+      this.camera.setViewOffset(w, h, o.x, o.y, w, h);
+    } else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
     for (const l of [this.trail, this.plan, this.ghostTrail, this.hoverLine]) l.material.resolution.set(w, h);
   }

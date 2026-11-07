@@ -5,7 +5,8 @@
   "description": "Operator console (React + Tailwind). Builds to core/web/console.html so the core serves it without a build step at the booth.",
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf ../web/console-assets && vite build"
+    "build": "rm -rf ../web/console-assets && vite build",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "react": "^19.2.0",
