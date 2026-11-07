@@ -5,6 +5,7 @@ import TopBar from "./components/TopBar.jsx";
 import Flow from "./components/Flow.jsx";
 import Findings from "./components/Findings.jsx";
 import Site from "./components/Site.jsx";
+import Live0G from "./components/Live0G.jsx";
 import StressBar from "./components/StressBar.jsx";
 import Sheet from "./components/Sheet.jsx";
 
@@ -52,6 +53,10 @@ export default function App() {
 
       <div data-panes className="pointer-events-none absolute inset-x-0 top-[80px] bottom-[84px] z-10 flex justify-between gap-4 px-4">
         <Flow />
+        {/* the free window between the panes: what is happening on 0G right now, over the bottom of the 3D view */}
+        <div className="hidden min-w-0 flex-1 items-end justify-center self-end min-[1180px]:flex">
+          <Live0G />
+        </div>
         <Site />
         <Findings />
       </div>

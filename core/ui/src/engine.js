@@ -159,8 +159,12 @@ class Engine {
     if (!root || !this.s3) return;
     const l = root.querySelector('[data-pane="left"]');
     const r = root.querySelector('[data-pane="right"]');
+    const live = root.querySelector('[data-pane="live"]');
     const gap = 16;
-    this.s3.setInsets(l ? l.offsetLeft + l.offsetWidth + gap : 0, r ? root.clientWidth - r.offsetLeft + gap : 0);
+    // the free window: between the panes, under the top bar, above the bottom bar and (in a mission) the Live-on-0G panel
+    const top = root.offsetTop + 8;
+    const bottom = this.s3.el.clientHeight - (root.offsetTop + root.offsetHeight) + (live?.offsetHeight ? live.offsetHeight + gap : 0);
+    this.s3.setInsets(l ? l.offsetLeft + l.offsetWidth + gap : 0, r ? root.clientWidth - r.offsetLeft + gap : 0, top, bottom);
   }
   clearMarks() {
     this.S.pending = [];
