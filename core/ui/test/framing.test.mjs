@@ -32,9 +32,11 @@ for (const [name, [W, H]] of Object.entries(decks)) for (const [w, h] of sizes) 
     const eps = 1;
     assert.ok(b.x0 >= free.x0 - eps && b.x1 <= free.x1 + eps, `x ${b.x0.toFixed(0)}..${b.x1.toFixed(0)} outside ${free.x0}..${free.x1}`);
     assert.ok(b.y0 >= free.y0 - eps && b.y1 <= free.y1 + eps, `y ${b.y0.toFixed(0)}..${b.y1.toFixed(0)} outside ${free.y0}..${free.y1}`);
-    // and it is not lost in the middle of a big empty screen: it uses most of one dimension
+    // not lost in a big empty screen, and not jammed against the edges either (the top view used to be too zoomed in)
     const fillX = (b.x1 - b.x0) / (free.x1 - free.x0), fillY = (b.y1 - b.y0) / (free.y1 - free.y0);
-    assert.ok(Math.max(fillX, fillY) >= 0.8, `fills only ${(Math.max(fillX, fillY) * 100).toFixed(0)}% of the free window`);
+    const fill = Math.max(fillX, fillY);
+    assert.ok(fill >= 0.55, `fills only ${(fill * 100).toFixed(0)}% of the free window`);
+    assert.ok(fill <= (mode === "top" ? 0.74 : 0.84), `fills ${(fill * 100).toFixed(0)}% of the free window: too tight for the ${mode} view`);
   });
 }
 

@@ -4,12 +4,19 @@
  * Pure on purpose: Three.js is passed in, so the console and the landing page use it with their own copy of three and
  * core/ui/test/framing.test.mjs runs this exact function in node against the real library.
  *
- * The fit is numeric: the camera sits on a fixed viewing direction (a 52 degree orbit angle, or straight down for the
- * top view) and is pulled back until the projected deck, home pad and panel height all lie inside the free rectangle
+ * The fit is numeric: the camera sits on a fixed viewing direction (a three-quarter orbit view, or straight down for
+ * the top view) and is pulled back until the projected deck, home pad and panel height all lie inside the free rectangle
  * with a small margin. That replaces the old rules of thumb, which framed the orbit view for a column the width of the
  * whole canvas minus a constant, and put the top view at a fixed 1.15 x the deck size whatever the panes covered.
  */
-const ELEV = { orbit: (52 * Math.PI) / 180, top: Math.PI / 2 };
+const DEG = Math.PI / 180;
+// How each view looks at the deck. Orbit is a three-quarter view from the south-east: 40 degrees above the horizon, turned
+// 28 degrees off the deck's long axis so the rows show depth instead of a flat elevation. Top looks straight down.
+// pad = the share of the free window left empty on each side (x, y): the top view gets a lot more air so it is not zoomed in.
+const VIEW = {
+  orbit: { elev: 40 * DEG, az: 28 * DEG, pad: [0.09, 0.1] },
+  top: { elev: Math.PI / 2, az: 0, pad: [0.16, 0.16] },
+};
 const PAD = 3.5; // the home pad sits this far west of the deck and must stay in frame
 const HEIGHT = 1.8; // panels and rails stand this tall
 
@@ -27,14 +34,15 @@ export function viewOffset(w, h, free) {
 
 export function fitCamera(THREE, { fov, w, h, W, H, mode = "orbit", free }) {
   const target = new THREE.Vector3((W - PAD) / 2, H / 2, 0);
-  const elev = ELEV[mode] ?? ELEV.orbit;
+  const { elev, az, pad } = VIEW[mode] ?? VIEW.orbit;
   // straight down is a degenerate view for lookAt; a hair off the vertical keeps the deck's long side horizontal
-  const dir = new THREE.Vector3(0, -Math.max(1e-4, Math.cos(elev)), Math.sin(elev)).normalize();
+  const flat = Math.max(1e-4, Math.cos(elev));
+  const dir = new THREE.Vector3(Math.sin(az) * flat, -Math.cos(az) * flat, Math.sin(elev)).normalize();
   const cam = new THREE.PerspectiveCamera(fov, w / h, 0.05, 500);
   const off = viewOffset(w, h, free);
   cam.setViewOffset(w, h, off.x, off.y, w, h);
 
-  const padX = (free.x1 - free.x0) * 0.04, padY = (free.y1 - free.y0) * 0.06;
+  const padX = (free.x1 - free.x0) * pad[0], padY = (free.y1 - free.y0) * pad[1];
   const box = [free.x0 + padX, free.x1 - padX, free.y0 + padY, free.y1 - padY];
   const corners = [];
   for (const x of [-PAD, W]) for (const y of [0, H]) for (const z of [0, HEIGHT]) corners.push(new THREE.Vector3(x, y, z));
