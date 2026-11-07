@@ -1,1 +1,0 @@
-export{n as secp256k1}from"./read-D69dHm79.js";
