@@ -152,7 +152,6 @@ h1 em, h2 em { font-style: normal; color: var(--rec); position: relative; white-
 @media (hover: hover) { .card:hover::after, .layer:hover::after, .attack:hover::after, .steps li:hover::after { opacity: 1; } }
 
 .steps { position: relative; list-style: none; padding: 0; margin: 56px 0 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-.steps::before { content: ""; position: absolute; left: 0; top: 0; height: 2px; width: 100%; background: var(--rec); transform: scaleX(var(--p, 0)); transform-origin: left; z-index: 1; }
 .steps li { position: relative; padding: 28px 24px 30px; background: var(--bg2); }
 .band:not(.alt) .steps li { background: var(--bg); }
 .steps i { display: block; font: 850 44px/1 var(--display); font-stretch: 125%; font-style: normal; color: var(--rec); }

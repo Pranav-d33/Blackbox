@@ -25,7 +25,6 @@
       </a>
       <div class="nav-links">
         <a href="#how">How it works</a>
-        <a href="#break">Break it</a>
         <a href="#mission">Proof</a>
         <a href="#sdk">SDK</a>
         <a href="#stack">Stack</a>
@@ -42,7 +41,6 @@
     <div id="scene" class="scene" aria-hidden="true" data-parallax="0.18"></div>
     <div class="hero-fade"></div>
     <div class="wrap hero-copy">
-      <p class="kicker"><span class="rec" aria-hidden="true"></span>Flight recorder for AI robots</p>
       <h1>Every decision a robot makes, <em>on the record.</em></h1>
       <p class="lede">Blackbox sits between a robot's AI and its motors. The robot moves only on a decision it can verify, and everyone with a stake can check the record afterwards, without trusting whoever ran it.</p>
       <div class="hero-cta">
@@ -98,25 +96,9 @@
     </div>
   </section>
 
-  <section class="band" id="break">
-    <div class="wrap split">
-      <p class="eyebrow"><i>03</i>Try to break it</p>
-      <div>
-        <h2>Built for the operator <em>you can't trust.</em></h2>
-        <div class="grid2">
-          <div class="attack"><b>Forge a decision</b><span>The operator signs a fake "continue" with its own key.</span><code>Refused: signer is not on the manifest allowlist</code></div>
-          <div class="attack"><b>Flip the answer</b><span>Keep the enclave's real signature, change what it said.</span><code>Refused: TEE signature does not cover this answer</code></div>
-          <div class="attack"><b>Edit the log</b><span>Lower a severity after the flight.</span><code>Verifier: entry #2 was changed after the robot signed it</code></div>
-          <div class="attack"><b>Cut the AI</b><span>Kill the link to the model mid-flight.</span><code>Safe stop: 0G unreachable, no decision made</code></div>
-        </div>
-        <p class="note">And the counterfactual: replay the same flight with every answer forced to "continue", and a second drone flies straight past the damage. The model's answer is what moved the robot.</p>
-      </div>
-    </div>
-  </section>
-
   <section class="band alt" id="mission">
     <div class="wrap split">
-      <p class="eyebrow"><i>04</i>Proof</p>
+      <p class="eyebrow"><i>03</i>Proof</p>
       <div>
         <h2>A real flight. <em>Check every line.</em></h2>
         <p class="sub" id="m-sub">Loading…</p>
@@ -136,7 +118,7 @@
 
   <section class="band" id="numbers">
     <div class="wrap split">
-      <p class="eyebrow"><i>05</i>The economics</p>
+      <p class="eyebrow"><i>04</i>The economics</p>
       <div>
         <h2>Verifiable costs <em>almost nothing.</em></h2>
         <div class="figures">
@@ -151,7 +133,7 @@
 
   <section class="band alt" id="sdk">
     <div class="wrap split">
-      <p class="eyebrow"><i>06</i>SDK</p>
+      <p class="eyebrow"><i>05</i>SDK</p>
       <div class="two">
         <div>
           <h2>Any robot. <em>Three calls.</em></h2>
@@ -176,7 +158,7 @@
 
   <section class="band" id="stack">
     <div class="wrap split">
-      <p class="eyebrow"><i>07</i>The stack</p>
+      <p class="eyebrow"><i>06</i>The stack</p>
       <div>
         <h2>Why a chain, and <em>why these.</em></h2>
         <p class="sub">The parties don't trust each other, and the one running the robot has the most reason to edit the record. A signed log proves a file wasn't edited. It can't prove which model decided, that the answer was made for this checkpoint, or that the robot did only what it was told. A public chain gives everyone a commitment no one can quietly rewrite, checkable from a phone with no account.</p>
