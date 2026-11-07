@@ -13,14 +13,14 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
 
 const C = {
-  skyTop: 0x060a14,
-  skyHorizon: 0x1d2c40,
-  path: 0x7dd3fc,
+  skyTop: 0x000000,
+  skyHorizon: 0x1a1030,
+  path: 0xc4b5fd,
   plan: 0x8b93a3,
-  ghost: 0xf87171,
-  wait: 0xfbbf24,
-  stop: 0xf87171,
-  asset: 0x5298ff,
+  ghost: 0xf0abfc,
+  wait: 0xddd6fe,
+  stop: 0xf0abfc,
+  asset: 0xa78bfa,
 };
 
 const TILT = THREE.MathUtils.degToRad(12);
@@ -129,9 +129,9 @@ export class Scene3D {
     // blue-hour sky: a vertical gradient behind everything, fog in the horizon colour
     this.scene.background = canvasTex(512, (g, n) => {
       const grad = g.createLinearGradient(0, 0, 0, n);
-      grad.addColorStop(0, "#060a14");
-      grad.addColorStop(0.55, "#121c2b");
-      grad.addColorStop(1, "#24344a");
+      grad.addColorStop(0, "#000000");
+      grad.addColorStop(0.55, "#0b0716");
+      grad.addColorStop(1, "#1f1336");
       g.fillStyle = grad;
       g.fillRect(0, 0, n, n);
     });
@@ -150,14 +150,14 @@ export class Scene3D {
     this.controls.minDistance = 3;
     this.controls.maxDistance = 110;
 
-    this.scene.add(new THREE.HemisphereLight(0xb9cdf2, 0x2b2619, 1.15));
+    this.scene.add(new THREE.HemisphereLight(0xcfc4f2, 0x140f1c, 1.15));
     const sun = new THREE.DirectionalLight(0xffe2bd, 2.6);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.bias = -0.0004;
     sun.shadow.normalBias = 0.02;
     this.sun = sun;
-    const rim = new THREE.DirectionalLight(0x8fb4ff, 0.6);
+    const rim = new THREE.DirectionalLight(0xa78bfa, 0.7);
     rim.position.set(30, 60, 25);
     this.scene.add(sun, sun.target, rim);
 
@@ -323,7 +323,7 @@ export class Scene3D {
       ap.position.set((x0 + x1) / 2, H / 2, -0.35);
       ap.receiveShadow = true;
       this.worldGroup.add(ap);
-      const bank = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0 + 30, 80, 8), new THREE.MeshStandardMaterial({ map: canvasTex(512, noisePaint("#3b4a2a", 70), 10), roughness: 1 }));
+      const bank = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0 + 30, 80, 8), new THREE.MeshStandardMaterial({ map: canvasTex(512, noisePaint("#1a1622", 70), 10), roughness: 1 }));
       bank.position.set(x0 < 0 ? x0 - 15 + (x1 - x0) / 2 : x1 + 15 - (x1 - x0) / 2, H / 2, -4.75);
       bank.receiveShadow = true;
       this.worldGroup.add(bank);
@@ -359,7 +359,7 @@ export class Scene3D {
   }
 
   _buildSolar(meta, W, H) {
-    this._ground("#3d4a2b", 80, W / 2, H / 2, Math.max(W, H) * 5);
+    this._ground("#16131d", 80, W / 2, H / 2, Math.max(W, H) * 5);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(W, H), this._surfaceMat(null));
     ground.position.set(W / 2, H / 2, 0);
     ground.receiveShadow = true;
