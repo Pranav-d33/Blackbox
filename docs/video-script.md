@@ -1,86 +1,101 @@
 # Demo video script (about 3:00)
 
-Recorded in real time. Solar farm scenario. "Say" lines are the voiceover; keep them plain.
+Style: close to ASD-STE100 (Simplified Technical English). Short sentences, active voice, one idea per sentence, the same word for the same thing every time. Lines in quotes are the voiceover. Recorded in real time, solar farm scenario.
 
 ---
 
-## Part 1 · The demo: a solar farm inspection (0:00 – 1:15)
+## 1. The demo (0:00 - 1:15)
 
-**0:00 – 0:12 · The problem**
-*On screen:* launch page, then **Try the live demo**. The 3D solar farm, drone on the pad. Hover a panel: `r2m13`.
-> "Solar farms are inspected by drones. Today most just take pictures and someone reviews them later. The next step is drones that decide for themselves: is this a crack, do I go closer, do I call the repair crew. Once a drone decides on its own, someone will ask: what did it see, and why did it decide that? Today the only answer is the operator's own database."
+**0:00 - 0:15 · Open**
+*Screen:* launch page. Click **Try the live demo**. The 3D solar farm shows, with the drone on the pad. Hover a panel: `r2m13`.
 
-**0:12 – 0:25 · Mark the site**
-*On screen:* place a **Cracked cell** on a row 2 panel and **Soiling** on a row 3 panel.
-> "I'll plant two problems: a real crack, and some dirt that only looks like one."
+"On a large solar farm, about 1 panel in 100 is damaged. This damage costs a US solar farm about $5,000 per megawatt each year. Drones now find this damage and decide what to do. This is Blackbox. Blackbox records each decision that the drone makes. Anyone can check that record later."
 
-**0:25 – 0:50 · Fly the survey**
-*On screen:* **Fly the survey**. Live card: hold → ask 0G → answer → interlock → act. Drone descends on the crack, flies on past the soiling.
-> "The drone's own detector flags both, but it doesn't decide. At each mark the drone stops and asks 0G's sealed AI model. 0G says: crack, send the repair crew. Dirt, add it to the cleaning round. The drone only moves after checking the answer is really signed by 0G and made for this exact stop."
+**0:15 - 0:25 · Mark the site**
+*Screen:* put a **Cracked cell** in row 2. Put **Soiling** in row 3.
 
-**0:50 – 1:00 · Did 0G actually move the drone?**
-*On screen:* **Replay, 0G forced to "continue"**. A red drone flies past the crack.
-> "Same flight, but 0G's answers swapped for 'keep going'. The drone misses the crack. So 0G's answer is what moved the robot."
+"We add two problems. Here is a cracked cell. Here is some dirt. The dirt looks almost the same as a crack."
 
-**1:00 – 1:15 · Try to break it**
-*On screen:* **Forge "continue"**, **Tamper answer**, **Edit log**, then **Cut 0G link**.
-> "A fake 'skip it' command: refused. 0G's real answer flipped: refused. A severity lowered in the log: the checker names the exact entry. And if 0G is cut off, the drone flies home and writes 'no decision made'. It never guesses."
+**0:25 - 0:50 · Fly**
+*Screen:* click **Fly the survey**. Follow the live card. The drone goes down at the crack. The drone flies past the dirt.
 
----
+"The drone camera finds both problems. The drone stops at each problem. It sends the image to the 0G AI model. For the crack, 0G says: send the repair crew. For the dirt, 0G says: add it to the cleaning list. Before the drone moves, it checks two things. The answer must come from 0G. The answer must be for this stop."
 
-## Part 2 · Why web3 here (1:15 – 1:35)
+**0:50 - 1:00 · The 0G answer moves the drone**
+*Screen:* click **Replay, 0G forced to "continue"**. A red drone flies past the crack.
 
-*On screen:* scan the **QR**, public verifier turns green on a phone.
-> "Four parties care about this record: the farm owner, the insurer, the panel maker and the contractor. They don't trust each other, and the one flying the drone has the most reason to edit it.
-> A public chain gives them one record nobody can quietly rewrite, with a timestamp, that anyone can check from a phone with no login and no permission from the operator."
+"Now we fly the same mission again. This time we change each 0G answer to 'continue'. The red drone flies past the crack. The 0G answer is what moves the drone."
 
-Points to land:
-- Parties that don't trust each other → shared record none of them controls.
-- Tamper-evident and timestamped, not just "a log file".
-- Checkable by a stranger from a QR code.
+**1:00 - 1:15 · Try to break it**
+*Screen:* click **Forge "continue"**, then **Tamper answer**, then **Edit log**, then **Cut 0G link**.
+
+"We send a false command. The drone refuses it. We change the 0G answer. The drone refuses it. We change the log. Blackbox finds the change and shows the line. Now we cut the link to 0G. The drone flies home. The log says: no decision made."
 
 ---
 
-## Part 3 · Why 0G and why Arkiv (1:35 – 2:05)
+## 2. Why a blockchain (1:15 - 1:35)
 
-**Why 0G**
-> "We need three things inside the control loop: an AI we can verify, storage for the log, and a chain to lock it in. 0G gives all three in one network. Its sealed model runs in a secure enclave and signs every answer. That signature is what the drone checks before it moves. No 0G, no decision."
+*Screen:* scan the **QR** with a phone. The verifier shows green.
 
-**Why Arkiv**
-*On screen:* `r2m13` → **History**, then **Analytics** (defects by maker and batch).
-> "0G proves the record. But nobody at a solar farm asks for a storage hash. They ask: what's the history of this panel? Are cracks clustering in one maker's batch? That's a warranty claim. Arkiv makes every finding searchable like a database, owned by the wallet that wrote it, and it expires after the working period. 0G says what's true, Arkiv makes it easy to ask."
+"Four companies need this record. They are the farm owner, the insurer, the panel maker and the inspection contractor. If the contractor keeps the log, the contractor can change it. On a public blockchain, no one can change it. Anyone can check it with a phone. You do not need a login. You do not need permission."
 
 ---
 
-## Part 4 · Under the hood (2:05 – 2:45)
+## 3. Why 0G and Arkiv (1:35 - 2:05)
 
-**0G** (show the decision card fields, then the verifier)
-> - "Every stop calls 0G's sealed vision model in a TEE. The robot checks the TEE signer against an allowlist and that the answer echoes its own nonce."
-> - "Every event is a signed, hash-chained entry on 0G Storage, with the 0G request ID."
-> - "The mission is registered on 0G Chain before takeoff and anchored every two decisions."
-> - "The physics is MuJoCo with a Skydio X2 drone, and any mission replays from its seed to the same trajectory hash."
-> - "Robots are identified through 0G's zerobot registry."
+**0G**
 
-**Arkiv** (show the Analytics query)
-> - "Four entity types: findings, the site owner's asset register, missions, and a mirror of every 0G upload."
-> - "Two wallets: the owner owns the register, the inspector owns the findings."
-> - "If 0G Storage can't serve a file, the verifier reads the Arkiv mirror and still checks every hash against 0G Chain. Arkiv is never trusted for the verdict."
+"During the flight, the drone needs three things. It needs an AI that we can check. It needs storage for the log. It needs a blockchain to lock the log. 0G gives all three in one network. The 0G model runs in a secure enclave and signs each answer. The cost is low. The drone asks 0G only about the 1.5% of panels that the camera finds. That costs about one third of a cent per megawatt. A human drone survey costs $300 to $500 per megawatt."
 
-**The SDK** (switch the top bar to **Bridge deck**, hover `x12y03`)
-> "Nothing here is about solar. What the robot inspects, what the AI may answer and what the robot may do live in one JSON mission profile. Same code, a bridge deck crack survey.
-> The same loop takes other inputs too: the crew can answer a hold in plain text, and it goes through the same checks. Next could be warehouse damage checks, a spoken command like 'inspect row 3 again' turned into a signed instruction, or a cheap model first and a bigger one only when it's unsure."
+**Arkiv**
+*Screen:* click `r2m13`, then **History**, then **Analytics**. Show damage by maker and batch.
+
+"0G keeps the proof. But a site manager does not search by file hash. The manager asks: what happened to this panel? Do the cracks come from one maker's batch? That is a warranty claim. Arkiv makes each finding easy to search. In our test, Arkiv writes 10 times faster than 0G Storage. It reads 8 times faster. 0G keeps the proof. Arkiv gives the search."
 
 ---
 
-## Close (2:45 – 3:00)
+## 4. Under the hood (2:05 - 2:45)
 
-> "Blackbox. 0G decides, Blackbox proves it, Arkiv makes it searchable. For any robot whose decisions someone else needs to trust."
+*Screen:* open a decision card. Then open the verifier.
+
+**0G**
+
+"Each decision goes to the 0G sealed vision model. The model runs in an Intel TDX enclave. The drone checks the signer and a one-time code before it moves.
+The robot signs each event. Each event links to the event before it. Blackbox stores the events on 0G Storage, each with its 0G request ID.
+Before takeoff, Blackbox registers the mission on 0G Chain. After each two decisions, it locks the log on 0G Chain.
+The flight uses real physics. A Skydio X2 drone flies in MuJoCo at 240 updates per second. Each mission replays to the same path.
+The 0G zerobot registry gives each robot its identity."
+
+**Arkiv**
+*Screen:* show the Analytics query.
+
+"Blackbox writes four record types to Arkiv. They are findings, missions, the asset list and a backup copy of each 0G file. The asset list gives the maker and batch of all 136 panels.
+The owner wallet owns the asset list. The inspector wallet owns the findings.
+If 0G Storage is down, the verifier reads the Arkiv backup. It still checks each hash against 0G Chain."
+
+**The SDK**
+*Screen:* select **Bridge deck** in the top bar. Hover `x12y03`.
+
+"Blackbox is not only for solar. One JSON file sets what the drone inspects. It sets what the AI can answer. It sets what the drone can do. Here, the same code inspects a bridge deck for cracks. The crew can also reply in text. The text goes through the same checks. Warehouse checks or voice commands need only a new mission file."
+
+---
+
+## Close (2:45 - 3:00)
+
+*Screen:* back to the solar farm. The drone is on the pad. The verifier shows green.
+
+"Blackbox. 0G decides. Blackbox proves it. Arkiv makes it easy to search."
 
 ---
 
 ## Notes
 
-- If recording on mock 0G, say "mock 0G" out loud.
-- Say "tamper-evident", never "tamper-proof". Don't say "0G controls the robot" or "Arkiv proves the decision".
-- Warehouse, voice command and two-model check are ideas, not built. Say "next could be".
-- Qualification hits, covered without naming them: 0G call in the decision loop (Part 1), log on 0G Storage with request IDs, replayable MuJoCo sim, safe stop (Part 4); Arkiv: why Arkiv, how it's used, schema and wallets (Parts 3–4).
+- If you record with mock 0G, say "mock 0G" on camera.
+- Do not say "tamper-proof", "0G controls the robot" or "Arkiv proves the decision".
+- Warehouse checks and voice commands are not built. Do not demo them.
+- Sources for the numbers:
+  - 1 panel in 100 damaged: 2,481 of 232,934 modules, Remote Sensing 15(7):1914, 2023.
+  - $5,070 per MW per year: Raptor Maps via pv magazine, Feb 2026.
+  - 1.5% and $0.0035 per MW: our 8 sim runs (`docs/pitch-numbers-and-workflows.md`).
+  - $300-500 per MW human survey: a vendor blog (weak source).
+  - Arkiv write 7 s vs 76 s, read 0.36 s vs 2.8 s: `arkiv/benchmark.md`.
