@@ -10,6 +10,27 @@ const ArkivQuery = ({ q }) => (
     <code className="block font-mono text-caption leading-relaxed break-all text-white/75">{q}</code>
   </div>
 );
+const ARKIV = "https://rabdi.explorer.arkiv.network";
+const ext = { target: "_blank", rel: "noreferrer" };
+/** Links that let anyone check a number on the Arkiv explorer itself, not just in this console. */
+const VerifyOnArkiv = ({ entity, wallets = [] }) => (
+  <section className="mt-5 rounded-2xl bg-white/[0.04] p-3.5">
+    <h3 className="mb-2 text-meta font-semibold tracking-[0.04em] text-white/50 uppercase">Verify live on Arkiv</h3>
+    <div className="flex flex-col gap-1.5 text-body">
+      {entity ? (
+        <a className="text-tint hover:underline" href={`${ARKIV}/entity/${entity.key}`} {...ext}>
+          Latest finding · <AssetId name={entity.asset} /> <span className="font-mono text-meta text-white/45">{short(entity.key, 8)}</span> ↗
+        </a>
+      ) : null}
+      {wallets.map((w) => (
+        <a key={w} className="text-tint hover:underline" href={`${ARKIV}/address/${w}`} {...ext}>
+          Everything written by inspector <span className="font-mono text-meta">{short(w, 8)}</span> ↗
+        </a>
+      ))}
+      <a className="text-tint hover:underline" href={`${ARKIV}/entity-explorer`} {...ext}>Run the query below in the Arkiv entity explorer ↗</a>
+    </div>
+  </section>
+);
 const Loading = () => (
   <div role="status" aria-live="polite">
     <p className="mb-4 flex items-center gap-3 text-lead text-white/60">
@@ -131,6 +152,7 @@ function Analytics({ m }) {
         )}
       </section>
       <Bars title="Written by (inspector wallets)" rows={m.inspectors.map(([k, n]) => [short(k, 8), n])} color="var(--color-asset)" />
+      <VerifyOnArkiv entity={m.open[0]} wallets={m.inspectors.slice(0, 2).map(([k]) => k)} />
       <ArkivQuery q={m.query} />
     </div>
   );
